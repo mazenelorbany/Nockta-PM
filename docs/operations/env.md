@@ -77,7 +77,7 @@ Generate secrets with `pnpm gen:secrets` (prints two random base64url secrets) o
 | Name | Purpose | Required | Default | Example | Consumed by |
 |---|---|---|---|---|---|
 | `MAGIC_LINK_TTL_SECONDS` | Lifetime of issued magic-link tokens | no | `900` | `900` | `apps/api/src/modules/auth/auth.service.ts` |
-| `MAGIC_LINK_BASE_URL` | Frontend URL hosting `/auth/magic` | yes | `http://localhost:5174/auth/magic` | `https://clients.nockta.com/auth/magic` | `auth.service.ts`, `mail.service.ts` |
+| `MAGIC_LINK_BASE_URL` | Frontend URL hosting `/auth/magic` | yes | `http://localhost:5173/auth/magic` | `https://app.nockta.com/auth/magic` | `auth.service.ts`, `mail.service.ts` |
 
 ## AI providers
 
@@ -133,15 +133,15 @@ Generate secrets with `pnpm gen:secrets` (prints two random base64url secrets) o
 
 | Name | Purpose | Required | Default | Example | Consumed by |
 |---|---|---|---|---|---|
-| `APP_URL_INTERNAL` | Internal web app URL (used in emails, Chat cards) | yes | `http://localhost:5173` | `https://app.nockta.com` | `apps/api/src/modules/auth/mail.service.ts`, chat card builders |
-| `APP_URL_CLIENT` | Client portal URL | yes | `http://localhost:5174` | `https://clients.nockta.com` | `mail.service.ts` |
+| `APP_URL_INTERNAL` | Web app URL (used in emails, Chat cards) | yes | `http://localhost:5173` | `https://app.nockta.com` | `apps/api/src/modules/auth/mail.service.ts`, chat card builders |
+| `APP_URL_CLIENT` | Same web app URL (kept for legacy env contract; clients share the internal SPA) | yes | `http://localhost:5173` | `https://app.nockta.com` | (none at runtime — vestigial) |
 | `APP_URL_API` | API public URL (for OAuth redirects, webhook URLs) | yes | `http://localhost:3000` | `https://api.nockta.com` | `apps/api/src/main.ts`, OAuth strategy |
 
 ## CORS / rate limiting
 
 | Name | Purpose | Required | Default | Example | Consumed by |
 |---|---|---|---|---|---|
-| `CORS_ORIGINS` | Comma-separated origins | yes | `http://localhost:5173,http://localhost:5174` | `https://app.nockta.com,https://clients.nockta.com` | `apps/api/src/main.ts` |
+| `CORS_ORIGINS` | Comma-separated origins | yes | `http://localhost:5173` | `https://app.nockta.com` | `apps/api/src/main.ts` |
 | `RATE_LIMIT_GLOBAL_PER_MIN` | Global per-IP throttle | no | `600` | `600` | `apps/api/src/common/guards/identity-aware-throttler.guard.ts` |
 | `RATE_LIMIT_PER_USER_PER_MIN` | Per-JWT-subject throttle | no | `120` | `120` | `identity-aware-throttler.guard.ts` |
 
@@ -154,13 +154,13 @@ Generate secrets with `pnpm gen:secrets` (prints two random base64url secrets) o
 
 ---
 
-## Frontend (`apps/web`, `apps/client`)
+## Frontend (`apps/web`)
 
-Frontends only need build-time variables. Vite inlines `VITE_*` into the bundle, so set these as **build-time** variables on the host (not runtime env).
+The frontend only needs build-time variables. Vite inlines `VITE_*` into the bundle, so set these as **build-time** variables on the host (not runtime env).
 
 | Name | Purpose | Required | Default | Example | Consumed by |
 |---|---|---|---|---|---|
-| `VITE_API_URL` | API base URL | **yes** | `http://localhost:3000` | `https://api.nockta.com` | `apps/web/src/api/client.ts`, `apps/client/src/api/client.ts` |
+| `VITE_API_URL` | API base URL | **yes** | `http://localhost:3000` | `https://api.nockta.com` | `apps/web/src/api/client.ts` |
 | `VITE_SENTRY_DSN` | Optional frontend Sentry DSN | no | — | `https://xxx@sentry.io/xxx` | `apps/web/src/lib/sentry.ts` |
 
 ---

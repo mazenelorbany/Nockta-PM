@@ -30,8 +30,8 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 /**
- * Single source for in-app buttons. Both apps/web and apps/client should
- * migrate raw `<button>` usages here so visual tweaks land everywhere.
+ * Single source for in-app buttons. apps/web migrates raw `<button>`
+ * usages here so visual tweaks land everywhere.
  */
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', type = 'button', ...rest }, ref) => (

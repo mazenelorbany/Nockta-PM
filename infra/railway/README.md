@@ -49,10 +49,9 @@ See `.env.example` at the repo root. Per Railway service:
 
 ## DNS
 
-- `app.nockta.com` → web app service (added when the internal web app is deployed)
-- `clients.nockta.com` → client portal service (added when the client portal is deployed)
+- `app.nockta.com` → web app service (serves both internal users and external clients)
 - `api.nockta.com` → `api` service
-- All three served with Let's Encrypt certs (Railway handles automatically)
+- Both served with Let's Encrypt certs (Railway handles automatically)
 
 ## Migrations
 

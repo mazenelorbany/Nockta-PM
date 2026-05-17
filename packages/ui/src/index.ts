@@ -13,8 +13,8 @@ export {
   NocktaWordmark,
 } from './components/NocktaMark';
 
-// Shared primitives — both apps/web and apps/client should migrate raw
-// HTML usages to these so theme + behavior stay coherent across surfaces.
+// Shared primitives — apps/web migrates raw HTML usages here so theme +
+// behaviour stay coherent across surfaces.
 export { Button, type ButtonProps } from './components/Button';
 export { Input, type InputProps } from './components/Input';
 export { Badge, type BadgeProps } from './components/Badge';

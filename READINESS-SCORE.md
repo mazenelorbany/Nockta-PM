@@ -42,7 +42,7 @@ The realtime channel is live: open the same project in two browser tabs, drag a 
 **Blockers (would have prevented basic use):**
 - Clients got 403 on `GET /tasks/project/:projectId` — `assertAtLeast('Viewer')` excluded `Client` rank. Now `assertAtLeast('Client')` with the visibility filter doing the actual narrowing.
 - Search endpoint crashed with `column "search_vector" does not exist` because the FTS column was in raw-SQL-only territory. Rewrote `SearchService.searchTasks` to use Prisma `contains: q, mode: 'insensitive'` over title + description + comments. FTS path can come back when the companion SQL has had time to bake in production.
-- `pnpm dev` failed if a previous run had crashed and left ports held. Now pre-flights `lsof -ti tcp:$port | xargs kill -9` on 3000/5173/5174/5555.
+- `pnpm dev` failed if a previous run had crashed and left ports held. Now pre-flights `lsof -ti tcp:$port | xargs kill -9` on 3000/5173/5555.
 - `docker compose --wait` failed on `minio-init` because it's a one-shot container. Split into "wait on long-running services" + "run init with tolerated exit".
 - Sidebar `Search` / `Notifications` / `Settings` links pointed to routes that didn't exist; clicking bounced back to `/` via the catch-all. Removed from `navItems` until the pages exist.
 

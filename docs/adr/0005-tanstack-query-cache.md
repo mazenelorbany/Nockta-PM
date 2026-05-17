@@ -22,7 +22,7 @@ Options:
 
 ## Decision
 
-Use **TanStack Query 5** as the server-state cache for `apps/web` and `apps/client`. Conventions:
+Use **TanStack Query 5** as the server-state cache for `apps/web` (the single SPA serving both internal users and external clients). Conventions:
 
 - Query keys are arrays: `['tasks', projectId, filters]`, `['task', taskId]`, `['notifications', 'unread-count']`.
 - The `@nockta/sdk` package exposes typed fetchers; React hooks wrap them with `useQuery` / `useMutation`.

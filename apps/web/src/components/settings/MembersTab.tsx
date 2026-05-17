@@ -838,9 +838,9 @@ function InviteGuestDialog({
             Invite a guest
           </h2>
           <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-            We'll email them a magic-link to{' '}
-            <code className="font-mono text-foreground/80">clients.nockta.com</code>. They appear in
-            the workspace user picker right away so you can grant project access before they sign in.
+            We'll email them a magic-link sign-in to the Nockta Flow app. They
+            appear in the workspace user picker right away so you can grant
+            project access before they sign in.
           </p>
         </div>
         <div className="px-5 py-4 space-y-3">

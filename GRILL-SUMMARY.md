@@ -299,14 +299,14 @@ Notable absence: **no custom metadata column**. Future feature-specific data get
 
 ---
 
-## 15. Client portal
+## 15. External-client experience
 
-- **Separate frontend app** (`apps/client`), same backend.
-- **Separate subdomain:** `clients.nockta.com` (internal app: `app.nockta.com`).
-- **Magic-link auth** for clients. Optional Google OAuth.
+- **One SPA for everyone** — `apps/web` serves internal users and external clients. The original `apps/client` portal was retired; two parallel design systems drifted and the API was always the boundary. Role-conditional UI hides internal-only sections (Workload, Standup, Worklog, Deployments, Automations, Settings) for `kind=client` users.
+- **One domain:** `app.nockta.com` for everyone.
+- **Magic-link auth** for clients via `/auth/magic`. Internal users use Google OAuth.
 - **Backend enforces role permissions at the API layer** — a client request to internal endpoints gets 403, never an exposed view.
-- **Client capabilities:** view projects they're added to, view client-visible tasks, comment (always `client_visible`), upload attachments, report bugs, approve tasks.
-- **Client bug report → direct task** in the project's `Todo` column with `reported_by_client = true`, screenshot attached, project Manager gets Google Chat notification.
+- **Three project-role flavours for external collaborators:** Contributor (full edit), Viewer (read-only), Client (bug-report only, forced type=Bug + visibility=client_visible). Restriction is keyed on project role, not user kind.
+- **Bug report → direct task** in the project's `Todo` column with `reportedByClient = true`, attachments allowed, project Manager gets Google Chat notification.
 - **No internal triage queue** — keeps the pipeline single-rail.
 
 ---
@@ -398,13 +398,13 @@ Notable absence: **no custom metadata column**. Future feature-specific data get
 ```
 apps/
 ├── api          NestJS backend (also hosts in-process BullMQ workers)
-├── web          React + Vite — internal users (app.nockta.com)
-└── client       React + Vite — clients (clients.nockta.com)
+└── web          React + Vite — internal users AND external clients
+                  (single shell on app.nockta.com, role-conditional UI)
 
 packages/
 ├── ui           shared shadcn/ui component layer + design tokens
 ├── types        shared TypeScript types (DTOs, event payloads)
-├── sdk          shared API client (typed, used by web + client apps)
+├── sdk          shared API client (typed, used by apps/web)
 ├── eslint-config
 └── tsconfig
 ```

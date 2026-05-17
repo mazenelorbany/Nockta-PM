@@ -126,11 +126,11 @@ The biggest **deltas from spec** are conscious: Railway as the prod host, Anthro
 - ✅ Per-project chat broadcast: schema has `chatSpaceId` + `chatBroadcastEvents[]`.
 - ❌ Client portal Chat-hiding check is implicit (clients have no binding flow); fine in practice.
 
-### §15 Client portal
-- ✅ Separate Vite app at `apps/client` with magic-link login, home, project, report-bug pages.
-- ✅ Separate subdomain wired via `APP_URL_CLIENT` + Dockerfile + nginx config + railway.json.
-- ✅ Client bug report → direct Task (no triage queue) — `ReportBugPage` exists; service-side wiring lives in `tasks.service.ts`.
-- 🟡 Only 4 pages — no comments view, no attachment upload UI, no notification panel for clients, no task approval UI. **Substantial client-portal UI work remaining.**
+### §15 External-client experience
+- ✅ Consolidated into `apps/web` (the `apps/client` portal was retired). One SPA, role-conditional UI hides internal-only surfaces (Workload, Standup, Worklog, Deployments, Automations, Settings) for `kind=client` users. The dedicated portal was replaced because two parallel design systems drifted and the API already enforces all permissions.
+- ✅ Magic-link sign-in on `/auth/magic` — `RequestMagicLink` form lives on `LoginPage`; callback at `/auth/magic` verifies + redirects.
+- ✅ Bug-only restriction (type=Bug, visibility=client_visible) is now keyed on **project role** (`Client`), not user kind. A kind=client user with Contributor or Manager grants can create real tasks like an internal contributor.
+- ✅ Contributor / Viewer / Client project roles all admit clients onto the board / dashboard / list / backlog / timeline / docs tabs.
 
 ### §16 Deployment / CI/CD tracking
 - ✅ `Deployment` + `TaskDeployment` + `ProjectDeploymentSecret` schemas.

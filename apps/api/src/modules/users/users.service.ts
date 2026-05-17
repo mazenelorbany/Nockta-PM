@@ -94,7 +94,8 @@ export class UsersService {
     }
 
     // Fire the magic-link email. This creates a MagicLink row + dispatches
-    // via MailService; the link lands at clients.nockta.com and signs them in.
+    // via MailService; the link lands on apps/web's /auth/magic page and
+    // signs them in.
     await this.auth.requestMagicLink(email);
 
     return {

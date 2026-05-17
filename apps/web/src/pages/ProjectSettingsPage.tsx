@@ -1801,7 +1801,7 @@ function ProjectAccessManager({
         id="access-guests"
         title="Guests"
         icon={<Sparkles className="h-3.5 w-3.5" />}
-        hint="External people who sign in at clients.nockta.com. They only see content marked client-visible, and can comment + report bugs."
+        hint="External collaborators who sign in via magic link. They only see content marked client-visible, and can comment + report bugs."
         empty={guestGrants.length === 0}
         emptyHint={
           loading
@@ -2233,8 +2233,8 @@ function InlineInviteGuestDialog({
             Invite a guest to this project
           </h2>
           <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-            We'll email a magic link to clients.nockta.com. After the invite
-            sends we'll automatically grant them Client access to this project.
+            We'll email them a one-time sign-in link. After the invite sends
+            we'll automatically grant them Client access to this project.
           </p>
         </div>
         <div className="px-5 py-4 space-y-3">

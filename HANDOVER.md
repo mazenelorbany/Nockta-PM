@@ -11,8 +11,7 @@ The codebase is a pnpm + Turborepo monorepo. Three apps deploy as separate Railw
 | Service        | Source                                                | Notes |
 |----------------|-------------------------------------------------------|-------|
 | `api`          | This repo, `apps/api/railway.json`                    | NestJS + Prisma + Socket.IO + BullMQ workers + schedulers, all in one process. |
-| `web`          | This repo, `apps/web/railway.json`                    | Internal app, Vite + nginx. Pass `VITE_API_URL` as a build arg. |
-| `client`       | This repo, `apps/client/railway.json`                 | Client portal, Vite + nginx. Pass `VITE_API_URL`. |
+| `web`          | This repo, `apps/web/railway.json`                    | Single React SPA for both internal users and external clients (role-conditional UI). Vite + nginx. Pass `VITE_API_URL` as a build arg. |
 | `postgres`     | Railway plugin                                        | Managed Postgres. The initial migration creates `pgcrypto`, `pg_trgm`, `citext`, `btree_gin`. |
 | `redis`        | Railway plugin                                        | Sessions, BullMQ queues, Socket.IO Redis adapter, scheduler leader-election. |
 | `qdrant`       | This repo, `infra/railway/qdrant.railway.json`        | Vector DB for the AI layer. Mount a volume at `/qdrant/storage`. |
@@ -63,8 +62,7 @@ The frontends (`web`, `client`) only need `VITE_API_URL` at **build time** — s
 
 ## 4. DNS
 
-- `app.nockta.com` → `web` service
-- `clients.nockta.com` → `client` service
+- `app.nockta.com` → `web` service (serves both internal users and external clients)
 - `api.nockta.com` → `api` service
 
 Let's Encrypt is handled by Railway. After DNS lands, update three things:
@@ -153,7 +151,7 @@ The five things to be honest about if your lead asks:
 1. **`apps/workers` folder is empty by design.** All workers run inside `apps/api`. Documented in [`GRILL-SUMMARY.md §21`](GRILL-SUMMARY.md). Revisit when job throughput exceeds a single node.
 2. **Elasticsearch is not deployed.** Search uses the Postgres FTS path (tsvector columns from `companion.sql`). Switching is a config flip: set `SEARCH_ELASTIC_URL` and the SearchService routes to ES.
 3. **Mobile responsive coverage is partial.** Board, Backlog, Timeline, Sprints, Workload, the global Layout, and the task drawer are responsive. Other pages assume desktop.
-4. **Client portal UI is thin.** Backend wires comments, attachments, and notifications; the `apps/client` SPA has 4 pages (login, home, project, report bug). A real client experience is v2.
+4. **External-client UX runs inside `apps/web`.** The dedicated `apps/client` portal was retired in favour of role-conditional UI in the single shell. A kind=client user with Viewer/Contributor/Client project role sees only the surfaces that apply to them (Dashboard, Board, List, Backlog, Timeline, Docs); internal-only sections collapse. Magic-link auth (`/auth/magic`) is the entry path for clients who don't have Google SSO.
 5. **No GitHub Enterprise.** Webhook routing is hardcoded to `api.github.com`. If you ever need a self-hosted GitHub, factor the host out.
 
 The complete delta against `GRILL-SUMMARY.md` is in [`GAP-REPORT.md`](GAP-REPORT.md). Current score against the spec: **~9.4 / 10**.

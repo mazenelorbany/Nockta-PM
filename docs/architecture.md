@@ -9,8 +9,7 @@ Nockta Flow is a single deployable API behind two single-page applications, with
 ```mermaid
 graph TD
   User[User<br/>internal + client]
-  Web[apps/web<br/>React + Vite SPA]
-  Client[apps/client<br/>React + Vite SPA]
+  Web[apps/web<br/>React + Vite SPA<br/>shared shell, role-conditional UI]
   API[apps/api<br/>NestJS + Socket.IO<br/>+ BullMQ + schedulers]
   PG[(Postgres 16<br/>Prisma)]
   Redis[(Redis 7)]
@@ -23,10 +22,8 @@ graph TD
   Chat[Google Chat App]
 
   User -->|HTTPS| Web
-  User -->|HTTPS| Client
   Web -->|REST<br/>Bearer JWT| API
   Web <-->|WebSocket<br/>JWT-in-handshake| API
-  Client -->|REST| API
 
   API -->|prisma| PG
   API -->|ioredis| Redis
@@ -44,9 +41,8 @@ graph TD
 
 ### Boxes
 
-- **User** — internal engineers on `app.nockta.com`, external clients on `clients.nockta.com`. JWT bearer auth; no cookies.
-- **apps/web** — internal Vite SPA. Auth via Google OAuth or magic link; tokens stored in `localStorage`; SDK injects `Authorization: Bearer ...` on every request.
-- **apps/client** — slimmer Vite SPA for client-portal users. Same auth model but `User.kind = 'client'`, restricted to `client_visible` task surface.
+- **User** — internal engineers and external clients, all on `app.nockta.com`. JWT bearer auth; no cookies. Internal users sign in via Google OAuth; external clients via magic link.
+- **apps/web** — single Vite SPA. Internal users and external clients share one shell; role-conditional UI hides surfaces the actor can't act on (sidebar PERSONAL_LINKS and ProjectTabs gate by `User.kind` and effective project role). Tokens stored in `localStorage`; SDK injects `Authorization: Bearer ...` on every request.
 - **apps/api** — single NestJS process. Hosts REST controllers, Socket.IO gateway (Redis-adapter), BullMQ workers (notifications, attachment scan/thumb, AI embedding, outbound webhooks), and in-process schedulers (maintenance, digests, due-soon, recurrence, AI cron). `numReplicas: 1` per `railway.json`; safe to scale because Redis-backed `SchedulerLockService` arbitrates schedulers and BullMQ self-balances workers.
 - **Postgres** — primary store. Prisma owns the schema. `companion.sql` overlays the things Prisma can't express: partial unique indexes, check constraints, tsvector generated columns + GIN indexes, `Event` table partitioned by `createdAt`, materialized views (`mv_workload_open`, `mv_sprint_velocity`, `mv_cycle_time_30d`).
 - **Redis** — sessions / JTI revocation (`SessionService`), BullMQ queues, Socket.IO Redis adapter for cross-replica broadcast, scheduler leader-election locks, transient caches (e.g. integration status, CSRF-style nonces for GitHub install).

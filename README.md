@@ -10,8 +10,7 @@ This repository is a pnpm + Turborepo monorepo. The full design rationale lives 
 
 | Layer            | Tech                                                                  |
 |------------------|-----------------------------------------------------------------------|
-| Web (internal)   | React 18 + Vite + TanStack Query + Tailwind + dnd-kit + Tiptap + Socket.IO client |
-| Client portal    | React 18 + Vite (thin SPA — 4 pages)                                  |
+| Web              | React 18 + Vite + TanStack Query + Tailwind + dnd-kit + Tiptap + Socket.IO client. Internal users and external clients share the same shell; role-conditional UI hides internal-only surfaces (Standup, Workload, Worklog, Deployments, Automations, Settings) for kind=client users. |
 | API              | NestJS 10 + Prisma 5 + Socket.IO + BullMQ + Passport (JWT, Google OAuth) |
 | Database         | Postgres 16 (`pgcrypto`, `pg_trgm`, `citext`, `btree_gin`; partitioned `Event` table; tsvector FTS; materialized views) |
 | Cache / queues   | Redis 7 (sessions, BullMQ, Socket.IO Redis adapter, scheduler leader-election) |
@@ -28,8 +27,7 @@ Workspace layout:
 ```
 apps/
   api/      NestJS — REST + WebSocket + BullMQ workers + schedulers (single deployable)
-  web/      Internal SPA
-  client/   Client portal SPA
+  web/      React SPA — shared shell for internal users and external clients
 packages/
   types/    Shared enums + DTO types
   sdk/      Typed API client
@@ -82,8 +80,7 @@ Default ports:
 | http://localhost:3000        | API (Nest)           |
 | http://localhost:3000/docs   | Swagger UI (dev only) |
 | http://localhost:3000/health | Liveness probe       |
-| http://localhost:5173        | Internal web app     |
-| http://localhost:5174        | Client portal        |
+| http://localhost:5173        | Web app (internal + clients) |
 | http://localhost:8025        | mailhog (magic links) |
 | http://localhost:9001        | MinIO console        |
 
@@ -97,7 +94,6 @@ To wipe local data: `pnpm --filter @nockta/api wipe:local`.
 graph TD
   User[Internal user / Client]
   Web[apps/web — React + Vite]
-  Client[apps/client — React + Vite]
   API[apps/api — NestJS + Socket.IO]
   PG[(Postgres 16)]
   Redis[(Redis 7)]

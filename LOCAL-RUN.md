@@ -47,9 +47,9 @@ In a second terminal:
 pnpm --filter @nockta/web dev
 ```
 
-Vite serves the internal app at <http://localhost:5173>.
-
-(Optional, separate terminal: `pnpm --filter @nockta/client dev` for the client portal on `5174`.)
+Vite serves the web app at <http://localhost:5173>. Internal users and
+external clients use the same SPA; role-conditional UI hides surfaces a
+given user can't act on.
 
 ## Log in
 
@@ -86,8 +86,7 @@ The "Continue with Google" button still won't work until you set real `GOOGLE_OA
 | `nockta-grafana` | 3001 | Dashboards. `admin` / `admin`. |
 | `nockta-loki` | 3100 | Log aggregation (no Promtail wired yet). |
 | API | 3000 | NestJS. |
-| Web | 5173 | Internal app. |
-| Client | 5174 | Client portal. |
+| Web | 5173 | React SPA — internal users and external clients. |
 
 ## Tearing down
 
