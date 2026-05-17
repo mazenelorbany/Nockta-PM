@@ -93,6 +93,11 @@ interface Project {
   name: string;
   workflowPreset: Preset;
   sprintsEnabled?: boolean;
+  /** Caller's effective role on this project, returned by `/projects/:id`.
+   *  Drives client-side gating: Viewer hides write affordances entirely
+   *  (the API enforces them too; this is just UX so the user isn't
+   *  invited into a 403). */
+  effectiveRole?: 'Manager' | 'Contributor' | 'Viewer' | 'Client' | null;
 }
 
 interface ActiveSprint {
@@ -312,6 +317,14 @@ export function ProjectBoardPage(): JSX.Element {
 
   const tasks = tasksQuery.data ?? [];
   const project = projectQuery.data;
+  // Write affordances are gated on effective project role. Manager and
+  // Contributor can edit; Viewer is read-only; Client is bug-only (handled
+  // via the report-bug flow, not this board's "New task" button). Falling
+  // back to `true` keeps existing behaviour while the project payload loads.
+  const canEdit =
+    project?.effectiveRole == null ||
+    project.effectiveRole === 'Manager' ||
+    project.effectiveRole === 'Contributor';
   const columns = useMemo(() => (project ? PRESET_STATUSES[project.workflowPreset] : []), [project]);
   const visibleTasks = useMemo(() => applyTaskFilters(tasks, filters), [tasks, filters]);
   // Children (anything with a parentTaskId — subtasks, stories under epics,
@@ -759,14 +772,16 @@ export function ProjectBoardPage(): JSX.Element {
                 <span className="hidden sm:inline">{t('project_board.start_standup', 'Start standup')}</span>
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => openCreate(null)}
-              className="tap rounded-md bg-primary px-3 sm:px-4 h-8 text-xs sm:text-sm font-medium text-primary-foreground hover:opacity-90 transition-[opacity,transform] duration-150"
-            >
-              <span className="sm:hidden">+</span>
-              <span className="hidden sm:inline">{t('project_board.new_task', 'New task')}</span>
-            </button>
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => openCreate(null)}
+                className="tap rounded-md bg-primary px-3 sm:px-4 h-8 text-xs sm:text-sm font-medium text-primary-foreground hover:opacity-90 transition-[opacity,transform] duration-150"
+              >
+                <span className="sm:hidden">+</span>
+                <span className="hidden sm:inline">{t('project_board.new_task', 'New task')}</span>
+              </button>
+            )}
           </>
         }
       />
@@ -857,8 +872,9 @@ export function ProjectBoardPage(): JSX.Element {
             toggleSelect={toggleSelect}
             onAdd={openCreate}
             onOpen={openTask}
-            onDragEnd={onDragEnd}
+            onDragEnd={canEdit ? onDragEnd : () => {}}
             sensors={sensors}
+            canEdit={canEdit}
             isMobile={isMobile}
             mobileColumnIdx={mobileColumnIdx}
             setMobileColumnIdx={setMobileColumnIdx}
@@ -1294,6 +1310,10 @@ interface BoardCanvasProps {
   mobileColumnIdx: number;
   setMobileColumnIdx: (idx: number | ((prev: number) => number)) => void;
   onSwipeAction: (taskId: string, action: 'done' | 'snooze') => void;
+  /** When false (Viewer / no-role), the per-column "+ Add task" button is
+   *  hidden and dnd-kit drags are dropped on the floor — Viewers can still
+   *  click cards to read them but can't mutate the board. */
+  canEdit: boolean;
 }
 
 function BoardCanvas(props: BoardCanvasProps): JSX.Element {
@@ -1301,6 +1321,7 @@ function BoardCanvas(props: BoardCanvasProps): JSX.Element {
     columns, byStatus, subtasksByParent, selectedIds, toggleSelect,
     onAdd, onOpen, onDragEnd, sensors,
     isMobile, mobileColumnIdx, setMobileColumnIdx, onSwipeAction,
+    canEdit,
   } = props;
 
   // -------------------------------------------------------------------------
@@ -1441,6 +1462,7 @@ function BoardCanvas(props: BoardCanvasProps): JSX.Element {
                 onOpen={onOpen}
                 isMobile={isMobile}
                 onSwipeAction={onSwipeAction}
+                canEdit={canEdit}
               />
               <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
                 {activeTask ? <DragOverlayCard task={activeTask} /> : null}
@@ -1476,6 +1498,7 @@ function BoardCanvas(props: BoardCanvasProps): JSX.Element {
               onOpen={onOpen}
               isMobile={isMobile}
               onSwipeAction={onSwipeAction}
+              canEdit={canEdit}
             />
           ))}
         </div>
@@ -1530,6 +1553,7 @@ function BoardColumn({
   onOpen,
   isMobile,
   onSwipeAction,
+  canEdit,
 }: {
   status: string;
   tasks: Task[];
@@ -1540,6 +1564,7 @@ function BoardColumn({
   onOpen: (id: string) => void;
   isMobile: boolean;
   onSwipeAction: (taskId: string, action: 'done' | 'snooze') => void;
+  canEdit: boolean;
 }): JSX.Element {
   // Register the column body as a drop target so dropping anywhere in the
   // column (not just onto a task) triggers a status change. Without this,
@@ -1573,16 +1598,18 @@ function BoardColumn({
           <StatusPill status={status} />
           <span className="text-xs text-muted-foreground font-mono">{tasks.length}</span>
         </div>
-        <button
-          type="button"
-          onClick={onAdd}
-          aria-label={`Add task to ${status}`}
-          className="tap rounded p-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-        >
-          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-        </button>
+        {canEdit && (
+          <button
+            type="button"
+            onClick={onAdd}
+            aria-label={`Add task to ${status}`}
+            className="tap rounded p-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+        )}
       </div>
       <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
         <div
