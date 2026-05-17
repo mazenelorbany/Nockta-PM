@@ -1,0 +1,115 @@
+import 'reflect-metadata';
+// MUST be imported before anything that touches process.env — bootstrap-env.ts
+// loads apps/api/.env via Node's built-in env-file loader so subsequent imports
+// (./config/env, etc.) see the populated process.env.
+import './bootstrap-env';
+import { maybeInitSentry } from './bootstrap-sentry';
+import { ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
+import { Logger } from 'nestjs-pino';
+import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { CorrelationIdInterceptor } from './common/interceptors/correlation-id.interceptor';
+import { MetricsInterceptor } from './common/interceptors/metrics.interceptor';
+import { Env } from './config/env';
+import { RedisIoAdapter } from './modules/realtime/realtime.adapter';
+
+async function bootstrap(): Promise<void> {
+  // Initialize Sentry first so it captures any errors thrown during Nest boot.
+  // No-ops when SENTRY_DSN isn't set.
+  await maybeInitSentry();
+
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+    // Capture the raw request body — needed by webhook signature verifiers (GitHub, Chat, deployments).
+    rawBody: true,
+  });
+  app.useLogger(app.get(Logger));
+
+  app.use(helmet({ contentSecurityPolicy: false }));
+  // Auth is bearer-token only (see Swagger addBearerAuth + JwtAuthGuard). We
+  // intentionally do NOT enable cookie credentials — no CSRF surface, no
+  // need for csurf middleware. Allowed origins are still scoped via
+  // CORS_ORIGINS to reduce cross-origin XHR exposure of the token in dev.
+  app.enableCors({
+    origin: Env.CORS_ORIGINS,
+    credentials: false,
+    exposedHeaders: ['x-correlation-id'],
+  });
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+      transformOptions: { enableImplicitConversion: true },
+    }),
+  );
+  app.useGlobalInterceptors(new CorrelationIdInterceptor(), new MetricsInterceptor());
+  app.useGlobalFilters(new AllExceptionsFilter());
+  app.setGlobalPrefix('api/v1', { exclude: ['health', 'metrics'] });
+
+  if (Env.NODE_ENV !== 'production') {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Nockta Flow API')
+      .setDescription('Internal engineering operations platform.')
+      .setVersion('0.1.0')
+      .addBearerAuth()
+      .build();
+    const doc = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('docs', app, doc, {
+      swaggerOptions: { persistAuthorization: true },
+    });
+  }
+
+  // Socket.IO with Redis adapter for horizontal scaling
+  const ioAdapter = new RedisIoAdapter(app);
+  await ioAdapter.connectToRedis();
+  app.useWebSocketAdapter(ioAdapter);
+
+  app.enableShutdownHooks();
+  await app.listen(Env.PORT);
+  // eslint-disable-next-line no-console
+  console.log(`API listening on :${Env.PORT}`);
+
+  // Loud, scary log if the dev-auth backdoor is open. Visible at every boot
+  // so an ops engineer SSHing into a misconfigured instance spots it before
+  // an attacker does. The startup also won't enable dev-auth at all in
+  // production (env.ts gate); this banner is for staging / preview envs.
+  if (Env.DEV_AUTH_ENABLED && Env.NODE_ENV !== 'production') {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '⚠️  DEV_AUTH_ENABLED=true — dev login endpoints (POST /auth/dev/*) are ' +
+        "active. This MUST NOT ship to production. Set DEV_AUTH_ENABLED=false " +
+        'or unset it before promoting this image.',
+    );
+  }
+  logIntegrationStatus();
+}
+
+/**
+ * Print a compact integration banner at boot so the operator can spot at a
+ * glance which optional features are active in this deployment. Anything
+ * marked DISABLED is silent at runtime — if you expected it to be on, this
+ * is the line that will tell you why a feature is no-op.
+ */
+function logIntegrationStatus(): void {
+  const on = (v: unknown) => (v ? 'ENABLED ' : 'disabled');
+  const lines = [
+    `  LLM provider     : ${Env.LLM_PROVIDER}${Env.LLM_PROVIDER === 'anthropic' ? (Env.ANTHROPIC_API_KEY ? '' : ' (NO API KEY!)') : ` @ ${Env.OLLAMA_URL}`}`,
+    `  Sentry           : ${on(Env.SENTRY_DSN)}`,
+    `  GitHub App       : ${on(Env.GITHUB_APP_ID && Env.GITHUB_APP_PRIVATE_KEY)}${Env.GITHUB_APP_SLUG ? ` (slug=${Env.GITHUB_APP_SLUG})` : ''}`,
+    `  Google Chat bot  : ${on(Env.GOOGLE_CHAT_SERVICE_ACCOUNT_JSON && Env.GOOGLE_CHAT_APP_ID)}`,
+    `  SMTP (magic link): ${Env.SMTP_HOST}:${Env.SMTP_PORT}${Env.SMTP_USER ? ' (authed)' : ' (unauthed)'}`,
+    `  Elasticsearch    : ${on(Env.SEARCH_ELASTIC_URL)}${Env.SEARCH_ELASTIC_URL ? '' : ' — using Postgres FTS'}`,
+    `  Qdrant           : ${Env.QDRANT_URL}`,
+    `  S3 storage       : ${Env.S3_ENDPOINT} (bucket=${Env.S3_BUCKET})`,
+    `  Metrics          : ${on(Env.PROMETHEUS_METRICS_ENABLED)}`,
+    `  CORS origins     : ${Env.CORS_ORIGINS.join(', ')}`,
+  ];
+  // eslint-disable-next-line no-console
+  console.log(`\n[boot] integration status (NODE_ENV=${Env.NODE_ENV}):\n${lines.join('\n')}\n`);
+}
+
+void bootstrap();

@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build artifacts
+dist/
+build/
+.vite/
+.turbo/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+# Defense-in-depth: catch per-app envs that historically slipped past the
+# top-level rule. If a real `apps/*/.env` is currently tracked, untrack it
+# with `git rm --cached apps/api/.env` then commit.
+apps/*/.env
+apps/*/.env.local
+!.env.example
+!apps/*/.env.example
+
+# Editor
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Coverage
+coverage/
+
+# Generated
+apps/api/prisma/generated/
+
+# Misc
+*.tgz

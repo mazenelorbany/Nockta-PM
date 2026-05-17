@@ -1,0 +1,754 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================================
+ * Nockta Flow — design tokens (dark-first)
+ *
+ * Drawn from the Nockta brand cube system + the nockta.com aesthetic:
+ *   black ink            #0A0A0A
+ *   nockta purple        #A78BFA   — primary brand accent
+ *   nockta lime          #D5E64A   — "in review" / "high priority"
+ *   nockta coral         #F75F4F   — "testing" / "critical"
+ *   nockta teal          #7DD3C0   — "done"
+ *
+ * Light theme available as `.light` on <html> if someone wants it; the app
+ * defaults to dark to match the Nockta site.
+ * ========================================================================= */
+
+@layer base {
+  :root {
+    /* Surfaces — layered neutral near-black with the faintest blue tint */
+    --background: 240 8% 5%;          /* deepest layer */
+    --foreground: 0 0% 96%;           /* warm off-white */
+
+    --card: 240 7% 8%;                /* one layer up from background */
+    --card-foreground: 0 0% 96%;
+
+    --popover: 240 7% 10%;
+    --popover-foreground: 0 0% 96%;
+
+    /* Brand */
+    --primary: 0 0% 96%;              /* white — used for primary CTAs on dark */
+    --primary-foreground: 240 8% 5%;
+
+    --brand: 262 84% 73%;             /* nockta purple */
+    --brand-foreground: 240 8% 5%;
+
+    --secondary: 240 5% 14%;
+    --secondary-foreground: 0 0% 96%;
+
+    --muted: 240 5% 11%;
+    --muted-foreground: 240 5% 60%;
+
+    --accent: 262 50% 18%;            /* deep purple — hover wash */
+    --accent-foreground: 0 0% 96%;
+
+    --destructive: 5 91% 64%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders — very subtle so they read as hairlines, not boxes */
+    --border: 240 5% 16%;
+    --input: 240 5% 16%;
+    --ring: 262 84% 73%;
+
+    /* Status colors */
+    --status-todo: 240 5% 55%;
+    --status-in-progress: 262 84% 73%;
+    --status-in-review: 66 78% 60%;
+    --status-testing: 5 91% 64%;
+    --status-done: 170 50% 60%;
+    --status-blocked: 0 84% 60%;
+
+    /* Priority colors */
+    --priority-low: 240 5% 55%;
+    --priority-medium: 262 84% 73%;
+    --priority-high: 66 78% 55%;
+    --priority-critical: 5 91% 64%;
+
+    --radius: 0.5rem;
+
+    /* Motion — strong easing curves, used everywhere a transition exists.
+     * The built-in `ease-out` is too weak; Emil's curves give animations
+     * an intentional, premium feel. Keep these in sync with tailwind.config. */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    /* Snappier curve for button release / press feedback (~100-160ms range).
+     * Shorter overshoot than --ease-out so it lands without lingering. */
+    --ease-snap: cubic-bezier(0.34, 1.2, 0.64, 1);
+
+    /* Standardized durations — keep UI animations under 300ms.
+     * Reach for these instead of arbitrary numbers so motion stays cohesive. */
+    --dur-instant: 100ms;
+    --dur-fast: 160ms;
+    --dur-base: 200ms;
+    --dur-slow: 280ms;
+
+    /* Brand gradients — used in hero panels */
+    --brand-gradient: radial-gradient(
+      ellipse at top left,
+      hsl(262 60% 24% / 0.6),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse at bottom right,
+      hsl(170 40% 20% / 0.35),
+      transparent 55%
+    );
+  }
+
+  .light {
+    --background: 36 33% 98%;
+    --foreground: 240 10% 4%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 4%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 4%;
+
+    --primary: 240 10% 4%;
+    --primary-foreground: 0 0% 100%;
+
+    --brand: 262 84% 60%;
+    --brand-foreground: 0 0% 100%;
+
+    --secondary: 36 25% 94%;
+    --secondary-foreground: 240 6% 10%;
+
+    --muted: 36 20% 92%;
+    --muted-foreground: 240 4% 40%;
+
+    --accent: 262 84% 96%;
+    --accent-foreground: 240 6% 10%;
+
+    --destructive: 5 91% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 6% 88%;
+    --input: 240 6% 88%;
+    --ring: 262 84% 60%;
+
+    --status-todo: 240 5% 55%;
+    --status-in-progress: 262 84% 60%;
+    --status-in-review: 66 78% 45%;
+    --status-testing: 5 91% 58%;
+    --status-done: 170 50% 45%;
+    --status-blocked: 0 84% 55%;
+
+    --priority-low: 240 5% 55%;
+    --priority-medium: 262 84% 60%;
+    --priority-high: 66 78% 42%;
+    --priority-critical: 5 91% 58%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    color-scheme: dark;
+  }
+  html.light {
+    color-scheme: light;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-feature-settings: 'rlig' 1, 'calt' 1, 'ss01' 1, 'cv11' 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* Headings use Plus Jakarta Sans — the same headline face ClickUp uses on
+   * marketing + product. Geometric, slightly rounder than Inter, reads as
+   * "modern productivity tool" without feeling generic. Inter handles body. */
+  h1, h2, h3, h4 {
+    @apply tracking-tight;
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    font-feature-settings: 'ss01' 1;
+  }
+  /* Form fields — every existing input/select/textarea picks up smooth focus
+   * affordance without per-component changes. Only animates border + shadow
+   * (transform/opacity-equivalent perf) so layout stays stable on focus. */
+  input,
+  select,
+  textarea {
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      box-shadow var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) ease;
+  }
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: none;
+    border-color: hsl(var(--ring) / 0.7);
+    box-shadow: 0 0 0 3px hsl(var(--ring) / 0.18);
+  }
+  /* Native "tap" feedback on buttons — anything with type=button or role=button
+   * gets a subtle press without an extra class. Existing `.tap` class composes
+   * over this and stays the source of truth for opt-in elements. */
+  button {
+    transition: transform var(--dur-instant) var(--ease-snap);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    button:active:not(:disabled):not([data-no-press]) {
+      transform: scale(0.97);
+    }
+  }
+
+  /* Custom scrollbar that respects the dark theme */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 999px;
+    border: 2px solid hsl(var(--background));
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.4);
+  }
+}
+
+/* ============================================================================
+ * Brand utilities
+ * ========================================================================= */
+
+@layer utilities {
+  .nockta-wordmark {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    font-feature-settings: 'ss01' 1;
+  }
+
+  /* Hairline tracking eyebrow — "ENGINEERED · NOT ASSEMBLED" style.
+   * Uses JetBrains Mono so it reads as a "system label" not a "title" — same
+   * effect ClickUp gets with Sometype Mono for captions. */
+  .nockta-eyebrow {
+    font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-size: 0.65rem;
+  }
+
+  /* Display headlines — Plus Jakarta with tighter tracking */
+  .display-heading {
+    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+  }
+
+  /* Brand gradient backdrop — for hero panels */
+  .bg-brand-gradient {
+    background-color: hsl(var(--background));
+    background-image: var(--brand-gradient);
+  }
+
+  /* Marquee animation for brand mantras */
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  .animate-marquee {
+    animation: marquee 40s linear infinite;
+  }
+}
+
+/* ============================================================================
+ * Motion primitives — reusable enter/exit animations.
+ *
+ * Rules of the road (Emil Kowalski):
+ *  - Only animate transform + opacity (GPU, off-main-thread).
+ *  - Never start at scale(0) — use scale(0.97) so the element has shape.
+ *  - Enter uses ease-out (responsive); exit can match.
+ *  - Keep UI animations under 300ms; 150-200ms is the sweet spot.
+ *  - Popovers/dropdowns scale from their trigger origin. Modals stay centered.
+ *  - Buttons get scale(0.97) on :active so they feel pressed.
+ * ========================================================================= */
+
+@layer utilities {
+  /* Press feedback — apply to any clickable element. Subtle, instant, makes
+   * the UI feel like it is listening. */
+  .tap {
+    transition: transform 160ms var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .tap:active {
+      transform: scale(0.97);
+    }
+  }
+
+  /* Dropdown / popover — scales in from a trigger-relative origin.
+   * Pair with a `style={{ transformOrigin }}` on the element, defaulting to
+   * `top right` (most popovers anchor to a right-aligned trigger).
+   *
+   * Two variants exist:
+   *   .animate-popover-in  — keyframe (legacy, restarts from zero on rapid retrigger)
+   *   .popover-trans       — transition + @starting-style (interruptible, retargets)
+   * Prefer `.popover-trans` on rapidly-toggled menus; the keyframe is fine for
+   * one-shot palettes and modals. */
+  @keyframes nockta-popover-in {
+    from {
+      opacity: 0;
+      transform: scale(0.97) translateY(-2px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+  .animate-popover-in {
+    animation: nockta-popover-in 180ms var(--ease-out) forwards;
+  }
+
+  /* Interruptible variant — transitions retarget on re-trigger, so quickly
+   * opening/closing a menu won't restart from scale(0.97) each time. Pair with
+   * a `transformOrigin` to point the scale at the trigger. */
+  .popover-trans {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    transition:
+      opacity var(--dur-fast) var(--ease-out),
+      transform var(--dur-fast) var(--ease-out);
+  }
+  @starting-style {
+    .popover-trans {
+      opacity: 0;
+      transform: scale(0.97) translateY(-2px);
+    }
+  }
+  /* Closing pair — apply via JS by toggling `data-state="closed"`. Faster than
+   * open (Emil's asymmetric timing — system response is quick). */
+  .popover-trans[data-state='closed'] {
+    opacity: 0;
+    transform: scale(0.97) translateY(-2px);
+    transition-duration: var(--dur-instant);
+  }
+
+  /* Modal / dialog — centered, slightly larger entry. */
+  @keyframes nockta-dialog-in {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .animate-dialog-in {
+    animation: nockta-dialog-in 200ms var(--ease-out) forwards;
+  }
+
+  /* Overlay (the dim/blur backdrop behind modals). Keep it fast so the modal
+   * doesn't feel delayed. */
+  @keyframes nockta-overlay-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .animate-overlay-in {
+    animation: nockta-overlay-in 140ms ease forwards;
+  }
+
+  /* Drawer — slides from the right. translateX with % so it adapts to width.
+   * Enter via keyframe (one-shot, smooth); exit via a transition so it can
+   * retarget cleanly. Asymmetric timing: enter is 320ms (deliberate), exit is
+   * 200ms (system response). Pair the wrapping component with a `closing`
+   * state that flips data-state to `closed` ~200ms before unmount. */
+  @keyframes nockta-drawer-in-right {
+    from { transform: translateX(100%); }
+    to   { transform: translateX(0); }
+  }
+  .animate-drawer-in-right {
+    animation: nockta-drawer-in-right 320ms var(--ease-drawer) forwards;
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+  .animate-drawer-in-right[data-state='closed'] {
+    transform: translateX(100%);
+  }
+  /* Mobile drawer — slides up from the bottom. Same asymmetric timing as the
+   * right drawer: 320ms enter, 200ms exit on data-state='closed'. */
+  @keyframes nockta-drawer-in-bottom {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+  .animate-drawer-in-bottom {
+    animation: nockta-drawer-in-bottom 320ms var(--ease-drawer) forwards;
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+  .animate-drawer-in-bottom[data-state='closed'] {
+    transform: translateY(100%);
+  }
+  .animate-overlay-in {
+    transition: opacity var(--dur-base) ease;
+  }
+  .animate-overlay-in[data-state='closed'] {
+    opacity: 0;
+  }
+
+  /* List stagger — child fade+rise. Tag rows with `.stagger-item` and a parent
+   * with `.stagger-list` to get a quick cascade on mount. Capped at 8 children
+   * so very long lists don't feel slow. */
+  @keyframes nockta-stagger-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .stagger-list > .stagger-item {
+    opacity: 0;
+    animation: nockta-stagger-in 260ms var(--ease-out) forwards;
+  }
+  .stagger-list > .stagger-item:nth-child(1) { animation-delay: 0ms; }
+  .stagger-list > .stagger-item:nth-child(2) { animation-delay: 30ms; }
+  .stagger-list > .stagger-item:nth-child(3) { animation-delay: 60ms; }
+  .stagger-list > .stagger-item:nth-child(4) { animation-delay: 90ms; }
+  .stagger-list > .stagger-item:nth-child(5) { animation-delay: 120ms; }
+  .stagger-list > .stagger-item:nth-child(6) { animation-delay: 150ms; }
+  .stagger-list > .stagger-item:nth-child(7) { animation-delay: 180ms; }
+  .stagger-list > .stagger-item:nth-child(n+8) { animation-delay: 210ms; }
+
+  /* Card hover lift — gated to hover-capable devices so touch doesn't trigger
+   * false positives on tap. */
+  .card-hover {
+    transition: transform 180ms var(--ease-out), border-color 180ms ease, background-color 180ms ease;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .card-hover:hover {
+      transform: translateY(-1px);
+    }
+  }
+
+  /* Composable form field — full pattern (border, padding, font, focus glow).
+   * Use on new inputs/selects/textareas: `<input className="field" />`.
+   * Existing fields still get the base focus animation from @layer base. */
+  .field {
+    width: 100%;
+    border: 1px solid hsl(var(--input));
+    background-color: hsl(var(--background));
+    border-radius: calc(var(--radius) - 2px);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: hsl(var(--foreground));
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      box-shadow var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) ease;
+  }
+  .field::placeholder {
+    color: hsl(var(--muted-foreground) / 0.7);
+  }
+  .field:hover:not(:focus-visible) {
+    border-color: hsl(var(--ring) / 0.35);
+  }
+  .field:focus-visible {
+    outline: none;
+    border-color: hsl(var(--ring) / 0.7);
+    box-shadow: 0 0 0 3px hsl(var(--ring) / 0.18);
+    background-color: hsl(var(--card));
+  }
+  .field:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  /* Board card lift — replaces the instant `scale-[1.02]` snap with a
+   * smooth ramp for both shadow and scale. Apply via class, gate the
+   * dragging state on a `data-dragging="true"` attribute. */
+  .board-card {
+    transition:
+      transform var(--dur-base) var(--ease-out),
+      box-shadow var(--dur-base) var(--ease-out),
+      border-color var(--dur-fast) ease,
+      opacity var(--dur-fast) ease;
+    will-change: transform;
+  }
+  .board-card[data-dragging='true'] {
+    transform: scale(1.025) rotate(-0.4deg);
+    box-shadow:
+      0 16px 32px -12px hsl(0 0% 0% / 0.55),
+      0 4px 12px -2px hsl(0 0% 0% / 0.4);
+    opacity: 0.95;
+    cursor: grabbing;
+  }
+
+  /* Drop-zone affordance — column body subtly highlights when a card hovers.
+   * Apply via dnd-kit's `isOver` boolean → `data-over="true"`. */
+  .board-column-body {
+    transition: background-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+  }
+  .board-column-body[data-over='true'] {
+    background-color: hsl(var(--brand) / 0.06);
+    box-shadow: inset 0 0 0 1px hsl(var(--brand) / 0.25);
+  }
+
+  /* Subtle item-hover row — sidebar nav, command palette, list view rows.
+   * Reads as a smooth bg fade instead of a hard color flip. */
+  .row-hover {
+    transition:
+      background-color var(--dur-fast) ease,
+      color var(--dur-fast) ease;
+  }
+
+  /* Field group section header — used in TaskDetailDrawer side rails to make
+   * editable cells feel like a single object instead of disconnected pieces. */
+  .field-cell {
+    transition:
+      background-color var(--dur-fast) ease,
+      border-color var(--dur-fast) ease;
+    border-radius: calc(var(--radius) - 4px);
+  }
+  .field-cell:hover {
+    background-color: hsl(var(--accent) / 0.4);
+  }
+
+  /* ============================================================================
+   * Modern + fancy primitives — glass surfaces, gradient meshes, animated
+   * counters, scrim treatments. All composable; pair with existing motion.
+   * ========================================================================= */
+
+  /* Glass surface — frosted dark with a subtle inner highlight. Use on
+   * popovers, command palette, drawer overlays. The double-shadow gives a
+   * "raised glass" feel without being heavy. */
+  .glass {
+    background-color: hsl(var(--card) / 0.65);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    border: 1px solid hsl(var(--border) / 0.8);
+    box-shadow:
+      0 1px 0 hsl(0 0% 100% / 0.04) inset,
+      0 24px 60px -24px hsl(0 0% 0% / 0.55),
+      0 8px 24px -12px hsl(0 0% 0% / 0.35);
+  }
+  .glass-strong {
+    background-color: hsl(var(--card) / 0.85);
+    backdrop-filter: blur(28px) saturate(1.6);
+    -webkit-backdrop-filter: blur(28px) saturate(1.6);
+    border: 1px solid hsl(var(--border) / 0.9);
+    box-shadow:
+      0 1px 0 hsl(0 0% 100% / 0.06) inset,
+      0 32px 80px -24px hsl(0 0% 0% / 0.65);
+  }
+  /* Glass scrim — for modal backdrops. Replaces flat black/50. */
+  .glass-scrim {
+    background-color: hsl(240 8% 5% / 0.62);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  /* Gradient mesh — animated multi-radial backdrop. Subtle on dark surfaces.
+   * Apply to a container with `position: relative; overflow: hidden`. */
+  .gradient-mesh {
+    position: relative;
+    isolation: isolate;
+  }
+  .gradient-mesh::before {
+    content: '';
+    position: absolute;
+    inset: -20%;
+    z-index: -1;
+    background:
+      radial-gradient(circle at 20% 30%, hsl(262 84% 35% / 0.35), transparent 40%),
+      radial-gradient(circle at 80% 20%, hsl(170 50% 30% / 0.25), transparent 45%),
+      radial-gradient(circle at 50% 80%, hsl(262 60% 25% / 0.3), transparent 50%);
+    animation: nockta-mesh-drift 24s ease-in-out infinite alternate;
+    filter: blur(40px);
+  }
+  @keyframes nockta-mesh-drift {
+    0%   { transform: translate(0, 0) rotate(0deg); }
+    50%  { transform: translate(-3%, 2%) rotate(3deg); }
+    100% { transform: translate(2%, -2%) rotate(-2deg); }
+  }
+
+  /* Subtle gradient mesh — same idea but quieter, for headers/sections. */
+  .gradient-mesh-subtle {
+    position: relative;
+    isolation: isolate;
+  }
+  .gradient-mesh-subtle::before {
+    content: '';
+    position: absolute;
+    inset: -10%;
+    z-index: -1;
+    background:
+      radial-gradient(ellipse at top left, hsl(262 84% 30% / 0.18), transparent 55%),
+      radial-gradient(ellipse at bottom right, hsl(170 50% 25% / 0.12), transparent 50%);
+    filter: blur(30px);
+    pointer-events: none;
+  }
+
+  /* Animated number counter — purely visual cue that the number is "fresh."
+   * Wrap a tabular-nums span with .count-up to get a brief slide-up entry. */
+  @keyframes nockta-count-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .count-up {
+    animation: nockta-count-in 360ms var(--ease-out) both;
+  }
+
+  /* Page transition pair — used by framer-motion's <PageTransition>. CSS
+   * fallback for non-JS environments. The actual transition is JS-driven. */
+  .page-fade {
+    animation: nockta-page-in 240ms var(--ease-out) both;
+  }
+  @keyframes nockta-page-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Magnetic hover — subtle lift + glow for premium cards. Pair with .card-hover
+   * via composition: <div class="card-hover magnetic">. */
+  .magnetic {
+    position: relative;
+    transition:
+      transform 280ms var(--ease-out),
+      box-shadow 280ms var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .magnetic:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 12px 32px -16px hsl(var(--brand) / 0.35),
+        0 4px 12px -6px hsl(0 0% 0% / 0.4);
+    }
+  }
+
+  /* Hairline divider — thinner than border-border, for dense vertical lists. */
+  .hairline {
+    border-color: hsl(var(--border) / 0.5);
+  }
+
+  /* Kbd — keyboard shortcut hint. Used in command palette + tooltips. */
+  .kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.4em;
+    padding: 0 0.35em;
+    height: 1.5em;
+    font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+    font-size: 0.7em;
+    font-weight: 500;
+    color: hsl(var(--muted-foreground));
+    background-color: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: calc(var(--radius) - 4px);
+    box-shadow: 0 1px 0 hsl(var(--border));
+  }
+}
+
+/* Reduced motion — keep colour/opacity transitions for affordance, drop all
+ * transform-based movement. Animations cause discomfort for some users. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 80ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-marquee { animation: none !important; }
+  .board-card[data-dragging='true'] {
+    transform: none !important;
+  }
+  .gradient-mesh::before,
+  .gradient-mesh-subtle::before { animation: none !important; }
+  .magnetic:hover { transform: none !important; }
+}
+
+/* =============================================================================
+ * .prose-task — minimal typography for rendered markdown inside the task
+ * detail drawer. Hand-rolled instead of pulling in @tailwindcss/typography
+ * because we only need a tight, design-controlled subset and don't want
+ * its opinionated body-copy sizing.
+ * =========================================================================== */
+.prose-task {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: hsl(var(--foreground));
+}
+.prose-task > * + * { margin-top: 0.6em; }
+.prose-task h1,
+.prose-task h2,
+.prose-task h3,
+.prose-task h4,
+.prose-task h5,
+.prose-task h6 {
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.2em;
+  margin-bottom: 0.4em;
+}
+.prose-task h1 { font-size: 1.25rem; }
+.prose-task h2 { font-size: 1.1rem; }
+.prose-task h3 { font-size: 1rem; }
+.prose-task h4,
+.prose-task h5,
+.prose-task h6 { font-size: 0.9rem; color: hsl(var(--muted-foreground)); }
+.prose-task p { margin: 0; }
+.prose-task strong { font-weight: 600; color: hsl(var(--foreground)); }
+.prose-task em { font-style: italic; }
+.prose-task a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+.prose-task a:hover { text-decoration-thickness: 2px; }
+.prose-task code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+.prose-task pre {
+  background: hsl(var(--muted));
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.85em;
+}
+.prose-task pre code {
+  padding: 0;
+  background: transparent;
+}
+.prose-task ul,
+.prose-task ol {
+  padding-left: 1.4em;
+}
+.prose-task ul { list-style: disc; }
+.prose-task ol { list-style: decimal; }
+.prose-task li + li { margin-top: 0.25em; }
+.prose-task li > p { display: inline; }
+.prose-task blockquote {
+  border-left: 3px solid hsl(var(--border));
+  padding: 0.1em 0 0.1em 0.9em;
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+.prose-task hr {
+  border: none;
+  border-top: 1px solid hsl(var(--border));
+  margin: 1em 0;
+}
+.prose-task img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+.prose-task table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.85em;
+}
+.prose-task th,
+.prose-task td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.35rem 0.6rem;
+  text-align: left;
+}
+.prose-task th { background: hsl(var(--muted) / 0.4); font-weight: 600; }

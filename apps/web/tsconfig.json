@@ -1,0 +1,13 @@
+{
+  "extends": "@nockta/tsconfig/react.json",
+  "compilerOptions": {
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["src/*"],
+      "@nockta/types": ["../../packages/types/src"],
+      "@nockta/sdk": ["../../packages/sdk/src"],
+      "@nockta/ui": ["../../packages/ui/src"]
+    }
+  },
+  "include": ["src", "vite.config.ts"]
+}

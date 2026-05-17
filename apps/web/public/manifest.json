@@ -1,0 +1,38 @@
+{
+  "name": "Nockta Flow",
+  "short_name": "Nockta",
+  "description": "Project management for engineering, design, and client teams.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0A0A0A",
+  "theme_color": "#0A0A0A",
+  "categories": ["productivity", "business"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "My tasks",
+      "short_name": "Tasks",
+      "url": "/my-tasks"
+    },
+    {
+      "name": "Inbox",
+      "short_name": "Inbox",
+      "url": "/inbox"
+    }
+  ]
+}

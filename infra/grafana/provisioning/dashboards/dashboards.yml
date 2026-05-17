@@ -1,0 +1,15 @@
+apiVersion: 1
+
+# Auto-load every dashboard JSON dropped into /var/lib/grafana/dashboards. The
+# docker-compose volume mount maps the local dashboards/ folder there.
+providers:
+  - name: nockta
+    orgId: 1
+    folder: 'Nockta Flow'
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

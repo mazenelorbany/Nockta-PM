@@ -1,0 +1,18 @@
+**/node_modules
+**/dist
+**/build
+**/.turbo
+**/.vite
+**/coverage
+.git
+.gitignore
+**/.env
+**/.env.local
+**/.env.*.local
+infra/postgres/data
+**/*.log
+**/.DS_Store
+**/.vscode
+**/.idea
+Nockta\ Flow.pdf
+GRILL-SUMMARY.md

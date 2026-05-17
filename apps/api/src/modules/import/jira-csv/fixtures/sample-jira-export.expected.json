@@ -1,0 +1,66 @@
+{
+  "_comment": "Golden output for sample-jira-export.csv when run through the Jira CSV adapter with the 'engineering' workflow preset and no per-run mapping overrides. Rows are listed in the order the parser yields them (data rows in CSV order). Each entry mirrors what dryRun() projects into `fields`. Row 4 (PROJ-104) is intentionally skipped (empty Summary). Row 5 (PROJ-105) carries two validation errors so it lands in `errors[]` but not in `wouldInsert`.",
+  "wouldInsert": 3,
+  "wouldSkip": 1,
+  "wouldError": 1,
+  "rows": [
+    {
+      "rowIndex": 2,
+      "fields": {
+        "title": "Investigate flaky login flow",
+        "description": "Steps to reproduce: open /login",
+        "priority": "High",
+        "type": "Bug",
+        "status": "In Progress",
+        "assigneeEmail": "jane@acme.com",
+        "dueDate": "2024-10-01",
+        "labels": "backend, auth"
+      },
+      "errors": []
+    },
+    {
+      "rowIndex": 3,
+      "fields": {
+        "title": "Add dark-mode toggle",
+        "description": "User-facing dark mode switch on the navbar",
+        "priority": "Medium",
+        "type": "Story",
+        "status": "Todo",
+        "labels": "frontend"
+      },
+      "errors": []
+    },
+    {
+      "rowIndex": 4,
+      "fields": {
+        "title": "Ship release notes",
+        "description": "Document the release in /docs/release-notes",
+        "priority": "Low",
+        "type": "Task",
+        "status": "Done",
+        "assigneeEmail": "jane@acme.com",
+        "labels": "docs"
+      },
+      "errors": []
+    },
+    {
+      "rowIndex": 5,
+      "skipped": true,
+      "fields": { "title": null }
+    },
+    {
+      "rowIndex": 6,
+      "fields": {
+        "title": "Unknown priority test",
+        "type": "Task",
+        "status": "Todo",
+        "dueDate": "2024-10-15",
+        "labels": "backend"
+      },
+      "errors": [
+        { "field": "priority", "message": "Unknown priority \"UrgentTypo\"; expected Highest/High/Medium/Low/Lowest" },
+        { "field": "assigneeEmail", "message": "Assignee email \"bad-email\" is not a valid email address" }
+      ]
+    }
+  ]
+}

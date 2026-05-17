@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "_comment": "deleteOutDir is false so the dev-script's pre-build of dist/ survives nest start --watch's race. Otherwise nest start --watch nukes dist/ before tsc has finished re-emitting and node fails with MODULE_NOT_FOUND.",
+    "deleteOutDir": false,
+    "tsConfigPath": "tsconfig.build.json"
+  }
+}

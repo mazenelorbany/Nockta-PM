@@ -1,0 +1,82 @@
+{
+  "title": "Nockta Flow — API Latency",
+  "uid": "nockta-api-latency",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "tags": ["nockta", "api", "latency"],
+  "time": { "from": "now-6h", "to": "now" },
+  "timezone": "browser",
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Request rate (req/s, per status)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(nockta_http_requests_total[1m]))",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "min": 0 } }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Latency percentiles (5m)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(nockta_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(nockta_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(nockta_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "min": 0 } }
+    },
+    {
+      "id": 3,
+      "type": "table",
+      "title": "Slowest routes (top 10 by p95)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 9 },
+      "targets": [
+        {
+          "expr": "topk(10, histogram_quantile(0.95, sum by (route, le) (rate(nockta_http_request_duration_seconds_bucket[5m]))))",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "5xx error rate (1m)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 9 },
+      "targets": [
+        {
+          "expr": "sum(rate(nockta_http_requests_total{status=~\"5..\"}[1m])) / sum(rate(nockta_http_requests_total[1m]))",
+          "legendFormat": "5xx fraction",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 } }
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+name: CI
+
+# Run on every PR and on pushes to main. Four lightweight gates: typecheck,
+# lint, build, test. Each job is independent so a slow Prisma generate in one
+# doesn't gate the others, and `concurrency` below cancels older runs on the
+# same ref so a quick second push doesn't double-spend CI minutes.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Cancel older runs on the same ref so a quick second push doesn't double-spend
+# CI minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        run: pnpm db:generate
+      - name: Typecheck
+        run: pnpm typecheck
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        run: pnpm db:generate
+      - name: Lint
+        run: pnpm lint
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        run: pnpm db:generate
+      - name: Build
+        run: pnpm build
+
+  hygiene:
+    name: Hygiene
+    # Runs the repo's hygiene script — fails on editor cruft, stale TODOs,
+    # unused exports, and stray production console.log calls. Cheap (<30s)
+    # and catches the rot before it ships.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # `git blame` needs full history to date stale TODOs.
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Hygiene check
+        run: pnpm hygiene
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        # Several services import Prisma client types at module-load time, so
+        # tests need the client generated even though they mock the live
+        # connection. Cheap (~5s) and removes a frequent "Module not found:
+        # @prisma/client" footgun.
+        run: pnpm db:generate
+      - name: Test
+        run: pnpm test

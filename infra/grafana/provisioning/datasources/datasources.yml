@@ -1,0 +1,17 @@
+apiVersion: 1
+
+# Explicit UIDs so provisioned dashboards can reference these datasources by
+# stable identifier (e.g. {"datasource": {"type": "prometheus", "uid": "prometheus"}}).
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://loki:3100

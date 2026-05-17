@@ -1,0 +1,2251 @@
+// =============================================================================
+// Nockta Flow — Prisma schema
+// Source of truth: /Users/mazen/Documents/Work/pm/GRILL-SUMMARY.md
+// =============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DATABASE_DIRECT_URL")
+  extensions = [pgcrypto, pg_trgm, citext, btree_gin]
+}
+
+// -----------------------------------------------------------------------------
+// Enums
+// -----------------------------------------------------------------------------
+
+enum UserKind {
+  internal
+  client
+}
+
+enum CompanyRole {
+  Admin
+  Member
+}
+
+enum ProjectRole {
+  Manager
+  Contributor
+  Viewer
+  Client
+}
+
+enum ProjectVisibility {
+  public
+  teams
+  private
+}
+
+enum WorkflowPreset {
+  engineering
+  design
+  generic
+}
+
+enum Priority {
+  Low
+  Medium
+  High
+  Critical
+}
+
+// Issue type — Jira-style hierarchy.
+//   Epic     — large body of work spanning multiple sprints; parents Stories/Tasks/Bugs.
+//   Story    — user-facing feature.
+//   Task     — engineering work item (default).
+//   Bug      — defect.
+//   Subtask  — sub-item of any non-Subtask; requires a parent.
+enum TaskType {
+  Epic
+  Story
+  Task
+  Bug
+  Subtask
+}
+
+enum Visibility {
+  internal
+  client_visible
+}
+
+enum EventVisibility {
+  public
+  internal
+  admin_only
+}
+
+enum SprintState {
+  planned
+  active
+  completed
+}
+
+enum TaskLinkType {
+  blocks
+  related
+  duplicate
+}
+
+enum AttachmentParentType {
+  Task
+  Comment
+  BugReport
+}
+
+enum ScanStatus {
+  pending
+  clean
+  infected
+}
+
+enum DeploymentStatus {
+  started
+  succeeded
+  failed
+  rolled_back
+}
+
+enum DeploymentSource {
+  vercel
+  railway
+  github_actions
+  docker
+  generic
+}
+
+enum AccessSubjectKind {
+  user
+  team
+}
+
+enum TaskGithubLinkKind {
+  commit
+  pr
+  issue
+}
+
+enum NotificationChannel {
+  in_app
+  chat
+  email
+}
+
+enum MagicLinkIntent {
+  client_login
+  client_signup
+}
+
+enum GoalStatus {
+  active
+  achieved
+  dropped
+}
+
+enum AutomationTrigger {
+  task_created
+  task_status_changed
+  task_assigned
+  task_unassigned
+  task_due_soon
+  task_blocked
+  task_labeled
+  comment_added
+}
+
+enum AutomationAction {
+  set_priority
+  set_assignee
+  add_label
+  remove_label
+  transition_status
+  add_comment
+  add_watcher
+  notify_user
+  set_due_date
+  set_sprint
+  /// Fires an HTTP POST to a user-configured URL with the task + trigger
+  /// payload. Optional HMAC signature header for receiver verification.
+  send_webhook
+}
+
+enum AutomationRunStatus {
+  succeeded
+  skipped
+  failed
+}
+
+enum RecurrenceFrequency {
+  daily
+  weekly
+  monthly
+}
+
+enum DashboardScope {
+  /// Only the owner can see this dashboard.
+  private
+  /// Anyone in the workspace can see (read-only unless they're the owner).
+  workspace
+  /// Visible to a specific list of users / teams via DashboardAccess.
+  shared
+}
+
+enum CustomFieldKind {
+  text
+  number
+  select
+  multiselect
+  date
+  url
+  checkbox
+  /// Read-only, computed at fetch time from an expression that references
+  /// other custom fields by name. See CustomFieldDefinition.formulaExpression
+  /// and `formula-evaluator.ts`.
+  formula
+  /// Read-only, computed at fetch time by aggregating a numeric field over
+  /// a relation (subtasks / linkedTasks). See CustomFieldDefinition.rollupConfig.
+  rollup
+}
+
+// -----------------------------------------------------------------------------
+// Workspace — multi-tenant boundary
+//
+// One row per tenant. Every per-tenant resource (Project, User,
+// OutboundWebhook, WorkspaceAiSettings, AuditLogEntry, TaskTemplate)
+// carries a `workspaceId` FK back here. Single-tenant deployments boot
+// with a single row id='default' seeded by migration 0009 and every
+// existing row attached to it.
+//
+// `settings` is a free-form JSON blob — feature flags, branding, default
+// timezone, etc. Strongly-typed knobs (AI thresholds, etc.) live on
+// their own per-workspace tables (WorkspaceAiSettings).
+// -----------------------------------------------------------------------------
+
+model Workspace {
+  id        String   @id
+  name      String
+  slug      String   @unique
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users             User[]
+  projects          Project[]
+  outboundWebhooks  OutboundWebhook[]
+  webhookDeliveries WebhookDelivery[]
+  aiSettings        WorkspaceAiSettings?
+  auditLogEntries   AuditLogEntry[]
+  taskTemplates     TaskTemplate[]
+  members           WorkspaceMember[]
+}
+
+/// Per-user membership in a workspace. A User can belong to multiple
+/// workspaces, each with a `Owner | Admin | Member` role. The bootstrap
+/// migration (0013_workspace_members) backfills one row per existing User
+/// into the 'default' workspace so the single-tenant path stays unchanged.
+///
+/// Why a separate join table instead of widening User.companyRole:
+///   - `companyRole` is a coarse company-wide tier (Admin vs Member of
+///     the Nockta org). `WorkspaceMember.role` is fine-grained: a user
+///     can be Admin in workspace A and a Member in workspace B without
+///     polluting their company-level role.
+///   - The same User row needs to participate in multiple workspaces in
+///     the multi-tenant future; a foreign key on User can only point at
+///     one workspace. The join table breaks that 1:1.
+///
+/// `role` is a string (not an enum) so adding a new tier (e.g. Viewer)
+/// doesn't require a Postgres enum migration.
+model WorkspaceMember {
+  workspaceId String
+  userId      String   @db.Uuid
+  /// One of 'Owner' | 'Admin' | 'Member'. Validated at the service layer
+  /// (WorkspaceService.assertMember).
+  role        String
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation("WorkspaceMemberUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([workspaceId, userId])
+  @@index([userId])
+  @@index([workspaceId, role])
+}
+
+// -----------------------------------------------------------------------------
+// Identity & auth
+// -----------------------------------------------------------------------------
+
+model User {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String
+  email       String   @unique @db.Citext
+  kind        UserKind
+  companyRole CompanyRole? // null for clients
+  name        String
+  avatarUrl   String?
+  googleId    String?     @unique // internal users only
+  archivedAt  DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // ---- MFA / two-factor auth ----
+  /// Base32-encoded TOTP secret, encrypted at rest via AES-GCM
+  /// (TotpService.encryptSecret). Null = no MFA enrolled.
+  totpSecret    String?
+  mfaEnabled    Boolean   @default(false)
+  /// SHA-256-hashed one-time backup codes. Consumed on use (the matching hash
+  /// is removed from the array). Generated 10-at-a-time on enrollment.
+  mfaBackupCodes String[]  @default([])
+
+  // ---- Time-tracking preferences ----
+  /// Optional weekly worklog target in hours. When set, the personal dashboard
+  /// shows progress vs target plus a consecutive-weeks streak counter computed
+  /// live from Worklog rows. Null = the target widget is hidden entirely.
+  weeklyHoursTarget Int?
+  /// Pomodoro-mode opt-in (Pass 5). When true, the ActiveTimerChip overlays
+  /// 25-min work / 5-min break / 15-min long-break phase indicators and the
+  /// client auto-stops the worklog timer at the end of a work block. Pure
+  /// client-side state machine; the API only persists the toggle.
+  pomodoroEnabled Boolean @default(false)
+
+  /// Smart-digest opt-in (Pass I — Notifications 8→9). When true, the
+  /// dispatcher routes immediate notifications through NotificationDigestService
+  /// which batches into a single rolled-up email/Chat message every ~5 minutes.
+  /// Default OFF — explicit opt-in keeps single-event UX intact for users who
+  /// have not asked for batching.
+  digestEnabled Boolean @default(false)
+  /// Where to flush the digest to when it fires. 'email' uses Auth's Gmail SMTP
+  /// (re-used as a transactional rail; the magic-link service is the only other
+  /// caller), 'chat' fans out via the existing chat-dispatcher path. Defaults
+  /// to 'email' because chat requires the user to have bound their Chat account.
+  digestChannel String  @default("email")
+
+  refreshTokens         RefreshToken[]
+  chatBinding           ChatBinding?
+  teamMemberships       TeamMember[]
+  projectAccessGrants   ProjectAccess[]      @relation("ProjectAccessUser")
+  createdProjects       Project[]            @relation("ProjectCreator")
+  authoredTasks         Task[]               @relation("TaskCreator")
+  assignedTasks         Task[]               @relation("TaskAssignee")
+  reportedTasks         Task[]               @relation("TaskReporter")
+  authoredComments      Comment[]            @relation("CommentAuthor")
+  commentMentionsOnMe   CommentMention[]     @relation("CommentMentionUser")
+  commentReactions      CommentReaction[]    @relation("CommentReactionUser")
+  commentRevisionsAuthored CommentRevision[] @relation("CommentRevisionEditor")
+  uploadedAttachments   Attachment[]
+  emittedEvents         Event[]              @relation("EventActor")
+  notifications         Notification[]
+  notificationPrefs     NotificationPreference[]
+  taskMutes             TaskMute[]
+  taskWatches           TaskWatcher[]
+  taskLinksCreated      TaskLink[]           @relation("TaskLinkCreator")
+  savedSearches         SavedSearch[]
+  projectAccessGrantedBy ProjectAccess[]     @relation("ProjectAccessGrantedBy")
+  teamsCreated          Team[]               @relation("TeamCreator")
+  sprintsCreated        Sprint[]             @relation("SprintCreator")
+  labelsAdded           TaskLabel[]          @relation("TaskLabelAddedBy")
+  coReporting           TaskReporter[]       @relation("TaskReporterUser")
+  reporterAdditions     TaskReporter[]       @relation("TaskReporterAddedBy")
+  worklogs              Worklog[]            @relation("WorklogAuthor")
+  goalsOwned            Goal[]               @relation("GoalOwner")
+  goalTasksAdded        GoalTask[]           @relation("GoalTaskAddedBy")
+  docsAuthored          Doc[]                @relation("DocAuthor")
+  docRevisionsAuthored  DocRevision[]        @relation("DocRevisionAuthor")
+  docCommentsAuthored   DocComment[]         @relation("DocCommentAuthor")
+  automationsCreated    Automation[]         @relation("AutomationCreator")
+  taskTemplatesCreated  TaskTemplate[]       @relation("TaskTemplateCreator")
+  dashboardsOwned       Dashboard[]          @relation("DashboardOwner")
+  dashboardAccess       DashboardAccess[]    @relation("DashboardAccessUser")
+  projectTemplatesCreated ProjectTemplate[]  @relation("ProjectTemplateCreator")
+  workloadSnapshots     DailyWorkloadSnapshot[] @relation("DailyWorkloadSnapshotUser")
+  importRuns            ImportRun[]             @relation("ImportRunActor")
+  jiraStatusMapsCreated JiraStatusMap[]         @relation("JiraStatusMapCreator")
+  auditLogEntries       AuditLogEntry[]         @relation("AuditLogUser")
+  notificationMutes     NotificationMute[]
+  notificationSnoozeRules NotificationSnoozeRule[]
+  outboundWebhooksCreated OutboundWebhook[]      @relation("OutboundWebhookCreator")
+  pushSubscriptions     PushSubscription[]
+  aiUsageEvents         AiUsageEvent[]            @relation("AiUsageEventUser")
+  exportSchedulesCreated ExportSchedule[]         @relation("ExportScheduleCreator")
+  workspaceMemberships  WorkspaceMember[]         @relation("WorkspaceMemberUser")
+  // Pass I (Notifications 8→9) — batched digest queue, one row per user/channel.
+  notificationDigests   NotificationDigest[]
+  // Pass I (Sprints 8→9) — retro authorship + goal-hit evaluation.
+  sprintRetrosAuthored  SprintRetro[]             @relation("SprintRetroAuthor")
+  sprintGoalEvaluations SprintGoalEvaluation[]    @relation("SprintGoalEvaluator")
+  // Pass I (Comments 8→9) — workspace/project comment templates.
+  commentTemplatesCreated CommentTemplate[]       @relation("CommentTemplateCreator")
+  // Pass I (Analytics 8→9) — author of a saved custom report definition.
+  customReportsCreated  CustomReport[]            @relation("CustomReportCreator")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([kind])
+  @@index([googleId])
+  @@index([workspaceId])
+}
+
+/// Browser Web Push subscriptions for a user. One row per (user, endpoint) —
+/// the endpoint is the URL the push service (FCM/Apple/Mozilla) uses to
+/// deliver pushes. A user can have multiple rows (one per device/browser).
+///
+/// Pruned automatically when the push service returns 410 Gone for an
+/// endpoint — see WebPushService.dispatch.
+model PushSubscription {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  endpoint   String   @unique
+  /// Base64url-encoded P-256 public key portion of the subscription. Passed
+  /// verbatim to the `web-push` library at dispatch time.
+  p256dh     String
+  /// Base64url-encoded auth secret. Same — pass-through to `web-push`.
+  auth       String
+  /// Optional free-form label so users can identify devices in a future
+  /// Settings → Devices UI. Null = unlabeled.
+  label      String?
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Append-only log of user-facing security events: logins, MFA enrollment/use,
+/// session revocations. Surfaced in Settings → Security → Recent activity.
+model AuditLogEntry {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String
+  userId      String?  @db.Uuid
+  action      String   // 'login.password', 'login.google', 'mfa.enrolled', 'mfa.verified', 'mfa.failed', 'logout', 'session.revoked', etc.
+  ip          String?
+  userAgent   String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  user      User?     @relation("AuditLogUser", fields: [userId], references: [id], onDelete: SetNull)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([action])
+  @@index([workspaceId])
+}
+
+model RefreshToken {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
+  tokenHash    String    @unique
+  expiresAt    DateTime
+  rotatedToId  String?   @db.Uuid // points at successor token if this one was rotated
+  revokedAt    DateTime?
+  ip           String?
+  userAgent    String?
+  createdAt    DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model MagicLink {
+  id        String          @id @default(uuid()) @db.Uuid
+  email     String          @db.Citext
+  tokenHash String          @unique
+  intent    MagicLinkIntent
+  expiresAt DateTime
+  usedAt    DateTime?
+  ip        String?
+  createdAt DateTime        @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
+model ChatBinding {
+  userId             String   @id @db.Uuid
+  googleChatUserId   String
+  googleChatSpaceId  String
+  connectedAt        DateTime @default(now())
+  lastSeenAt         DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([googleChatUserId])
+}
+
+// -----------------------------------------------------------------------------
+// Org: teams (= groups, override of brief)
+// -----------------------------------------------------------------------------
+
+model Team {
+  id          String   @id @default(uuid()) @db.Uuid
+  slug        String   @unique
+  name        String
+  description String?
+  createdById String   @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy        User             @relation("TeamCreator", fields: [createdById], references: [id])
+  members          TeamMember[]
+  projectAccess    ProjectAccess[]
+  commentMentions  CommentMention[] @relation("CommentMentionTeam")
+  dashboardAccess  DashboardAccess[] @relation("DashboardAccessTeam")
+}
+
+model TeamMember {
+  teamId   String   @db.Uuid
+  userId   String   @db.Uuid
+  joinedAt DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, userId])
+  @@index([userId])
+}
+
+// -----------------------------------------------------------------------------
+// Projects
+// -----------------------------------------------------------------------------
+
+model Project {
+  id              String            @id @default(uuid()) @db.Uuid
+  workspaceId     String
+  key             String            @unique // immutable, 2-10 uppercase
+  name            String
+  description     String?
+  visibility      ProjectVisibility
+  workflowPreset  WorkflowPreset
+  sprintsEnabled  Boolean           @default(false)
+  githubAutoStatus Boolean          @default(true)
+  /// Per-file upload cap in MB. Admin-configurable; default 100, hard cap 500.
+  maxAttachmentMb Int               @default(100)
+  chatSpaceId     String?           // configured Chat space for broadcast
+  chatBroadcastEvents String[]      @default([])
+  /// When 'client_visible', new tasks default to client-visible AND guests on
+  /// the project see EVERY task in the project regardless of the per-task
+  /// visibility field. When 'internal' (the default), the legacy strict
+  /// behavior applies — guests only see tasks explicitly marked client_visible.
+  ///
+  /// Set this to 'client_visible' for projects where the entire scope is
+  /// shared with a client (most client engagements). Keep it 'internal' when
+  /// only a curated subset should reach the client portal.
+  defaultTaskVisibility Visibility   @default(internal)
+  archivedAt      DateTime?
+  createdById     String            @db.Uuid
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  /// Per-project task counter — atomically incremented by the task creation path.
+  nextTaskNumber  Int               @default(1)
+
+  createdBy           User                     @relation("ProjectCreator", fields: [createdById], references: [id])
+  accessGrants        ProjectAccess[]
+  tasks               Task[]
+  sprints             Sprint[]
+  labels              Label[]
+  docs                Doc[]
+  automations         Automation[]
+  taskTemplates       TaskTemplate[]
+  customFields        CustomFieldDefinition[]
+  deployments         Deployment[]
+  deploymentSecrets   ProjectDeploymentSecret[]
+  repoLinks           ProjectRepo[]
+  cfdSnapshots        CfdSnapshot[] @relation("CfdSnapshotProject")
+  importRuns          ImportRun[]   @relation("ImportRunProject")
+  // Pass I (Comments 8→9) — project-scoped comment templates.
+  commentTemplates    CommentTemplate[]
+  // Pass I (Analytics 8→9) — saved reports may be project-scoped.
+  customReports       CustomReport[]
+  workspace           Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([archivedAt])
+  @@index([workspaceId])
+}
+
+model ProjectAccess {
+  id            String            @id @default(uuid()) @db.Uuid
+  projectId     String            @db.Uuid
+  subjectKind   AccessSubjectKind
+  userId        String?           @db.Uuid // populated when subjectKind = user
+  teamId        String?           @db.Uuid // populated when subjectKind = team
+  role          ProjectRole
+  grantedById   String            @db.Uuid
+  createdAt     DateTime          @default(now())
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User?   @relation("ProjectAccessUser", fields: [userId], references: [id], onDelete: Cascade)
+  team      Team?   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  grantedBy User    @relation("ProjectAccessGrantedBy", fields: [grantedById], references: [id])
+
+  @@unique([projectId, userId])
+  @@unique([projectId, teamId])
+  @@index([projectId])
+  @@index([userId])
+  @@index([teamId])
+}
+
+// -----------------------------------------------------------------------------
+// Tasks
+// -----------------------------------------------------------------------------
+
+model Task {
+  id                 String      @id @default(uuid()) @db.Uuid
+  projectId          String      @db.Uuid
+  keyNumber          Int         // per-project, incremented from Project.nextTaskNumber
+  type               TaskType    @default(Task)
+  title              String
+  description        String?     // markdown
+  status             String      // workflow-preset-dependent — validated at app layer
+  priority           Priority    @default(Medium)
+  isBlocked          Boolean     @default(false)
+  blockedReason      String?
+  visibility         Visibility  @default(internal)
+  reportedByClient   Boolean     @default(false)
+  parentTaskId       String?     @db.Uuid
+  sprintId           String?     @db.Uuid
+  assigneeUserId     String?     @db.Uuid
+  reporterUserId     String      @db.Uuid
+  createdById        String      @db.Uuid
+  /// Earliest the work should begin. Optional. Used by Gantt/calendar views
+  /// and surfaced alongside dueDate in the task drawer.
+  startDate          DateTime?
+  dueDate            DateTime?
+  /// Set the first time a task crosses into the next-24h window; cleared
+  /// when dueDate moves outward. Prevents repeated automation/notification fires.
+  dueSoonNotifiedAt  DateTime?
+  /// Latest AI risk-prediction reason. Surfaced on cards as an "at risk" badge.
+  aiRiskReason       String?
+  aiRiskPredictedAt  DateTime?
+  /// AI-suggested priority rationale. Populated by the PrioritizeProcessor
+  /// when a freshly-created task has the default priority — the LLM reads
+  /// title + description and writes both a suggested priority and the reason.
+  /// Surfaced in the task drawer so the user can sanity-check the AI's call.
+  aiPriorityReason   String?
+  /// Structured per-factor breakdown that produced `aiPriorityReason`.
+  /// Shape: `[{ name, weight, value, contribution }]`. When present, the
+  /// task drawer renders this as a small table instead of the plain
+  /// rationale tooltip — gives the user a defensible audit trail for
+  /// why the AI picked the priority it did.
+  aiPriorityFactors  Json?
+  /// Free-form triage explanation written by the PrioritizeProcessor. A
+  /// 2-3 sentence narrative referencing the concrete signals the LLM used
+  /// — title keywords, similar past tasks, blocker risk, due date proximity.
+  /// Distinct from `aiPriorityReason` (the one-line tooltip rationale): this
+  /// is the longer "why did the AI triage this task here?" prose surfaced
+  /// below the factors table in the AiWhyChip popover.
+  aiTriageExplanation String?
+  estimate           Int?        // unit-agnostic
+  boardPosition      String      // fractional indexing
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent        Task?    @relation("SubtaskParent", fields: [parentTaskId], references: [id], onDelete: SetNull)
+  subtasks      Task[]   @relation("SubtaskParent")
+  sprint        Sprint?  @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  assignee      User?    @relation("TaskAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  reporter      User     @relation("TaskReporter", fields: [reporterUserId], references: [id])
+  createdBy     User     @relation("TaskCreator", fields: [createdById], references: [id])
+
+  comments        Comment[]
+  fromLinks       TaskLink[]         @relation("TaskLinkFrom")
+  toLinks         TaskLink[]         @relation("TaskLinkTo")
+  mutes           TaskMute[]
+  watchers        TaskWatcher[]
+  githubLinks     TaskGithubLink[]
+  deployments     TaskDeployment[]
+  embedding       TaskEmbeddingMeta?
+  labels          TaskLabel[]
+  worklogs        Worklog[]
+  goals           GoalTask[]
+  sprintMemberships SprintTaskMembership[] @relation("TaskSprintMemberships")
+  recurrence      TaskRecurrence?
+  customFieldValues CustomFieldValue[]
+  /// Docs linked to this task (DocTask join). First-class link, not just a
+  /// markdown reference — drives the "Docs" section in the task drawer and
+  /// the "Linked tasks" section on each doc.
+  docs            DocTask[]
+  /// Additional reporters beyond the single primary `reporter`. ClickUp-style
+  /// many-reporters is needed for tasks reported in tandem (e.g. a bug filed
+  /// by a client AND captured by a PM). The single `reporterUserId` column
+  /// remains the canonical first reporter — these rows are "co-reporters".
+  reporters       TaskReporter[]
+
+  @@unique([projectId, keyNumber])
+  @@index([projectId, status])
+  @@index([projectId, sprintId])
+  @@index([projectId, type])
+  @@index([assigneeUserId])
+  @@index([reporterUserId])
+  @@index([parentTaskId])
+  @@index([projectId, boardPosition])
+  @@index([isBlocked])
+}
+
+model TaskLink {
+  id          String       @id @default(uuid()) @db.Uuid
+  fromTaskId  String       @db.Uuid
+  toTaskId    String       @db.Uuid
+  type        TaskLinkType
+  createdById String       @db.Uuid
+  createdAt   DateTime     @default(now())
+
+  fromTask  Task @relation("TaskLinkFrom", fields: [fromTaskId], references: [id], onDelete: Cascade)
+  toTask    Task @relation("TaskLinkTo",   fields: [toTaskId],   references: [id], onDelete: Cascade)
+  createdBy User @relation("TaskLinkCreator", fields: [createdById], references: [id])
+
+  @@unique([fromTaskId, toTaskId, type])
+  @@index([toTaskId])
+}
+
+model TaskWatcher {
+  userId    String   @db.Uuid
+  taskId    String   @db.Uuid
+  watchedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@id([userId, taskId])
+  @@index([taskId])
+}
+
+/// Co-reporters on a task beyond the canonical `reporterUserId`. Used for the
+/// multi-reporter chip row in the task drawer.
+model TaskReporter {
+  taskId    String   @db.Uuid
+  userId    String   @db.Uuid
+  addedAt   DateTime @default(now())
+  addedById String   @db.Uuid
+
+  task    Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user    User @relation("TaskReporterUser", fields: [userId], references: [id], onDelete: Cascade)
+  addedBy User @relation("TaskReporterAddedBy", fields: [addedById], references: [id])
+
+  @@id([taskId, userId])
+  @@index([userId])
+}
+
+model TaskMute {
+  userId  String   @db.Uuid
+  taskId  String   @db.Uuid
+  mutedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@id([userId, taskId])
+}
+
+// -----------------------------------------------------------------------------
+// Sprints
+// -----------------------------------------------------------------------------
+
+model Sprint {
+  id          String      @id @default(uuid()) @db.Uuid
+  projectId   String      @db.Uuid
+  name        String
+  /// Short free-text sprint goal / theme (≤ 200 chars). Surfaced as a banner
+  /// on the project board while the sprint is active so the team has a single
+  /// north-star sentence in front of them all day. Null = no goal set.
+  goal        String?
+  startDate   DateTime?
+  endDate     DateTime?
+  state       SprintState @default(planned)
+  /// Latest AI-generated retrospective summary. Null until first /ai/summarize call.
+  aiSummary   String?
+  aiSummaryAt DateTime?
+  createdById String      @db.Uuid
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("SprintCreator", fields: [createdById], references: [id])
+  tasks     Task[]
+  memberships SprintTaskMembership[]
+  // Pass I (Sprints 8→9) — at most one retro / goal-evaluation per sprint.
+  retro       SprintRetro?
+  goalEval    SprintGoalEvaluation?
+
+  /// Only one sprint per project may be in state=active. Enforced via partial unique index (raw SQL migration).
+  @@index([projectId, state])
+}
+
+/// Append-only history of which tasks were members of which sprints over time.
+/// Used by analytics.burndown to reconstruct sprint scope at any historical
+/// point — the live Task.sprintId only tells us "now"; this table records
+/// "between added_at and removed_at, this task counted toward sprint X's scope."
+///
+/// Backfilled on first run: one row per existing Task.sprintId with
+/// addedAt = task.createdAt and removedAt = null. See companion.sql §7.
+///
+/// Hooks: sprintsService.addTasks creates rows; sprintsService.removeTask
+/// closes a row by setting removedAt; sprintsService.complete with
+/// moveIncompleteTo also closes affected rows.
+model SprintTaskMembership {
+  id        String    @id @default(uuid()) @db.Uuid
+  sprintId  String    @db.Uuid
+  taskId    String    @db.Uuid
+  addedAt   DateTime  @default(now())
+  /// Null while the task is currently in the sprint; set to the timestamp
+  /// of removal otherwise. Multiple rows per (sprintId, taskId) are allowed
+  /// if a task is removed and later re-added.
+  removedAt DateTime?
+
+  sprint Sprint @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+  task   Task   @relation("TaskSprintMemberships", fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([sprintId, addedAt])
+  @@index([taskId, addedAt])
+}
+
+// -----------------------------------------------------------------------------
+// Docs — per-project markdown documents with revision history
+// -----------------------------------------------------------------------------
+
+model Doc {
+  id            String   @id @default(uuid()) @db.Uuid
+  projectId     String   @db.Uuid
+  title         String
+  /// Latest markdown body. Older versions are kept in DocRevision.
+  /// Kept around for FTS (search_vector) and for older clients that don't yet
+  /// speak ProseMirror JSON; the Tiptap editor populates `contentJson`, and
+  /// `DocsService.update` derives a minimal markdown serialization from it
+  /// before writing so search keeps working.
+  body          String   @default("")
+  /// ProseMirror JSON state for the Tiptap editor. Optional so the markdown-only
+  /// path (older clients, fixtures, restored revisions written before the
+  /// migration) still works without a corresponding JSON tree.
+  contentJson   Json?
+  authorUserId  String   @db.Uuid
+  /// Soft order within the project's doc tree (alphabetical default, can override).
+  position      Int      @default(0)
+  parentDocId   String?  @db.Uuid
+  archivedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author    User          @relation("DocAuthor", fields: [authorUserId], references: [id])
+  parent    Doc?          @relation("DocParent", fields: [parentDocId], references: [id], onDelete: SetNull)
+  children  Doc[]         @relation("DocParent")
+  revisions DocRevision[]
+  tasks     DocTask[]
+  comments  DocComment[]
+
+  @@index([projectId, position])
+  @@index([parentDocId])
+}
+
+model DocRevision {
+  id           String   @id @default(uuid()) @db.Uuid
+  docId        String   @db.Uuid
+  title        String
+  body         String
+  /// Snapshot of the ProseMirror JSON at the time of the revision. Optional so
+  /// older revisions (created before the Tiptap migration) continue to be
+  /// readable — the diff UI falls back to rendering `body` markdown when
+  /// `contentJson` is null.
+  contentJson  Json?
+  authorUserId String   @db.Uuid
+  createdAt    DateTime @default(now())
+
+  doc    Doc  @relation(fields: [docId], references: [id], onDelete: Cascade)
+  author User @relation("DocRevisionAuthor", fields: [authorUserId], references: [id])
+
+  @@index([docId, createdAt(sort: Desc)])
+}
+
+/// First-class link between a Doc and a Task. Surfaces a "Docs" section on the
+/// task drawer and a "Linked tasks" section on the doc page. Many-to-many.
+model DocTask {
+  docId   String   @db.Uuid
+  taskId  String   @db.Uuid
+  addedAt DateTime @default(now())
+
+  doc  Doc  @relation(fields: [docId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@id([docId, taskId])
+  @@index([taskId])
+}
+
+/// Comments on a Doc. Same model as Task comments but kept separate so the
+/// schema doesn't need a polymorphic parent. Threaded one level deep.
+model DocComment {
+  id              String   @id @default(uuid()) @db.Uuid
+  docId           String   @db.Uuid
+  authorUserId    String   @db.Uuid
+  bodyMd          String
+  parentCommentId String?  @db.Uuid
+  deletedAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  doc     Doc          @relation(fields: [docId], references: [id], onDelete: Cascade)
+  author  User         @relation("DocCommentAuthor", fields: [authorUserId], references: [id])
+  parent  DocComment?  @relation("DocCommentReply", fields: [parentCommentId], references: [id], onDelete: SetNull)
+  replies DocComment[] @relation("DocCommentReply")
+
+  @@index([docId, createdAt])
+  @@index([parentCommentId])
+}
+
+// -----------------------------------------------------------------------------
+// Goals / OKRs — strategic objectives, optionally linked to tasks
+// -----------------------------------------------------------------------------
+
+model Goal {
+  id            String     @id @default(uuid()) @db.Uuid
+  name          String
+  description   String?
+  ownerUserId   String     @db.Uuid
+  status        GoalStatus @default(active)
+  /// Manual progress override (0-100). If null, frontend computes from key results / linked tasks.
+  progress      Int?
+  startDate     DateTime?
+  targetDate    DateTime?
+  /// Optional parent goal — supports goal trees (objective → sub-objective).
+  /// Parent goal's progress = weighted average of children's progress
+  /// (overridden by parent's `progress` if set manually).
+  parentGoalId  String?    @db.Uuid
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  owner       User        @relation("GoalOwner", fields: [ownerUserId], references: [id])
+  parent      Goal?       @relation("GoalParent", fields: [parentGoalId], references: [id], onDelete: SetNull)
+  children    Goal[]      @relation("GoalParent")
+  tasks       GoalTask[]
+  keyResults  KeyResult[]
+
+  @@index([ownerUserId])
+  @@index([status])
+  @@index([parentGoalId])
+}
+
+/// Measurable KR under a Goal. Progress = current / target * 100, clamped.
+/// `weight` lets a goal's progress be a weighted average across KRs — the
+/// service enforces that weights for a single goal sum to 100 on every
+/// create / update, redistributing proportionally if not.
+model KeyResult {
+  id            String   @id @default(uuid()) @db.Uuid
+  goalId        String   @db.Uuid
+  name          String
+  /// Optional unit label, e.g. "users", "%", "$M". Free text.
+  unit          String?
+  /// 'number' = plain numeric, 'percent' = 0..100, 'boolean' = 0/1, 'revenue'
+  /// = $ target. Drives the input UX on the KR form; the underlying values
+  /// remain Float so the math stays uniform.
+  kind          String   @default("number")
+  targetValue   Float    @default(100)
+  currentValue  Float    @default(0)
+  /// Contribution weight 0..100. Goal progress = sum(kr.progressPct * kr.weight) / sum(weights).
+  /// Service redistributes proportionally so they always sum to 100 within a goal.
+  weight        Int      @default(0)
+  position      Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId, position])
+}
+
+model GoalTask {
+  goalId    String   @db.Uuid
+  taskId    String   @db.Uuid
+  addedAt   DateTime @default(now())
+  addedById String   @db.Uuid
+
+  goal    Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  task    Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  addedBy User @relation("GoalTaskAddedBy", fields: [addedById], references: [id])
+
+  @@id([goalId, taskId])
+  @@index([taskId])
+}
+
+// -----------------------------------------------------------------------------
+// Labels — per-project tag system with a color
+// -----------------------------------------------------------------------------
+
+model Label {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @db.Uuid
+  name      String
+  /// Hex without leading # (e.g. "A78BFA"). 6 chars.
+  color     String   @default("A78BFA")
+  createdAt DateTime @default(now())
+
+  project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   TaskLabel[]
+
+  @@unique([projectId, name])
+  @@index([projectId])
+}
+
+model TaskLabel {
+  taskId   String   @db.Uuid
+  labelId  String   @db.Uuid
+  addedAt  DateTime @default(now())
+  addedById String  @db.Uuid
+
+  task    Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  label   Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
+  addedBy User  @relation("TaskLabelAddedBy", fields: [addedById], references: [id])
+
+  @@id([taskId, labelId])
+  @@index([labelId])
+}
+
+// -----------------------------------------------------------------------------
+// Worklog — time tracking entries per task
+// -----------------------------------------------------------------------------
+
+model Worklog {
+  id        String    @id @default(uuid()) @db.Uuid
+  taskId    String    @db.Uuid
+  userId    String    @db.Uuid
+  /// Seconds elapsed. For live timers, this stays 0 until the timer is stopped.
+  seconds   Int       @default(0)
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  note      String?
+  createdAt DateTime  @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation("WorklogAuthor", fields: [userId], references: [id])
+
+  @@index([taskId, startedAt(sort: Desc)])
+  @@index([userId, startedAt(sort: Desc)])
+  /// Partial unique index — only one running timer per user is enforced at the
+  /// SQL layer in companion.sql (WHERE endedAt IS NULL).
+}
+
+// -----------------------------------------------------------------------------
+// Comments
+// -----------------------------------------------------------------------------
+
+model Comment {
+  id           String     @id @default(uuid()) @db.Uuid
+  taskId       String     @db.Uuid
+  authorUserId String     @db.Uuid
+  bodyMd       String
+  visibility   Visibility @default(internal)
+  editLockedAt DateTime?  // set 15 min after createdAt; after this point: locked
+  /// Threading — null for top-level comments, set for replies. Only one level
+  /// of nesting is enforced at the service layer (replies cannot have
+  /// children); UI renders replies as a flat list under their parent.
+  parentCommentId String? @db.Uuid
+  /// Selection-threading: when a reply quotes a range out of another comment,
+  /// these capture the source comment id and the [start, end) char offsets
+  /// within that comment's bodyMd. Null for non-quoting comments. Validated
+  /// at create time so the range can't point past the source's body length.
+  quotedCommentId   String? @db.Uuid
+  quotedRangeStart  Int?
+  quotedRangeEnd    Int?
+  deletedAt    DateTime?
+  deletedById  String?    @db.Uuid
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  task     Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author   User             @relation("CommentAuthor", fields: [authorUserId], references: [id])
+  mentions CommentMention[]
+  parent   Comment?         @relation("CommentReply", fields: [parentCommentId], references: [id], onDelete: SetNull)
+  replies  Comment[]        @relation("CommentReply")
+  /// Selection-threading: the comment this one quotes from (if any). SetNull
+  /// on delete so the quoted snippet survives a soft-delete of the parent
+  /// (we render "deleted comment" as the source attribution).
+  quotedComment    Comment?  @relation("CommentQuotedFrom", fields: [quotedCommentId], references: [id], onDelete: SetNull)
+  quotingComments  Comment[] @relation("CommentQuotedFrom")
+  reactions  CommentReaction[]
+  revisions  CommentRevision[]
+
+  @@index([taskId, createdAt])
+  @@index([authorUserId])
+  @@index([parentCommentId])
+  @@index([quotedCommentId])
+}
+
+/// Emoji reaction on a Comment. Allowed emojis are validated at the app layer
+/// (see CommentsService.ALLOWED_REACTION_EMOJIS) — the schema keeps the column
+/// free-form so we can extend the allowlist without a migration. One row per
+/// (comment, user, emoji); toggling off deletes the row.
+model CommentReaction {
+  id        String   @id @default(uuid()) @db.Uuid
+  commentId String   @db.Uuid
+  userId    String   @db.Uuid
+  emoji     String
+  createdAt DateTime @default(now())
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation("CommentReactionUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId, emoji])
+  @@index([commentId])
+}
+
+/// Append-only edit history for a Comment. The service snapshots the PRIOR
+/// bodyMd here BEFORE writing the new body in update(), so this table records
+/// what the comment USED to say, not what it says now. The current body
+/// always lives on Comment.bodyMd.
+model CommentRevision {
+  id         String   @id @default(uuid()) @db.Uuid
+  commentId  String   @db.Uuid
+  bodyMd     String
+  editedById String   @db.Uuid
+  editedAt   DateTime @default(now())
+
+  comment  Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  editedBy User    @relation("CommentRevisionEditor", fields: [editedById], references: [id])
+
+  @@index([commentId, editedAt])
+}
+
+model CommentMention {
+  id        String  @id @default(uuid()) @db.Uuid
+  commentId String  @db.Uuid
+  userId    String? @db.Uuid
+  teamId    String? @db.Uuid
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User?   @relation("CommentMentionUser", fields: [userId], references: [id], onDelete: Cascade)
+  team    Team?   @relation("CommentMentionTeam", fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@unique([commentId, teamId])
+  @@index([commentId])
+}
+
+// -----------------------------------------------------------------------------
+// Attachments — polymorphic parent (Task / Comment / BugReport)
+// -----------------------------------------------------------------------------
+
+model Attachment {
+  id               String               @id @default(uuid()) @db.Uuid
+  parentType       AttachmentParentType
+  parentId         String               @db.Uuid
+  projectId        String               @db.Uuid
+  uploaderUserId   String               @db.Uuid
+  originalFilename String
+  mimeType         String
+  sizeBytes        BigInt
+  storageKey       String               @unique
+  thumb200Key      String?
+  thumb800Key      String?
+  visibility       Visibility           @default(internal)
+  scanStatus       ScanStatus           @default(pending)
+  scanResult       String?
+  deletedAt        DateTime?
+  createdAt        DateTime             @default(now())
+
+  uploader User @relation(fields: [uploaderUserId], references: [id])
+
+  @@index([parentType, parentId])
+  @@index([projectId])
+  @@index([scanStatus])
+  @@index([deletedAt])
+}
+
+// -----------------------------------------------------------------------------
+// Events — partitioned by month via raw-SQL migration. Drives timeline + audit.
+// -----------------------------------------------------------------------------
+
+model Event {
+  id           String          @default(uuid()) @db.Uuid
+  type         String
+  actorUserId  String?         @db.Uuid
+  entityType   String
+  entityId     String          @db.Uuid
+  projectId    String?         @db.Uuid
+  payload      Json
+  visibility   EventVisibility @default(internal)
+  createdAt    DateTime        @default(now())
+
+  actor User? @relation("EventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@id([id, createdAt]) // composite to support partitioning by createdAt
+  @@index([projectId, createdAt(sort: Desc)])
+  @@index([entityType, entityId, createdAt(sort: Desc)])
+  @@index([actorUserId, createdAt(sort: Desc)])
+  @@index([type, createdAt])
+}
+
+// -----------------------------------------------------------------------------
+// Notifications
+// -----------------------------------------------------------------------------
+
+model Notification {
+  id                String   @id @default(uuid()) @db.Uuid
+  recipientUserId   String   @db.Uuid
+  type              String
+  payload           Json
+  relatedTaskId     String?  @db.Uuid
+  relatedProjectId  String?  @db.Uuid
+  readAt            DateTime?
+  createdAt         DateTime @default(now())
+
+  recipient User @relation(fields: [recipientUserId], references: [id], onDelete: Cascade)
+
+  @@index([recipientUserId, createdAt(sort: Desc)])
+  @@index([recipientUserId, readAt])
+}
+
+model NotificationPreference {
+  id          String              @id @default(uuid()) @db.Uuid
+  userId      String              @db.Uuid
+  channel     NotificationChannel
+  eventType   String              // matches Event.type
+  enabled     Boolean             @default(true)
+  snoozeUntil DateTime?
+  digestMode  Boolean             @default(false)
+  /// Optional per-project override — null = applies to all projects.
+  projectId   String?             @db.Uuid
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channel, eventType, projectId])
+  @@index([userId])
+}
+
+/// Generalized per-entity mute. The existing `TaskMute` model is task-only —
+/// `NotificationMute` covers tasks AND docs (and any future muteable entity)
+/// without a new model per type. Dispatcher consults this BEFORE creating a
+/// notification; muted rows are dropped entirely (not deferred).
+model NotificationMute {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  entityType String   // 'task' | 'doc'
+  entityId   String   @db.Uuid
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, entityType, entityId])
+  @@index([userId, entityType])
+}
+
+/// Per-user Do-Not-Disturb window. Multiple rules per user are supported so
+/// a user can have e.g. "weekday evenings" + "all weekend" rules. The
+/// dispatcher consults `NotificationSnoozeService.isWithinSnoozeWindow`
+/// AFTER mute checks but BEFORE enqueueing — matches drop during the window.
+model NotificationSnoozeRule {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  /// ISO day tokens — e.g. ['mon', 'tue', 'wed', 'thu', 'fri']. Kept as
+  /// string array for flexibility (no enum migration to ship a new day token).
+  daysOfWeek String[]
+  startHour  Int      // 0-23 UTC
+  endHour    Int      // 0-23 UTC; if endHour < startHour the window wraps midnight
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, enabled])
+}
+
+// -----------------------------------------------------------------------------
+// GitHub integration
+// -----------------------------------------------------------------------------
+
+model GithubInstallation {
+  id               String   @id @default(uuid()) @db.Uuid
+  installationId   BigInt   @unique
+  accountLogin     String
+  accountType      String   // 'Organization' | 'User'
+  suspendedAt      DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  repos GithubRepo[]
+}
+
+model GithubRepo {
+  id             String   @id @default(uuid()) @db.Uuid
+  installationId String   @db.Uuid
+  githubRepoId   BigInt   @unique
+  owner          String
+  name           String
+  fullName       String   @unique // owner/name
+  archived       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  installation GithubInstallation @relation(fields: [installationId], references: [id], onDelete: Cascade)
+  projectLinks ProjectRepo[]
+}
+
+model ProjectRepo {
+  projectId String   @db.Uuid
+  repoId    String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  project Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  repo    GithubRepo @relation(fields: [repoId],    references: [id], onDelete: Cascade)
+
+  @@id([projectId, repoId])
+}
+
+model TaskGithubLink {
+  id            String             @id @default(uuid()) @db.Uuid
+  taskId        String             @db.Uuid
+  kind          TaskGithubLinkKind
+  repoFullName  String
+  commitSha     String?
+  prNumber      Int?
+  prState       String?            // 'open' | 'closed' | 'merged' | 'draft'
+  prTitle       String?
+  prUrl         String?
+  authorLogin   String?
+  metadata      Json?
+  createdAt     DateTime           @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([prNumber, repoFullName])
+  @@index([commitSha])
+}
+
+// -----------------------------------------------------------------------------
+// Deployments
+// -----------------------------------------------------------------------------
+
+model Deployment {
+  id            String           @id @default(uuid()) @db.Uuid
+  projectId     String           @db.Uuid
+  environment   String           // 'production' | 'staging' | etc.
+  status        DeploymentStatus
+  source        DeploymentSource
+  commitSha     String?
+  commitMessage String?
+  url           String?
+  startedAt     DateTime
+  finishedAt    DateTime?
+  metadata      Json?
+  rawPayload    Json?
+  createdAt     DateTime         @default(now())
+
+  project Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   TaskDeployment[]
+
+  @@index([projectId, startedAt(sort: Desc)])
+  @@index([commitSha])
+  @@index([status])
+}
+
+model TaskDeployment {
+  taskId       String   @db.Uuid
+  deploymentId String   @db.Uuid
+  attachedAt   DateTime @default(now())
+
+  task       Task       @relation(fields: [taskId],       references: [id], onDelete: Cascade)
+  deployment Deployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, deploymentId])
+}
+
+model ProjectDeploymentSecret {
+  id         String           @id @default(uuid()) @db.Uuid
+  projectId  String           @db.Uuid
+  source     DeploymentSource
+  secretHash String           // HMAC verification key (hashed)
+  createdAt  DateTime         @default(now())
+  rotatedAt  DateTime?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, source])
+}
+
+// -----------------------------------------------------------------------------
+// Search — saved queries per user
+// -----------------------------------------------------------------------------
+
+model SavedSearch {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  name      String
+  query     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Daily snapshot of per-user workload. One row per (user, day). Powers the
+/// 7-day sparkline on the workload page and the dashboard. Written by the
+/// `WorkloadSnapshotScheduler` at 00:05 UTC daily and invalidated on any
+/// task assignee/status change touching the user's open count.
+///
+/// `weightedLoad` is the priority-weighted score the existing workload
+/// endpoint computes (Critical=4, High=3, Medium=2, Low=1). Pre-computing it
+/// lets the sparkline render without recomputing the priority join.
+///
+/// Hard-deleted aggressively — only the last 60 days are kept; the cron
+/// also prunes anything older on every run.
+model DailyWorkloadSnapshot {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  date          DateTime @db.Date
+  openTasksCount Int     @default(0)
+  weightedLoad  Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  user User @relation("DailyWorkloadSnapshotUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([date])
+}
+
+/// Daily snapshot of CFD buckets per project. One row per (project, day,
+/// bucket). Read by `analytics.cumulativeFlow` for historical days; today's
+/// row is computed live and upserted on every task status change touching
+/// the project. Pruned to last 90 days on every cron tick.
+model CfdSnapshot {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @db.Uuid
+  date      DateTime @db.Date
+  /// Coarse status bucket — Backlog | In Progress | In Review | Done.
+  bucket    String
+  count     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  project Project @relation("CfdSnapshotProject", fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, date, bucket])
+  @@index([projectId, date])
+}
+
+// -----------------------------------------------------------------------------
+// AI / embeddings — Qdrant holds the vectors, this tracks task↔point mapping
+// -----------------------------------------------------------------------------
+
+model TaskEmbeddingMeta {
+  taskId        String   @id @db.Uuid
+  qdrantPointId String   @unique
+  sourceHash    String   // hash of (title + description); recomputed on change
+  updatedAt     DateTime @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+// -----------------------------------------------------------------------------
+// CustomFieldDefinition / CustomFieldValue — per-project user-defined fields
+// -----------------------------------------------------------------------------
+
+model CustomFieldDefinition {
+  id          String          @id @default(uuid()) @db.Uuid
+  projectId   String          @db.Uuid
+  name        String
+  kind        CustomFieldKind
+  /// Options for select/multiselect — array of {value, label, color?}. Empty for other kinds.
+  options     Json            @default("[]")
+  /// Display order in the task drawer.
+  position    Int             @default(0)
+  required    Boolean         @default(false)
+  archivedAt  DateTime?
+  /// Expression body for kind='formula'. Parsed by formula-evaluator.ts.
+  /// References other custom fields by name using {fieldName}. NULL for
+  /// non-formula defs. See migration 0011_custom_fields_formula.
+  formulaExpression String?
+  /// Aggregation config for kind='rollup'. Shape:
+  ///   { relation: 'subtasks'|'linkedTasks', field: 'estimate'|<name>, agg: 'sum'|'avg'|'min'|'max'|'count' }
+  /// NULL for non-rollup defs.
+  rollupConfig      Json?
+  /// Conditional visibility rule. Shape:
+  ///   { when: { fieldKey: <name>, op: 'equals'|'in'|'isSet', value: any } }
+  /// NULL means "always visible". Honored client-side (editor list) AND
+  /// server-side (response filter), so hidden field values aren't exposed.
+  visibilityRule    Json?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  project Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  values  CustomFieldValue[]
+
+  @@unique([projectId, name])
+  @@index([projectId, position])
+}
+
+model CustomFieldValue {
+  id              String @id @default(uuid()) @db.Uuid
+  taskId          String @db.Uuid
+  fieldId         String @db.Uuid
+  /// Free-form JSON value. String for text/url/date, number for number, array for multiselect, bool for checkbox.
+  value           Json
+  updatedAt       DateTime @updatedAt
+
+  task  Task                  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  field CustomFieldDefinition @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, fieldId])
+  @@index([fieldId])
+}
+
+// -----------------------------------------------------------------------------
+// TaskTemplate — reusable task blueprint per project
+// -----------------------------------------------------------------------------
+
+model TaskTemplate {
+  id            String    @id @default(uuid()) @db.Uuid
+  workspaceId   String
+  projectId     String    @db.Uuid
+  name          String
+  /// Defaults to ProjectAccess filter when creating, free-form for the user.
+  description   String?
+  /// The "shape" of the task that will be created.
+  titleTemplate String
+  bodyTemplate  String?
+  priority      Priority  @default(Medium)
+  estimate      Int?
+  defaultStatus String?
+  /// Label IDs to attach when instantiating.
+  labelIds      String[]  @default([])
+  /// Free-form tags used to organise templates in the cross-project gallery
+  /// (e.g. "engineering", "incident", "design-review"). Distinct from
+  /// `labelIds` — labels live per-project, tags are for grouping templates
+  /// across projects. Lowercased, max ~32 chars each; service validates.
+  tags          String[]  @default([])
+  /// Optional task TYPE the template emits (Epic / Story / Task / Bug). The
+  /// gallery filters by this so "Bug report" templates only show up when the
+  /// user picks the Bug type. Null = template is type-agnostic (defaults to
+  /// Task at instantiation).
+  taskType      TaskType?
+  createdById   String    @db.Uuid
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("TaskTemplateCreator", fields: [createdById], references: [id])
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([projectId, name])
+  @@index([projectId])
+  @@index([tags])
+  @@index([workspaceId])
+}
+
+// -----------------------------------------------------------------------------
+// TaskRecurrence — schedule a task to clone itself on a frequency
+// -----------------------------------------------------------------------------
+
+model TaskRecurrence {
+  id            String              @id @default(uuid()) @db.Uuid
+  taskId        String              @unique @db.Uuid
+  frequency    RecurrenceFrequency
+  /// Every N units (e.g. every 2 weeks)
+  interval      Int                 @default(1)
+  /// ISO weekday list for "weekly" (0=Sunday..6=Saturday). Empty = same weekday as task.
+  weekdays      Int[]               @default([])
+  /// Day of month for "monthly" (1..28). Null = same day as task.
+  dayOfMonth    Int?
+  /// Timezone for the recurrence (e.g. "Africa/Cairo"). Falls back to UTC.
+  timezone      String              @default("UTC")
+  /// When the next spawn should occur (UTC). Worker job uses this to find due rules.
+  nextRunAt     DateTime
+  /// Last successful spawn — for audit. Null until first run.
+  lastRunAt     DateTime?
+  enabled       Boolean             @default(true)
+  /// Optional end date — stop spawning after this.
+  endsAt        DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([nextRunAt])
+  @@index([enabled, nextRunAt])
+}
+
+// -----------------------------------------------------------------------------
+// Automations — per-project "when X then Y" rules
+// -----------------------------------------------------------------------------
+
+model Automation {
+  id            String            @id @default(uuid()) @db.Uuid
+  projectId     String            @db.Uuid
+  name          String
+  description   String?
+  enabled       Boolean           @default(true)
+  trigger       AutomationTrigger
+  /// Optional JSON filter for the trigger, e.g. { fromStatus: "todo", toStatus: "in_progress" }
+  triggerConfig Json              @default("{}")
+  /// First action — kept as a column so the legacy single-action shape still
+  /// works without an AutomationStep row. Additional steps go in `steps[]`.
+  action        AutomationAction
+  /// JSON config for the action, e.g. { priority: "High" } or { labelId: "..." }
+  actionConfig  Json              @default("{}")
+  createdById   String            @db.Uuid
+  /// Number of successful executions so far (cheap counter for the UI list).
+  runCount      Int               @default(0)
+  lastRunAt     DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  project   Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User              @relation("AutomationCreator", fields: [createdById], references: [id])
+  runs      AutomationRun[]
+  steps     AutomationStep[]
+
+  @@index([projectId, enabled])
+  @@index([trigger])
+}
+
+/// Additional ordered steps for a multi-step automation. The Automation row's
+/// `action` + `actionConfig` are step 0; rows here are step 1, 2, ... in
+/// `position` order. Each step runs sequentially in the same transaction.
+model AutomationStep {
+  id            String           @id @default(uuid()) @db.Uuid
+  automationId  String           @db.Uuid
+  position      Int
+  action        AutomationAction
+  actionConfig  Json             @default("{}")
+  createdAt     DateTime         @default(now())
+
+  automation Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  @@unique([automationId, position])
+  @@index([automationId])
+}
+
+model AutomationRun {
+  id           String              @id @default(uuid()) @db.Uuid
+  automationId String              @db.Uuid
+  taskId       String?             @db.Uuid
+  status       AutomationRunStatus
+  /// Free-text reason (failure message, "filter did not match", etc.)
+  message      String?
+  /// Snapshot of trigger payload for debugging.
+  payload      Json?
+  createdAt    DateTime            @default(now())
+
+  automation Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  @@index([automationId, createdAt(sort: Desc)])
+}
+
+// -----------------------------------------------------------------------------
+// Project templates — bootstrap a new project from a saved blueprint. Stores
+// the workflow preset, default labels, sample tasks, and whether sprints are
+// on. Used by the "Create from template" path on the Projects list page.
+// -----------------------------------------------------------------------------
+
+model ProjectTemplate {
+  id              String          @id @default(uuid()) @db.Uuid
+  name            String          @unique
+  description     String?
+  workflowPreset  WorkflowPreset
+  sprintsEnabled  Boolean         @default(false)
+  /// Default visibility for projects created from this template.
+  visibility      ProjectVisibility @default(teams)
+  /// Default labels — array of { name, color } JSON. Cloned into the new project.
+  labels          Json            @default("[]")
+  /// Sample tasks — array of { title, description?, type, priority, status }.
+  sampleTasks     Json            @default("[]")
+  createdById     String          @db.Uuid
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  createdBy User @relation("ProjectTemplateCreator", fields: [createdById], references: [id])
+
+  @@index([workflowPreset])
+}
+
+// -----------------------------------------------------------------------------
+// Custom dashboards — user-built boards for tracking people / teams / filters.
+// Each Dashboard has a JSON `widgets` array; widget rendering is owned by the
+// frontend so adding a new widget type doesn't require a schema change.
+// -----------------------------------------------------------------------------
+
+model Dashboard {
+  id          String          @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  ownerUserId String          @db.Uuid
+  scope       DashboardScope  @default(private)
+  /// Free-form JSON describing widgets. Shape owned by the frontend, e.g.
+  /// `[{ kind: 'tasks-list', filters: {...} }, { kind: 'workload-bars', ... }]`.
+  widgets     Json            @default("[]")
+  /// Shared filter (assignee / project / sprint) applied to every widget so
+  /// `Dashboard for Sarah` doesn't have to repeat the filter on each widget.
+  baseFilters Json            @default("{}")
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  owner  User              @relation("DashboardOwner", fields: [ownerUserId], references: [id])
+  access DashboardAccess[]
+
+  @@index([ownerUserId])
+  @@index([scope])
+}
+
+model DashboardAccess {
+  id          String @id @default(uuid()) @db.Uuid
+  dashboardId String @db.Uuid
+  /// Exactly one of userId / teamId is set per row. Application-level enforced.
+  userId      String? @db.Uuid
+  teamId      String? @db.Uuid
+  createdAt   DateTime @default(now())
+
+  dashboard Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  user      User?     @relation("DashboardAccessUser", fields: [userId], references: [id], onDelete: Cascade)
+  team      Team?     @relation("DashboardAccessTeam", fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([dashboardId, userId])
+  @@unique([dashboardId, teamId])
+  @@index([userId])
+  @@index([teamId])
+}
+
+// -----------------------------------------------------------------------------
+// Idempotency — chat callbacks, deployment webhooks, etc.
+// -----------------------------------------------------------------------------
+
+model IdempotencyKey {
+  key          String   @id
+  userId       String?  @db.Uuid
+  responseHash String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+// -----------------------------------------------------------------------------
+// Import center — bookkeeping for every CSV / Jira / Linear / GitHub Issues run.
+// One row per run; counts are bumped from the import services as rows process.
+// startedAt/finishedAt let the runs table render duration and show in-flight
+// imports with their realtime progress (also fanned out over Socket.IO room
+// `import:<runId>` while the run is live).
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// Workspace-wide AI knobs. Singleton row — Workspace isn't modeled as an
+// entity (Nockta Flow is single-workspace per database), so we enforce
+// uniqueness via a constant `singleton: 1` int with @unique.
+//
+// `dupThreshold` is read by the duplicate-detection processor at runtime
+// (replacing the previous Env.AI_DUP_THRESHOLD constant); `modelPreference`
+// overrides Env.LLM_PROVIDER when set to a concrete provider (`auto` defers
+// to the env-level default). The remaining fields are surfaced to the
+// admin Settings → AI tab.
+// -----------------------------------------------------------------------------
+
+model WorkspaceAiSettings {
+  id                    String   @id @default(uuid()) @db.Uuid
+  /// Per-workspace singleton — at most one row per workspaceId. Migration
+  /// 0009 promoted the legacy global singleton (singleton=1 unique) into a
+  /// workspace-scoped unique on workspaceId. The `singleton` column stays
+  /// for back-compat with seed/test code that writes `{ singleton: 1, ... }`,
+  /// but the meaningful uniqueness is now on `workspaceId`.
+  singleton             Int      @default(1)
+  workspaceId           String   @unique
+  /// Cosine similarity threshold for the duplicate-detection processor.
+  /// 0.7..0.99 in the UI; the service clamps writes into that range.
+  dupThreshold          Float    @default(0.85)
+  /// JSON of `{ deadline, blocked, customerImpact }` weights used when the
+  /// priority processor scores a task. Stored as Json so we can add new
+  /// weight buckets without a migration.
+  priorityWeights       Json     @default("{\"deadline\":1,\"blocked\":2,\"customerImpact\":1.5}")
+  /// Master switch for the "AI suggests" affordances across the app.
+  autoSuggestEnabled    Boolean  @default(true)
+  /// 'auto' (use Env.LLM_PROVIDER), 'ollama', or 'anthropic'. The LLM
+  /// service consults this at call-time; misconfigured provider (e.g.
+  /// anthropic without an API key) falls back through the existing chain.
+  modelPreference       String   @default("auto")
+  /// Per-AI-feature enable flag + per-AI-kind monthly budget (in USD cents).
+  /// Shape:
+  ///   {
+  ///     "features": {
+  ///       "duplicateDetection": true,
+  ///       "prioritySuggestion": true,
+  ///       "standupSynthesis": true,
+  ///       "sprintPlanning": true
+  ///     },
+  ///     "monthlyBudgetUsdCents": {
+  ///       "duplicate": 1000,
+  ///       "prioritize": 1000,
+  ///       "summarize": 500,
+  ///       "standup": 500
+  ///     }
+  ///   }
+  /// Defaults: every feature ON; no budget caps (zero/missing = unlimited).
+  /// When set, processors short-circuit once the kind's spend for the calendar
+  /// month exceeds the budget and emit a logged "budget_exceeded" usage event.
+  settings              Json     @default("{\"features\":{\"duplicateDetection\":true,\"prioritySuggestion\":true,\"standupSynthesis\":true,\"sprintPlanning\":true},\"monthlyBudgetUsdCents\":{}}")
+  updatedAt             DateTime @updatedAt
+  updatedById           String   @db.Uuid
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([workspaceId])
+}
+
+// -----------------------------------------------------------------------------
+// AiUsageEvent — one row per LLM call (success OR short-circuit).
+// Drives:
+//   - /ai/usage/summary cost dashboard (daily aggregates, byKind, byModel).
+//   - Per-kind monthly budget gates in the processors (sum costUsdCents for
+//     the current calendar month and short-circuit when over budget).
+// `workspaceId` is currently the constant `'default'` (single-workspace
+// database) but kept as a column so the multi-tenant pass (R6) can wire
+// WorkspaceContextService through without a migration.
+// -----------------------------------------------------------------------------
+
+model AiUsageEvent {
+  id            String   @id @default(uuid()) @db.Uuid
+  workspaceId   String   @default("default")
+  /// 'duplicate' | 'prioritize' | 'summarize' | 'standup' | 'sprint_planning'
+  /// — matches the AI feature toggles. `budget_exceeded` is recorded with
+  /// costUsdCents=0 when a feature is short-circuited so the dashboard can
+  /// surface the throttle without inflating spend.
+  kind          String
+  modelName     String
+  inputTokens   Int      @default(0)
+  outputTokens  Int      @default(0)
+  /// Computed cost in USD cents at write time, using the static price table
+  /// in AiCostTrackingService. Stored as int so SUM() stays integer.
+  costUsdCents  Int      @default(0)
+  /// Free-form status: 'ok' | 'budget_exceeded' | 'error'. Lets us split
+  /// "actual spend" from "we tried but were over budget" without re-deriving
+  /// from the cost column.
+  status        String   @default("ok")
+  userId        String?  @db.Uuid
+  createdAt     DateTime @default(now())
+
+  user User? @relation("AiUsageEventUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt])
+  @@index([kind, createdAt])
+}
+
+model ImportRun {
+  id            String    @id @default(uuid()) @db.Uuid
+  /// 'csv' | 'jira' | 'linear' | 'github_issues'
+  source        String
+  /// Admin who kicked off the import. Used for the "re-run" affordance which
+  /// re-opens the source tab with the prior mapping pre-filled.
+  actorUserId   String    @db.Uuid
+  /// Nullable: imports that CREATE a project (Jira/Linear) start with null and
+  /// patch it once the destination project is known.
+  projectId     String?   @db.Uuid
+  /// Free-form source reference — Linear team key, Jira project key, "owner/repo"
+  /// for GitHub. Used to render the runs table without re-fetching upstream.
+  sourceRef     String?
+  /// 'running' | 'succeeded' | 'failed' | 'cancelled'
+  status        String
+  totalRows     Int       @default(0)
+  createdRows   Int       @default(0)
+  skippedRows   Int       @default(0)
+  erroredRows   Int       @default(0)
+  /// Capped to ~4kB; long stack traces are truncated on write.
+  errorSummary  String?
+  /// JSON snapshot of the mapping the user supplied. Replayed on re-run so the
+  /// new run starts pre-filled. Kept opaque on purpose; the source services own
+  /// the shape and version it themselves.
+  mappingSnapshot Json?
+  /// Last 0-based row index that was successfully processed before a failure.
+  /// When set, POST /import/:id/resume replays from `resumableFromRow + 1`
+  /// so partial-fail runs don't have to re-do completed inserts. Null on
+  /// green runs or imports that never reached the row loop (Pass D).
+  resumableFromRow Int?
+  /// Frozen copy of the original payload (credentials excluded) used to
+  /// reconstruct the same input the user supplied on /resume. CSV stores
+  /// `{ csvText, mapping }`; Linear/Jira-CSV store enough to replay without
+  /// re-uploading. Opaque to storage; the source service owns the shape.
+  resumePayload Json?
+  /// Short human-readable failure message captured at the moment the run
+  /// transitions to `failed`. Distinct from `errorSummary` (aggregated
+  /// per-row feed); `lastError` is the single sentence shown in the
+  /// "Resume" affordance tooltip and what POST /import/:id/resume reads
+  /// to decide whether the run can be picked up.
+  lastError     String?
+  startedAt     DateTime  @default(now())
+  finishedAt    DateTime?
+
+  actor   User     @relation("ImportRunActor", fields: [actorUserId], references: [id])
+  project Project? @relation("ImportRunProject", fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([startedAt])
+  @@index([actorUserId, startedAt])
+  @@index([source])
+}
+
+// -----------------------------------------------------------------------------
+// JiraStatusMap — workspace-scoped overrides for the Jira-CSV importer.
+//
+// The Jira-CSV adapter ships an in-code preset table (JIRA_STATUS_PRESETS)
+// keyed by `workflowPreset`. This model lets a workspace admin pin per-name
+// overrides on top of that table so the mapper UI starts from a sensible
+// default without re-entering the same `Awaiting Triage → Todo` row on
+// every import. Per-run overrides supplied via the mapper still beat these
+// rows; this is the *default* layer.
+// -----------------------------------------------------------------------------
+
+model JiraStatusMap {
+  id           String   @id @default(uuid()) @db.Uuid
+  workspaceId  String
+  /// Original Jira status name as it appears in the CSV. Stored lowercased
+  /// for case-insensitive lookups.
+  jiraStatus   String
+  /// Nockta status string the destination project's workflow accepts.
+  nocktaStatus String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdById  String   @db.Uuid
+
+  createdBy User @relation("JiraStatusMapCreator", fields: [createdById], references: [id])
+
+  @@unique([workspaceId, jiraStatus])
+  @@index([workspaceId])
+}
+
+// -----------------------------------------------------------------------------
+// Outbound webhooks (workspace-level fan-out)
+//
+// Distinct from automation-rule `send_webhook` (which fires a one-shot HTTP
+// POST when an automation matches a project-scoped trigger). OutboundWebhook
+// targets the broader "wire workspace events to my external system" use case:
+//   - Subscribers register a URL + a list of event types they want.
+//   - The dispatcher catches the existing EventEmitter2 stream (task.created,
+//     comment.added, sprint.started, deploy.succeeded, automation.fired, ...)
+//     and enqueues a BullMQ delivery job per matching webhook.
+//   - The processor retries with 1s/5s/30s/5m/30m backoff (5 attempts) and
+//     auto-disables a webhook after 5 consecutive terminal failures so a
+//     dead receiver doesn't pile retries forever.
+//
+// `workspaceId` is a free-form String today (Nockta Flow is single-workspace
+// per DB; callers pass a constant like 'default'). The column is here so the
+// model is forward-compatible with a multi-tenant split.
+// -----------------------------------------------------------------------------
+
+model OutboundWebhook {
+  id              String    @id @default(uuid()) @db.Uuid
+  workspaceId     String
+  name            String
+  /// Receiver URL — must be http(s); validated at the app layer.
+  url             String
+  /// HMAC signing secret used to compute the X-Nockta-Signature header. Never
+  /// returned in API responses except on first-create (the UI surfaces it
+  /// once so the user can configure the receiver, then it's stored at rest
+  /// for signing only).
+  secret          String
+  /// Event types this webhook subscribes to — e.g. ['task.created',
+  /// 'comment.added']. Kept as String[] (vs an enum) so adding a new event
+  /// type doesn't require a schema migration.
+  eventTypes      String[]
+  enabled         Boolean   @default(true)
+  /// Count of CONSECUTIVE delivery failures (terminal — after all retries).
+  /// Reset to 0 on a successful delivery. Auto-disable triggers at 5.
+  failureCount    Int       @default(0)
+  lastDeliveryAt  DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String    @db.Uuid
+
+  createdBy  User              @relation("OutboundWebhookCreator", fields: [createdById], references: [id])
+  workspace  Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@index([workspaceId, enabled])
+  @@index([workspaceId])
+}
+
+model WebhookDelivery {
+  id              String    @id @default(uuid()) @db.Uuid
+  webhookId       String    @db.Uuid
+  /// Mirror of OutboundWebhook.workspaceId — denormalised onto the delivery
+  /// row so the per-workspace deliveries dashboard (and any future
+  /// cross-tenant audit) can filter without a join. Backfilled from
+  /// OutboundWebhook.workspaceId by migration 0013. Defaults to the
+  /// bootstrap workspace so legacy rows remain valid.
+  workspaceId     String    @default("default")
+  /// Event type that triggered the delivery (e.g. 'task.created').
+  eventType       String
+  /// Snapshot of the JSON body that was/will be POSTed. Stored so the user
+  /// can re-deliver a past payload from the UI without re-firing the source
+  /// event.
+  payload         Json
+  /// 'pending' | 'success' | 'failed' | 'dropped' — string vs enum so we can
+  /// add states (e.g. 'rate_limited') without a migration.
+  status          String
+  attemptCount    Int       @default(0)
+  /// Receiver's response status code; null when no response was received
+  /// (network error, timeout, abort).
+  responseCode    Int?
+  /// First ~1kB of the receiver's response body. Surfaced in the deliveries
+  /// drawer so debugging a 4xx doesn't require server logs.
+  responseExcerpt String?
+  deliveredAt     DateTime?
+  createdAt       DateTime  @default(now())
+
+  webhook   OutboundWebhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([webhookId, createdAt(sort: Desc)])
+  @@index([workspaceId, createdAt(sort: Desc)])
+}
+
+// -----------------------------------------------------------------------------
+// Exports (Pass D — exports.module)
+//
+// Scheduled or one-off data exports — CSV, XLSX, PDF — generated from a saved
+// view, a single project, or "all tasks". Two models:
+//   - ExportSchedule: a user-defined "give me this report on a cadence" row.
+//     A scheduler ticks every minute and enqueues an ExportRun when cron fires.
+//     A null `cron` means "fire once now then disable" (one-off pattern).
+//   - ExportRun: one materialised export. Stores the signed URL the user
+//     downloads via, the row count, and the status. Signed URLs expire at
+//     `expiresAt` (default = createdAt + 24h); a stale row keeps the storage
+//     key so the maintenance cron can purge the underlying object on retention.
+//
+// Both rows are workspace-scoped via a free-form string column (same pattern
+// as OutboundWebhook) so multi-tenant lands without a migration.
+// -----------------------------------------------------------------------------
+
+model ExportSchedule {
+  id            String   @id @default(uuid()) @db.Uuid
+  workspaceId   String   @default("default")
+  /// Human label shown in the UI list.
+  name          String
+  /// 'csv' | 'xlsx' | 'pdf' — the file format the run will produce.
+  kind          String
+  /// Legacy JSON descriptor kept around for back-compat with 0012 readers.
+  /// New code populates sourceKind/sourceId directly; this column is retained
+  /// so a pre-0015 replica can still load the schedule during a partial
+  /// deploy. Migration 0016 will drop it.
+  query         Json
+  /// 'saved_view' | 'project' | 'all_tasks' — discriminator for the data
+  /// source. Default 'all_tasks' so a row inserted by legacy code without
+  /// this column still loads.
+  sourceKind    String   @default("all_tasks")
+  /// FK-ish — points at SavedSearch.id (for 'saved_view') or Project.id
+  /// (for 'project'). Null when sourceKind = 'all_tasks'. Free-text so we
+  /// don't need a polymorphic FK; the service validates existence at run
+  /// time.
+  sourceId      String?
+  /// Cron expression (5-field, standard) — e.g. '0 9 * * 1' (Mondays 09:00 UTC).
+  /// Null for one-off exports that fire immediately and never repeat.
+  /// Mirrors legacy `cron` during the 0015 transition.
+  scheduleCron  String?
+  /// LEGACY — see scheduleCron. Dropped by 0016.
+  cron          String?
+  /// 'download' (signed URL only) or 'email' (signed URL + email to
+  /// deliveryEmail).
+  deliveryKind  String   @default("download")
+  /// LEGACY — see deliveryKind. Dropped by 0016.
+  delivery      String   @default("download")
+  /// Address to email the signed URL to when deliveryKind = 'email'.
+  deliveryEmailNew String?
+  /// LEGACY — see deliveryEmailNew. Dropped by 0016.
+  deliveryEmail String?
+  enabled       Boolean  @default(true)
+  lastRunAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdById   String   @db.Uuid
+
+  createdBy User        @relation("ExportScheduleCreator", fields: [createdById], references: [id])
+  runs      ExportRun[]
+
+  @@index([workspaceId, enabled])
+  @@index([workspaceId, sourceKind])
+  @@index([createdById])
+}
+
+model ExportRun {
+  id           String    @id @default(uuid()) @db.Uuid
+  /// Nullable: one-off exports (created via /exports/run) have no schedule.
+  scheduleId   String?   @db.Uuid
+  /// 'csv' | 'xlsx' | 'pdf'.
+  kind         String
+  /// Mirror of the parent schedule's sourceKind so the History view can
+  /// describe a run after the schedule is deleted. One-off runs populate
+  /// this inline from the request.
+  sourceKind   String?
+  /// Mirror of the parent schedule's sourceId. See sourceKind.
+  sourceId     String?
+  /// 'queued' | 'running' | 'completed' | 'failed'. (0012 used 'succeeded';
+  /// migration 0015 renames existing rows.)
+  status       String    @default("queued")
+  /// S3 key (or local relative path in dev) where the file lives.
+  storageKey   String?
+  /// Pre-signed download URL. Refreshed when the user calls /exports/:id/url
+  /// if the prior one has expired and the run is still within retention.
+  signedUrl    String?
+  /// Hard cutoff after which signedUrl is treated as expired even if the
+  /// underlying S3 presign would still be valid. Default = createdAt + 24h.
+  expiresAt    DateTime?
+  fileSize     Int       @default(0)
+  rowCount     Int       @default(0)
+  /// User-facing error message for failed runs. Replaces the legacy
+  /// `errorSummary` column from 0012; both are kept during the transition.
+  errorMessage String?
+  /// LEGACY — see errorMessage. Dropped by 0016.
+  errorSummary String?
+  createdAt    DateTime  @default(now())
+  completedAt  DateTime?
+
+  schedule ExportSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+
+  @@index([scheduleId, createdAt(sort: Desc)])
+  @@index([status, createdAt])
+  @@index([sourceKind, sourceId])
+}
+
+// =============================================================================
+// Pass I — Notifications 8→9: Smart digest batching
+// =============================================================================
+
+/// In-flight digest bucket for a user. The dispatcher writes (or appends to)
+/// the user's open row instead of sending an immediate notification when
+/// User.digestEnabled is true. NotificationDigestService flushes any row that
+/// has been pending > 5 minutes OR has > 10 items. `sentAt` is the marker —
+/// null = still buffering, non-null = flushed (kept for ~24h for debugging,
+/// then garbage-collected).
+///
+/// items[] is a small JSON array `[{ notificationType, payload, taskId,
+/// projectId, reason, queuedAt }]`. Capped at 25 entries client-side; once we
+/// hit 10 the flush path fires anyway so the cap is mostly belt-and-braces.
+model NotificationDigest {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @db.Uuid
+  /// 'email' | 'chat'. Mirrors User.digestChannel at the moment of first
+  /// queueing — a user changing their channel mid-buffer flushes the current
+  /// row to the OLD channel rather than retro-rerouting items.
+  channelKind    String
+  items          Json      @default("[]")
+  firstQueuedAt  DateTime  @default(now())
+  /// Non-null = this row has been flushed; we keep it around briefly for
+  /// auditing/debugging then prune.
+  sentAt         DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sentAt])
+  @@index([sentAt])
+}
+
+// =============================================================================
+// Pass I — Sprints 8→9: Retrospectives + goal hit-rate
+// =============================================================================
+
+/// One retrospective per sprint. The three classic columns (went-well, could-
+/// improve, action items) plus a free-form `actionItems` JSON array so the
+/// team can capture follow-ups with assignees + due dates without a separate
+/// table. Action items shape:
+///   [{ description: string, ownerUserId?: string, status: 'open'|'done',
+///      dueDate?: ISOString }]
+/// Listing the open action items across a project is the most common analytics
+/// read; the JSON path query is fast enough at this scale.
+model SprintRetro {
+  id                String   @id @default(uuid()) @db.Uuid
+  sprintId          String   @unique @db.Uuid
+  authorUserId      String?  @db.Uuid
+  whatWentWell      String?
+  whatCouldImprove  String?
+  actionItems       Json     @default("[]")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  sprint Sprint @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+  author User?  @relation("SprintRetroAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+}
+
+/// Was the sprint goal hit? Captured at completion time (or retro time — we
+/// don't enforce ordering). Drives the `goalHitRate` analytic.
+model SprintGoalEvaluation {
+  id                String   @id @default(uuid()) @db.Uuid
+  sprintId          String   @unique @db.Uuid
+  goalAchieved      Boolean
+  note              String?
+  evaluatedByUserId String?  @db.Uuid
+  evaluatedAt       DateTime @default(now())
+
+  sprint      Sprint @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+  evaluatedBy User?  @relation("SprintGoalEvaluator", fields: [evaluatedByUserId], references: [id], onDelete: SetNull)
+}
+
+// =============================================================================
+// Pass I — Comments 8→9: Reusable templates
+// =============================================================================
+
+/// Reusable comment snippets. Two scopes:
+///   - projectId = null  → workspace-wide template (every project sees it)
+///   - projectId set     → only that project's task comment composer sees it
+/// The Activity composer fetches both and merges; project templates shadow
+/// workspace templates of the same name visually but are not enforced unique.
+model CommentTemplate {
+  id              String   @id @default(uuid()) @db.Uuid
+  workspaceId     String   @default("default")
+  /// Nullable for workspace-wide templates. When set, the template only shows
+  /// up in that project's tasks.
+  projectId       String?  @db.Uuid
+  name            String
+  body            String
+  createdByUserId String?  @db.Uuid
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User?    @relation("CommentTemplateCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, projectId])
+  @@index([projectId])
+}
+
+// =============================================================================
+// Pass I — Analytics 8→9: Custom report builder
+// =============================================================================
+
+/// Saved custom-report definition. The `runReport` path resolves these into a
+/// safe, parameterized SQL groupBy over Task — dimensions become GROUP BY
+/// columns, metric becomes the aggregate, filters are appended to the WHERE
+/// clause via prepared bindings. We never interpolate user input into SQL.
+///
+/// Dimension allowlist (enforced at the service level):
+///   'status' | 'assignee' | 'priority' | 'sprint' | 'label' | 'project'
+///
+/// Metric allowlist (enforced at the service level):
+///   'count' | 'sum_estimate' | 'sum_actual'
+///
+/// Filters JSON shape (free-form but only specific keys are honoured):
+///   { projectIds?: string[], statuses?: string[], priorities?: string[],
+///     assigneeUserIds?: string[], sprintIds?: string[], labelIds?: string[],
+///     createdAfter?: ISOString, createdBefore?: ISOString,
+///     dueBefore?: ISOString }
+model CustomReport {
+  id              String   @id @default(uuid()) @db.Uuid
+  workspaceId     String   @default("default")
+  name            String
+  /// String array — allowlisted at the service layer. Stored verbatim so future
+  /// dimensions can ship without a column migration.
+  dimensions      String[]
+  metric          String
+  filters         Json     @default("{}")
+  /// Optional project anchor — when set, the report's "Project" filter is
+  /// implicitly set and the report appears under that project's analytics tab.
+  projectId       String?  @db.Uuid
+  createdByUserId String?  @db.Uuid
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User?    @relation("CustomReportCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([projectId])
+  @@index([createdByUserId])
+}

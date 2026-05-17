@@ -1,0 +1,34 @@
+{
+  "name": "nockta-flow",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Nockta engineering operations platform",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "bash scripts/dev.sh",
+    "dev:full": "NOCKTA_FULL_STACK=1 bash scripts/dev.sh",
+    "dev:apps": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "gen:secrets": "node scripts/gen-secrets.mjs",
+    "hygiene": "node scripts/check-hygiene.mjs",
+    "db:generate": "pnpm --filter @nockta/api prisma generate",
+    "db:migrate": "pnpm --filter @nockta/api prisma migrate dev",
+    "db:studio": "pnpm --filter @nockta/api prisma studio",
+    "docker:up": "docker compose -f infra/docker-compose.yml up -d",
+    "docker:down": "docker compose -f infra/docker-compose.yml down",
+    "docker:logs": "docker compose -f infra/docker-compose.yml logs -f"
+  },
+  "devDependencies": {
+    "turbo": "^2.1.0",
+    "typescript": "^5.6.0",
+    "prettier": "^3.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.12.0"
+}

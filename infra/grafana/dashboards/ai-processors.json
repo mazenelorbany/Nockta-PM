@@ -1,0 +1,83 @@
+{
+  "title": "Nockta Flow — AI Processors",
+  "uid": "nockta-ai-processors",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "tags": ["nockta", "ai"],
+  "time": { "from": "now-6h", "to": "now" },
+  "timezone": "browser",
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Run outcomes per processor (1m rate)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (processor, outcome) (rate(nockta_ai_processor_runs_total[1m]))",
+          "legendFormat": "{{processor}} · {{outcome}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops", "min": 0 } }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Failure rate (15m)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "If this trips orange or red, check /health/ai for upstream connectivity (Qdrant, LLM provider) before suspecting code.",
+      "gridPos": { "x": 0, "y": 8, "w": 8, "h": 7 },
+      "targets": [
+        {
+          "expr": "sum(rate(nockta_ai_processor_runs_total{outcome=\"failure\"}[15m])) / sum(rate(nockta_ai_processor_runs_total[15m]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "yellow", "value": 0.05 },
+              { "color": "red", "value": 0.15 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Total runs (1h)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 8, "y": 8, "w": 8, "h": 7 },
+      "targets": [
+        {
+          "expr": "sum(increase(nockta_ai_processor_runs_total[1h]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Skipped (precondition unmet) — last 1h",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Skips are expected (e.g. priority processor short-circuits when the user already set a non-Medium priority). A near-100% skip rate means the trigger filters are too aggressive.",
+      "gridPos": { "x": 16, "y": 8, "w": 8, "h": 7 },
+      "targets": [
+        {
+          "expr": "sum(increase(nockta_ai_processor_runs_total{outcome=\"skip\"}[1h]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    }
+  ]
+}

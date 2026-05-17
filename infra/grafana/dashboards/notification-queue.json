@@ -1,0 +1,73 @@
+{
+  "title": "Nockta Flow — Notification Queue (BullMQ)",
+  "uid": "nockta-notification-queue",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "tags": ["nockta", "notifications", "bullmq"],
+  "time": { "from": "now-3h", "to": "now" },
+  "timezone": "browser",
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Queue depth — waiting / active / delayed",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Reads bullmq_jobs_count{queue=\"notifications\"}. Requires the BullMQ Prometheus exporter or the in-app metrics integration to publish these. If absent, panel is empty — see the README in infra/grafana/.",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 },
+      "targets": [
+        { "expr": "bullmq_jobs_count{queue=\"notifications\", state=\"waiting\"}", "legendFormat": "waiting", "refId": "A" },
+        { "expr": "bullmq_jobs_count{queue=\"notifications\", state=\"active\"}", "legendFormat": "active", "refId": "B" },
+        { "expr": "bullmq_jobs_count{queue=\"notifications\", state=\"delayed\"}", "legendFormat": "delayed", "refId": "C" },
+        { "expr": "bullmq_jobs_count{queue=\"notifications\", state=\"failed\"}", "legendFormat": "failed", "refId": "D" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 } }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Completion rate (jobs/s)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "rate(bullmq_jobs_completed_total{queue=\"notifications\"}[5m])",
+          "legendFormat": "completed",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(bullmq_jobs_failed_total{queue=\"notifications\"}[5m])",
+          "legendFormat": "failed",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" } }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Failed jobs (last 1h)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "increase(bullmq_jobs_failed_total{queue=\"notifications\"}[1h])",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "yellow", "value": 5 },
+              { "color": "red", "value": 25 }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
