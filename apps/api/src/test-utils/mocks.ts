@@ -12,7 +12,12 @@ import type { PrismaService } from '../prisma/prisma.service';
 
 /** Build a Prisma mock with every model + method we touch in tests as a vi.fn(). */
 export function makePrismaMock(): PrismaService {
-  const m = () => vi.fn();
+  // Default each method to a resolved-undefined Promise so service-internal
+  // fire-and-forget calls like `prisma.foo.create(...).catch(...)` don't
+  // blow up in tests that didn't bother stubbing every model method.
+  // Tests that need a real return value still override via
+  // `mockResolvedValueOnce(...)`, which takes precedence.
+  const m = () => vi.fn().mockResolvedValue(undefined);
   const model = (methods: string[]) =>
     Object.fromEntries(methods.map((k) => [k, m()]));
 
@@ -49,6 +54,7 @@ export function makePrismaMock(): PrismaService {
       'findMany',
       'create',
       'update',
+      'delete',
     ]),
     projectAccess: model(['findFirst', 'findMany', 'create', 'delete']),
     teamMember: model(['findMany', 'deleteMany', 'createMany']),
@@ -61,6 +67,7 @@ export function makePrismaMock(): PrismaService {
       'count',
       'create',
       'update',
+      'updateMany',
       'delete',
       'groupBy',
     ]),
@@ -118,13 +125,13 @@ export function makePrismaMock(): PrismaService {
       'deleteMany',
     ]),
     projectTemplate: model(['findUnique', 'findMany', 'create', 'delete']),
-    label: model(['findMany', 'create', 'createMany']),
+    label: model(['findUnique', 'findMany', 'create', 'createMany', 'delete']),
     taskWatcher: model(['create', 'createMany', 'upsert', 'delete', 'deleteMany', 'findMany']),
     taskReporter: model(['findMany', 'upsert', 'delete']),
     taskLink: model(['findUnique', 'findUniqueOrThrow', 'create', 'delete']),
     taskEmbeddingMeta: model(['findUnique', 'upsert', 'deleteMany']),
     goal: model(['findUnique', 'findMany', 'create', 'update', 'delete']),
-    keyResult: model(['findMany', 'findUnique', 'create', 'update', 'delete', 'aggregate']),
+    keyResult: model(['findMany', 'findUnique', 'findUniqueOrThrow', 'create', 'update', 'delete', 'aggregate']),
     goalTask: model(['upsert', 'delete', 'findMany']),
     notificationPreference: model([
       'findMany',

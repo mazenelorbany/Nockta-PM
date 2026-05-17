@@ -332,11 +332,20 @@ export class JiraCsvImporter {
     const fields: Record<string, string | number | null> = {};
     const errorsByField: Record<string, string> = {};
 
-    /** Look up a source column, applying any user-supplied remap. */
+    /** Look up a source column, applying any user-supplied remap. The
+     *  mapper UI lets users express the remap two ways:
+     *    - by canonical source header: `{ "Title": "Summary" }` ("CSV's
+     *      Title column is Summary"),
+     *    - by Nockta target field key:  `{ "Title": "title"   }` ("CSV's
+     *      Title column is the title field").
+     *  Both are valid and used in practice. We honor either by reverse-
+     *  matching against the canonical column AND its suggestedFieldKey. */
     const sourceFor = (canonical: string): string | string[] | undefined => {
-      // If the user explicitly remapped a column to this Nockta field,
-      // honor that; otherwise fall back to the canonical header.
-      const remappedKey = Object.entries(columnMap).find(([, v]) => v === canonical)?.[0];
+      const targetFieldKey = JIRA_CSV_SOURCE_FIELDS.find((f) => f.key === canonical)
+        ?.suggestedFieldKey;
+      const remappedKey = Object.entries(columnMap).find(
+        ([, v]) => v === canonical || (targetFieldKey != null && v === targetFieldKey),
+      )?.[0];
       const key = remappedKey ?? canonical;
       return row.fields[key];
     };

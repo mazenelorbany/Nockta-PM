@@ -312,14 +312,19 @@ export class AiStandupService {
  *  resolved source ids along with the cleaned line (tags removed). Unknown
  *  tags are silently dropped — the LLM occasionally hallucinates one. */
 function citationLine(line: string, tagIndex: Map<string, string>): StandupLine {
-  const tagPattern = /\[([a-z]\d{1,3})\]/g;
+  // Two patterns: a strict lookup pattern (letter + digits, the schema we
+  // give the LLM) and a permissive strip pattern that also catches shape-
+  // matching hallucinations like `[zz]`. Without the permissive strip the
+  // hallucination stays in the cleaned line and looks like real text.
+  const lookupPattern = /\[([a-z]\d{1,3})\]/g;
+  const stripPattern = /\[[a-z0-9]{1,6}\]/gi;
   const sourceIds: string[] = [];
   let m: RegExpExecArray | null;
-  while ((m = tagPattern.exec(line)) !== null) {
+  while ((m = lookupPattern.exec(line)) !== null) {
     const id = tagIndex.get(m[1]!);
     if (id && !sourceIds.includes(id)) sourceIds.push(id);
   }
-  const cleaned = line.replace(tagPattern, '').replace(/\s+/g, ' ').trim();
+  const cleaned = line.replace(stripPattern, '').replace(/\s+/g, ' ').trim();
   return { line: cleaned, sourceIds };
 }
 

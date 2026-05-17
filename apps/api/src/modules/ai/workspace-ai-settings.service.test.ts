@@ -167,7 +167,9 @@ describe('dupThreshold propagates to DuplicateDetectionProcessor', () => {
     const events = makeEventsMock();
     // AiCostTrackingService is a no-op stub here — the test doesn't assert
     // against cost recording, but the constructor signature requires it.
-    const costs = { recordUsage: vi.fn().mockResolvedValue(undefined) };
+    // Method name is `record` (the service used to be `recordUsage` long
+    // ago; the test stub still carried the old name).
+    const costs = { record: vi.fn().mockResolvedValue(undefined) };
     const processor = new DuplicateDetectionProcessor(
       prisma,
       embeddings as unknown as EmbeddingService,

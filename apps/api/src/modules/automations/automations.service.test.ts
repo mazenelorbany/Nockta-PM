@@ -370,17 +370,13 @@ describe('AutomationsService — send_webhook', () => {
     expect(runArgs?.data?.status).toBe('succeeded');
   });
 
-  it('records a failed run when both attempts return a non-retryable 4xx', async () => {
-    // SPEC SAYS "no retry on 400". CODE ACTUALLY RETRIES on 400 because the
-    // outer try/catch swallows the throw on attempt=0 and loops again. We
-    // assert the CURRENT behavior — 2 fetch calls, status=failed — and the
-    // comment at the top of this file documents the divergence so a fix is
-    // an intentional change with a test update, not a silent regression.
+  it('records a failed run on a non-retryable 4xx without retrying', async () => {
+    // 400 / 4xx (non-429) is non-retryable: one fetch, one failed run row.
+    // (Earlier the service had a bug that retried 400 anyway; the fix
+    // landed via the nonRetryableErr sentinel — see service line ~510.)
     vi.useFakeTimers();
     stubAutomationAndTask({ url: 'https://hooks.example.com/bad-request' });
-    fetchSpy
-      .mockResolvedValueOnce(new Response('bad request', { status: 400 }))
-      .mockResolvedValueOnce(new Response('bad request', { status: 400 }));
+    fetchSpy.mockResolvedValueOnce(new Response('bad request', { status: 400 }));
     vi.mocked(mocks.prisma.automationRun.create).mockResolvedValue({} as never);
 
     const runPromise = service.runMatchingAutomations(PROJECT_ID, 'task_created', {
@@ -389,7 +385,7 @@ describe('AutomationsService — send_webhook', () => {
     await vi.advanceTimersByTimeAsync(2_001);
     await runPromise;
 
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
     const runArgs = vi.mocked(mocks.prisma.automationRun.create).mock.calls[0]?.[0];
     expect(runArgs?.data?.status).toBe('failed');
     expect(runArgs?.data?.message).toMatch(/400/);

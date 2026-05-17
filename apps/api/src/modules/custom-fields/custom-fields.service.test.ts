@@ -34,18 +34,23 @@ function build(): { service: CustomFieldsService; mocks: Mocks } {
   };
   const events = makeEventsMock();
   // Mock factory doesn't include custom field models — patch them in.
+  // Default every method to `vi.fn().mockResolvedValue(undefined)` so any
+  // unstubbed call resolves cleanly; the cycle check fans out to findMany
+  // even on the no-task path. Specific stubs (mockResolvedValueOnce) below
+  // still override per-test.
+  const cfd = () => vi.fn().mockResolvedValue(undefined);
   (prisma as unknown as { customFieldDefinition: { findUnique: ReturnType<typeof vi.fn>; findFirst: ReturnType<typeof vi.fn>; findMany: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn>; delete: ReturnType<typeof vi.fn> } }).customFieldDefinition = {
-    findUnique: vi.fn(),
-    findFirst: vi.fn(),
-    findMany: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
+    findUnique: cfd(),
+    findFirst: cfd(),
+    findMany: vi.fn().mockResolvedValue([]),
+    create: cfd(),
+    update: cfd(),
+    delete: cfd(),
   };
   (prisma as unknown as { customFieldValue: { findMany: ReturnType<typeof vi.fn>; upsert: ReturnType<typeof vi.fn>; delete: ReturnType<typeof vi.fn> } }).customFieldValue = {
-    findMany: vi.fn(),
-    upsert: vi.fn(),
-    delete: vi.fn(),
+    findMany: vi.fn().mockResolvedValue([]),
+    upsert: cfd(),
+    delete: cfd(),
   };
   const service = new CustomFieldsService(
     prisma,

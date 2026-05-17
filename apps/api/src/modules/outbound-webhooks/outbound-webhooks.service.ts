@@ -551,13 +551,14 @@ export class OutboundWebhooksService implements OnModuleInit {
     if (!input.name?.trim()) throw new BadRequestException('name is required');
     if (input.name.length > 100) throw new BadRequestException('name too long');
     if (!input.url?.trim()) throw new BadRequestException('url is required');
+    let parsed: URL;
     try {
-      const u = new URL(input.url);
-      if (!['http:', 'https:'].includes(u.protocol)) {
-        throw new BadRequestException('url must be http(s)');
-      }
+      parsed = new URL(input.url);
     } catch {
       throw new BadRequestException('url is not a valid URL');
+    }
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      throw new BadRequestException('url must be http(s)');
     }
     if (!input.secret || input.secret.length < 16) {
       throw new BadRequestException('secret must be at least 16 characters');

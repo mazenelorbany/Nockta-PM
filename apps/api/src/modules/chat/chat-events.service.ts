@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Env } from '../../config/env';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AiSyncService } from '../ai/ai-sync.service';
 import type { AuthenticatedUser } from '../auth/types';
@@ -631,11 +632,9 @@ export function errorCard(title: string, body: string): ChatReply {
 }
 
 function taskUrl(taskId: string): string {
-  // Imported via require to dodge a circular-import wart between Env and Chat
-  // when tests stub Env. The dynamic require still resolves once at module
-  // first-use; the cost is negligible.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { Env } = require('../../config/env') as typeof import('../../config/env');
+  // Env imported at module top so vitest's loader resolves it cleanly. The
+  // earlier dynamic-require workaround for a circular-import wart no longer
+  // applies (Env is a plain const object, not a class with mutual deps).
   return `${Env.APP_URL_INTERNAL}/tasks/${taskId}`;
 }
 
