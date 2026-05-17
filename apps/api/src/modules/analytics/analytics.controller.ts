@@ -70,6 +70,14 @@ export class AnalyticsController {
     });
   }
 
+  @Get('workload/:userId')
+  workloadDetail(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('userId', new ParseUUIDPipe()) userId: string,
+  ) {
+    return this.analytics.workloadDetail(actor, userId);
+  }
+
   @Get('projects/:projectId/velocity')
   velocity(
     @CurrentUser() actor: AuthenticatedUser,

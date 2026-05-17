@@ -20,6 +20,7 @@ import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import { cn } from '@nockta/ui';
 import { api } from '../lib/api';
+import { PromptDialog } from './dialogs';
 import { AvatarCircle, PriorityDot, TypeBadge, type Priority, type TaskType } from './task-bits';
 
 // =============================================================================
@@ -1510,8 +1511,9 @@ function SavedViewsMenu({
         </>
       )}
       {nameDialog && (
-        <NameViewDialog
+        <PromptDialog
           title={nameDialog.kind === 'save' ? 'Save view' : 'Rename view'}
+          body="Give it a short, memorable name."
           submitLabel={nameDialog.kind === 'save' ? 'Save view' : 'Rename'}
           defaultValue={nameDialog.kind === 'rename' ? nameDialog.currentName : ''}
           placeholder="e.g. My open bugs"
@@ -1523,113 +1525,6 @@ function SavedViewsMenu({
   );
 }
 
-// =============================================================================
-// NameViewDialog — in-app modal that replaces the native window.prompt() we
-// used to fire for "Save this view" / "Rename view". Centered card over a
-// scrim, autofocus the input, Enter to submit, Escape (or scrim click) to
-// cancel. Portaled to document.body so it sits above any popover that opened
-// it (and not affected by parent z-index stacking).
-// =============================================================================
-
-function NameViewDialog({
-  title,
-  submitLabel,
-  defaultValue,
-  placeholder,
-  onCancel,
-  onSubmit,
-}: {
-  title: string;
-  submitLabel: string;
-  defaultValue: string;
-  placeholder?: string;
-  onCancel: () => void;
-  onSubmit: (value: string) => void;
-}): JSX.Element {
-  const [value, setValue] = useState(defaultValue);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-    inputRef.current?.select();
-  }, []);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onCancel();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onCancel]);
-
-  const canSubmit = value.trim().length > 0;
-
-  return createPortal(
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-      className="fixed inset-0 z-[90] flex items-center justify-center p-4"
-    >
-      <button
-        type="button"
-        aria-label="Close"
-        onClick={onCancel}
-        className="absolute inset-0 cursor-default bg-background/70 backdrop-blur-sm"
-      />
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (canSubmit) onSubmit(value);
-        }}
-        className="animate-popover-in relative z-[91] w-full max-w-sm rounded-xl border border-border bg-popover shadow-2xl shadow-black/50"
-      >
-        <header className="px-4 pt-4 pb-2">
-          <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-          <p className="mt-1 nockta-eyebrow text-muted-foreground">
-            Give it a short, memorable name.
-          </p>
-        </header>
-        <div className="px-4 pb-3">
-          <input
-            ref={inputRef}
-            type="text"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder={placeholder}
-            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring"
-            maxLength={80}
-          />
-        </div>
-        <footer className="flex items-center justify-end gap-2 border-t border-border px-3 py-2.5 bg-card/40 rounded-b-xl">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="tap rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            className={cn(
-              'tap rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-              canSubmit
-                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                : 'bg-primary/30 text-primary-foreground/60 cursor-not-allowed',
-            )}
-          >
-            {submitLabel}
-          </button>
-        </footer>
-      </form>
-    </div>,
-    document.body,
-  );
-}
 
 // =============================================================================
 // Filter helper — apply a TaskFilters to a raw task list. Shared between Board

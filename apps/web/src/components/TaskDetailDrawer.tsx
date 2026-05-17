@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import { cn } from '@nockta/ui';
 import { CheckCircle2, MessageSquarePlus, UserPlus } from 'lucide-react';
 import { api } from '../lib/api';
+import { ConfirmDialog, PromptDialog } from './dialogs';
 import { useOnline } from '../hooks/useOnline';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { usePresence } from '../hooks/usePresence';
@@ -244,10 +245,15 @@ export function TaskDetailDrawer({
     onError: (err) => toast.error(apiErrorMessage(err, 'Delete failed')),
   });
 
+  // Dialog state — replaces native window.confirm / window.prompt so the
+  // delete + blocked flows use the same dark in-app modal as every other
+  // confirmation in the app. Two separate flags so they can't overlap.
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [blockReasonOpen, setBlockReasonOpen] = useState(false);
+
   function onDelete(): void {
     if (!task) return;
-    if (!window.confirm(`Delete ${task.key}? This cannot be undone.`)) return;
-    deleteMutation.mutate();
+    setDeleteConfirmOpen(true);
   }
 
   function onToggleBlocked(): void {
@@ -255,8 +261,7 @@ export function TaskDetailDrawer({
     if (task.isBlocked) {
       blockMutation.mutate({ blocked: false });
     } else {
-      const reason = window.prompt('Why is this task blocked? (optional)') ?? undefined;
-      blockMutation.mutate({ blocked: true, ...(reason ? { reason } : {}) });
+      setBlockReasonOpen(true);
     }
   }
 
@@ -368,8 +373,45 @@ export function TaskDetailDrawer({
     </div>
   );
 
+  // Shared dialog block — rendered as a sibling in both mobile and desktop
+  // branches so the modals overlay correctly regardless of which drawer
+  // layout is active.
+  const dialogs = (
+    <>
+      {deleteConfirmOpen && task && (
+        <ConfirmDialog
+          title={`Delete ${task.key}?`}
+          body="This cannot be undone."
+          destructive
+          confirmLabel="Delete task"
+          onCancel={() => setDeleteConfirmOpen(false)}
+          onConfirm={() => {
+            setDeleteConfirmOpen(false);
+            deleteMutation.mutate();
+          }}
+        />
+      )}
+      {blockReasonOpen && task && (
+        <PromptDialog
+          title="Mark as blocked"
+          body="What's blocking this task? You can leave it empty."
+          placeholder="e.g. Waiting on design approval"
+          required={false}
+          submitLabel="Mark blocked"
+          onCancel={() => setBlockReasonOpen(false)}
+          onSubmit={(reason) => {
+            setBlockReasonOpen(false);
+            const trimmed = reason.trim();
+            blockMutation.mutate({ blocked: true, ...(trimmed ? { reason: trimmed } : {}) });
+          }}
+        />
+      )}
+    </>
+  );
+
   if (isMobile) {
     return (
+      <>
       <div
         className="animate-overlay-in glass-scrim fixed inset-0 z-50 flex items-end justify-center"
         data-state={closing ? 'closed' : 'open'}
@@ -579,6 +621,8 @@ export function TaskDetailDrawer({
           )}
         </div>
       </div>
+      {dialogs}
+      </>
     );
   }
 
@@ -587,6 +631,7 @@ export function TaskDetailDrawer({
   // exactly so we don't regress muscle memory.
   // ---------------------------------------------------------------------
   return (
+    <>
     <div
       className="animate-overlay-in glass-scrim fixed inset-0 z-50 flex items-stretch sm:items-center justify-center sm:p-4 md:p-8"
       data-state={closing ? 'closed' : 'open'}
@@ -708,5 +753,7 @@ export function TaskDetailDrawer({
         )}
       </div>
     </div>
+    {dialogs}
+    </>
   );
 }
