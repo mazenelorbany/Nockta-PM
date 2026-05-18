@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { cn } from '@nockta/ui';
+
 import { FilterChip } from './FilterChip';
 import { FilterPopover, PopoverList, PopoverRow } from './FilterPopover';
 import type { Sprint } from './types';

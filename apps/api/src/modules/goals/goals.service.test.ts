@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { GoalsService } from './goals.service';
+
 import { makeEventsMock, makePrismaMock } from '../../test-utils/mocks';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { PermissionsService } from '../permissions/permissions.service';
 import type { AuthenticatedUser } from '../auth/types';
+
+import { GoalsService } from './goals.service';
 
 // =============================================================================
 // goals.service — covers the new (Round 3) overhaul:

@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, CheckCircle2, Clock } from 'lucide-react';
+
 import { api } from '../../lib/api';
+
 import type { AutomationRun } from './types';
 import { timeAgo } from './utils';
 

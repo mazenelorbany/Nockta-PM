@@ -5,9 +5,11 @@ import {
   IsDateString, IsEnum, IsInt, IsNumber, IsOptional, IsString, IsUUID,
   Max, MaxLength, Min, MinLength,
 } from 'class-validator';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { GoalsService } from './goals.service';
+
+import type { GoalsService } from './goals.service';
 
 class CreateGoalDto {
   @IsString() @MinLength(1) @MaxLength(200) name!: string;

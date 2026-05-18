@@ -1,7 +1,8 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
-import { PrismaService } from '../../prisma/prisma.service';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
+
+import type { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
+import type { PrismaService } from '../../prisma/prisma.service';
 
 /**
  * Scans tasks every 10 minutes for ones whose due date enters the next-24h

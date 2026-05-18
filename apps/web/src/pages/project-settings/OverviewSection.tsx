@@ -1,5 +1,6 @@
 import type { UseMutationResult } from '@tanstack/react-query';
 import { Settings as SettingsIcon } from 'lucide-react';
+
 import { Section, Field } from './shared';
 import type { Project } from './types';
 

@@ -1,12 +1,17 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+
 import { Logger } from '@nestjs/common';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
 import type { Job } from 'bullmq';
+
 import { Env } from '../../config/env';
-import { PrismaService } from '../../prisma/prisma.service';
-import { StorageService } from '../storage/storage.service';
+import type { PrismaService } from '../../prisma/prisma.service';
+import type { StorageService } from '../storage/storage.service';
+import type { AuthenticatedUser } from '../auth/types';
+import type { PermissionsService } from '../permissions/permissions.service';
+
 import {
   EXPORTS_QUEUE,
   EXPORT_SIGNED_URL_TTL_SECONDS,
@@ -49,12 +54,13 @@ export class ExportsProcessor extends WorkerHost {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly events: EventEmitter2,
+    private readonly permissions: PermissionsService,
   ) {
     super();
   }
 
   async process(job: Job<ExportJobPayload>): Promise<void> {
-    const { runId } = job.data;
+    const { runId, actorId } = job.data;
     const run = await this.prisma.exportRun.findUnique({ where: { id: runId } });
     if (!run) {
       this.logger.warn(`process: run ${runId} vanished before job started`);
@@ -73,13 +79,31 @@ export class ExportsProcessor extends WorkerHost {
     const kind = run.kind as ExportKind;
     const name = schedule?.name ?? `Export ${run.id.slice(0, 8)}`;
 
+    // Re-resolve the actor for defence-in-depth: even if the service-layer
+    // gate was bypassed somehow (direct queue insert, replayed job, etc.),
+    // we re-load the actor here and refuse to materialise an export they
+    // can't read. A NULL actorId means the job was enqueued before 0023
+    // or the user was deleted; we fail-closed to avoid leaking data.
+    const actor = actorId ? await this.loadActor(actorId) : null;
+    if (!actor) {
+      const reason = actorId
+        ? `actor ${actorId} was deleted or archived before the job ran`
+        : 'no actorId on job payload (pre-0023 job?)';
+      this.logger.warn(`process: refusing run ${runId} — ${reason}`);
+      await this.prisma.exportRun.update({
+        where: { id: run.id },
+        data: { status: 'failed', errorMessage: 'Actor unavailable at processing time' },
+      });
+      return;
+    }
+
     await this.prisma.exportRun.update({
       where: { id: run.id },
       data: { status: 'running' },
     });
 
     try {
-      const { columns, rows } = await this.loadRows(sourceKind, sourceId);
+      const { columns, rows } = await this.loadRows(actor, sourceKind, sourceId);
       const generatedAt = new Date();
       const buffer = await this.serialise(kind, { name, columns, rows, generatedAt });
 
@@ -161,24 +185,36 @@ export class ExportsProcessor extends WorkerHost {
 
   // ---- source loaders -----------------------------------------------------
 
+  /**
+   * Materialise the source rows the export is over. Every branch enforces
+   * the actor's access at this layer too, even though the service layer
+   * also gated it — defence-in-depth covers direct queue inserts and
+   * replayed jobs where the service gate may not have run.
+   */
   private async loadRows(
+    actor: AuthenticatedUser,
     sourceKind: ExportSourceKind,
     sourceId: string | null,
   ): Promise<{ columns: string[]; rows: Array<Record<string, string | number | null>> }> {
+    const isAdmin = actor.companyRole === 'Admin';
+
     if (sourceKind === 'saved_view') {
-      // internal: not reached from an HTTP request — BullMQ processor; failure marks the job failed.
       if (!sourceId) throw new Error('saved_view source requires sourceId');
       const view = await this.prisma.savedSearch.findUnique({ where: { id: sourceId } });
-      // internal: not reached from an HTTP request — BullMQ processor; failure marks the job failed.
       if (!view) throw new Error(`Saved view ${sourceId} no longer exists`);
-      // Saved views own free-form query JSON the FE understands. For the
-      // export we don't try to replay the FE's filter — we read the
-      // documented `projectId` / `assigneeUserId` / `status` fields the FE
-      // writes most commonly and pass the rest through unfiltered. A
-      // future pass should share the FE's query AST with the API so the
-      // FE-visible rows match the exported rows 1:1.
+      if (!isAdmin && view.userId !== actor.id) {
+        throw new Error(`Actor ${actor.id} cannot read saved view ${sourceId}`);
+      }
+      // Saved views own free-form query JSON the FE understands.
       const q = (view.query ?? {}) as Record<string, unknown>;
-      const where = pickTaskFilters(q);
+      const baseWhere = pickTaskFilters(q);
+      // Constrain the result set to the actor's accessible projects to
+      // prevent a saved view from referencing a project the actor no
+      // longer has access to.
+      const accessible = await this.accessibleProjectIds(actor);
+      const where = isAdmin
+        ? baseWhere
+        : { AND: [baseWhere, { projectId: { in: accessible } }] };
       const tasks = await this.prisma.task.findMany({
         where,
         orderBy: [{ projectId: 'asc' }, { keyNumber: 'asc' }],
@@ -188,11 +224,11 @@ export class ExportsProcessor extends WorkerHost {
       return { columns: defaultTaskColumns(), rows: tasks.map(taskToRow) };
     }
     if (sourceKind === 'project') {
-      // internal: not reached from an HTTP request — BullMQ processor; failure marks the job failed.
       if (!sourceId) throw new Error('project source requires sourceId');
       const project = await this.prisma.project.findUnique({ where: { id: sourceId } });
-      // internal: not reached from an HTTP request — BullMQ processor; failure marks the job failed.
       if (!project) throw new Error(`Project ${sourceId} not found`);
+      // Re-assert at processor layer.
+      await this.permissions.assertAtLeast(actor, sourceId, 'Viewer');
       const tasks = await this.prisma.task.findMany({
         where: { projectId: sourceId },
         orderBy: { keyNumber: 'asc' },
@@ -201,13 +237,55 @@ export class ExportsProcessor extends WorkerHost {
       });
       return { columns: defaultTaskColumns(), rows: tasks.map(taskToRow) };
     }
-    // all_tasks
+    // all_tasks: filter by the actor's accessible projects.
+    const where = isAdmin
+      ? undefined
+      : { projectId: { in: await this.accessibleProjectIds(actor) } };
     const tasks = await this.prisma.task.findMany({
+      ...(where ? { where } : {}),
       orderBy: [{ projectId: 'asc' }, { keyNumber: 'asc' }],
       take: 10_000,
       include: { assignee: { select: { email: true, name: true } }, project: { select: { key: true, name: true } } },
     });
     return { columns: defaultTaskColumns(), rows: tasks.map(taskToRow) };
+  }
+
+  /**
+   * Hydrate the actor by id. Returns null if the user is gone or archived
+   * (in which case the processor refuses the job).
+   */
+  private async loadActor(id: string): Promise<AuthenticatedUser | null> {
+    const u = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, email: true, kind: true, companyRole: true, archivedAt: true },
+    });
+    if (!u || u.archivedAt) return null;
+    return { id: u.id, email: u.email, kind: u.kind, companyRole: u.companyRole } as AuthenticatedUser;
+  }
+
+  /**
+   * Resolve every projectId the actor has at-least-Viewer access to. Mirrors
+   * the helper in SearchService / ReportsService — duplicated here rather
+   * than imported because the data model is single-tenant and the helper
+   * is small enough to stay local.
+   */
+  private async accessibleProjectIds(actor: AuthenticatedUser): Promise<string[]> {
+    if (actor.companyRole === 'Admin') {
+      const all = await this.prisma.project.findMany({ select: { id: true } });
+      return all.map((p) => p.id);
+    }
+    const direct = await this.prisma.projectAccess.findMany({
+      where: { OR: [{ userId: actor.id }, { team: { members: { some: { userId: actor.id } } } }] },
+      select: { projectId: true },
+    });
+    const publicProjects = await this.prisma.project.findMany({
+      where: { visibility: 'public' },
+      select: { id: true },
+    });
+    return Array.from(new Set([
+      ...direct.map((d) => d.projectId),
+      ...publicProjects.map((p) => p.id),
+    ]));
   }
 
   // ---- serialiser delegation ---------------------------------------------

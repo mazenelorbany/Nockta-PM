@@ -41,7 +41,7 @@ infra/
 docs/      ← this directory (architecture, ADRs, ops, security, env, API)
 ```
 
-The `apps/workers` folder exists as a vestige; all BullMQ workers and schedulers run in-process inside `apps/api`. See ADR-0004 and [`HANDOVER.md §9`](HANDOVER.md).
+All BullMQ workers and schedulers run in-process inside `apps/api`. There is no separate `apps/workers` deployable. See [ADR-0004](docs/adr/0004-bullmq-for-jobs.md) and [`CONTEXT.md`](CONTEXT.md).
 
 ---
 

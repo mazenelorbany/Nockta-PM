@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
+
 import { TypeBadge, type TaskType } from '../task-bits';
+
 import { FilterChip } from './FilterChip';
 import { FilterPopover, PopoverList, PopoverRow } from './FilterPopover';
 import { TYPES } from './types';

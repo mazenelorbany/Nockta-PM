@@ -1,12 +1,14 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ProjectsService } from './projects.service';
-import { ProjectsPurgeProcessor } from './projects-purge.processor';
+
 import { makeEventsMock, makePrismaMock } from '../../test-utils/mocks';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { PermissionsService } from '../permissions/permissions.service';
 import type { AuthenticatedUser } from '../auth/types';
 import type { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
+
+import { ProjectsPurgeProcessor } from './projects-purge.processor';
+import { ProjectsService } from './projects.service';
 
 // =============================================================================
 // Project archive grace-period — Pass 5 R4-deferred A

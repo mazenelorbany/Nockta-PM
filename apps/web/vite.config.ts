@@ -57,6 +57,44 @@ export default defineConfig({
     // Warn when any chunk crosses 600 kB un-minified. Default is 500; we
     // raised it once after rolling Tiptap into the docs page.
     chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        // Explicit vendor splits. Without this, Rollup's automatic chunking
+        // can pile React + router + query into the same async chunk as a
+        // route module, defeating long-term browser caching. The split
+        // below keeps the framework cores in their own chunks that change
+        // only on dep upgrades, so a feature ship doesn't bust the React
+        // chunk's cache.
+        //
+        //   react-vendor   — react + react-dom + jsx runtime
+        //   router         — react-router-dom
+        //   query          — @tanstack/react-query
+        //   dnd            — @dnd-kit/* (heavy, only board + backlog + timeline)
+        //   tiptap         — @tiptap/* (only the docs page)
+        //   recharts       — only the analytics page
+        //
+        // socket.io-client is already in its own chunk via the dynamic
+        // import in lib/socket.ts — no manualChunk entry needed.
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          router: ['react-router-dom'],
+          query: ['@tanstack/react-query'],
+          dnd: ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+          tiptap: [
+            '@tiptap/core',
+            '@tiptap/react',
+            '@tiptap/starter-kit',
+            '@tiptap/extension-link',
+            '@tiptap/extension-image',
+            '@tiptap/extension-mention',
+            '@tiptap/extension-task-list',
+            '@tiptap/extension-task-item',
+            '@tiptap/suggestion',
+          ],
+          recharts: ['recharts'],
+        },
+      },
+    },
   },
   resolve: {
     alias: {

@@ -3,8 +3,11 @@ import { FileSpreadsheet, Upload } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { cn } from '@nockta/ui';
+
 import { api } from '../../../lib/api';
 import { apiErrorMessage } from '../primitives';
+import { queryKeys } from '../../../lib/query-keys';
+
 import { ImportProgressBar, useImportProgress } from './useImportProgress';
 import { SourceHeader, Stat } from './shared';
 import type { DryRunResponsePayload, ImportSourceFieldPayload } from './types';
@@ -42,7 +45,7 @@ const NOCKTA_TARGET_LABELS: Record<string, string> = {
 
 export function JiraCsvImporter(): JSX.Element {
   const projectsQuery = useQuery({
-    queryKey: ['projects'],
+    queryKey: queryKeys.projects(),
     queryFn: () => api.get<Array<{ id: string; key: string; name: string }>>('/projects'),
   });
   const projects = projectsQuery.data ?? [];

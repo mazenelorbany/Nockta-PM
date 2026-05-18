@@ -1,6 +1,7 @@
 import { Controller, Get, Header } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
 import { collectDefaultMetrics, Counter, Histogram, register } from 'prom-client';
+
 import { Public } from '../modules/auth/decorators/public.decorator';
 
 // Default Node metrics (event loop lag, heap, GC, etc) — register once at

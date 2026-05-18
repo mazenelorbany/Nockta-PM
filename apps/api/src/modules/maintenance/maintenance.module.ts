@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+
 import { CfdSnapshotScheduler } from './cfd-snapshot.scheduler';
 import { CfdSnapshotInvalidator } from './cfd-snapshot.invalidator';
 import { DigestScheduler } from './digest.scheduler';

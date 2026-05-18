@@ -3,10 +3,13 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Archive, ArchiveRestore } from 'lucide-react';
 import { SkeletonList, Spinner, cn } from '@nockta/ui';
+
 import { api } from '../../../lib/api';
 import { AvatarCircle } from '../../task-bits';
 import { EditableField, SectionTitle, apiErrorMessage } from '../primitives';
 import type { Team } from '../TeamsTab';
+import { queryKeys } from '../../../lib/query-keys';
+
 import type { CompanyRole, UserDetail } from './types';
 import { UserProjectAccess } from './user-project-access';
 
@@ -45,8 +48,8 @@ export function UserDrawer({
     onSuccess: () => {
       toast.success('Teams updated');
       void queryClient.invalidateQueries({ queryKey: ['user-detail', userId] });
-      void queryClient.invalidateQueries({ queryKey: ['members'] });
-      void queryClient.invalidateQueries({ queryKey: ['teams'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.members() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.teams() });
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Could not update teams')),
   });
@@ -55,7 +58,7 @@ export function UserDrawer({
     onSuccess: () => {
       toast.success('Role updated');
       void queryClient.invalidateQueries({ queryKey: ['user-detail', userId] });
-      void queryClient.invalidateQueries({ queryKey: ['members'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.members() });
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Could not update role')),
   });
@@ -65,7 +68,7 @@ export function UserDrawer({
     onSuccess: (_resp, kind) => {
       toast.success(kind === 'client' ? 'Converted to Guest' : 'Converted to internal');
       void queryClient.invalidateQueries({ queryKey: ['user-detail', userId] });
-      void queryClient.invalidateQueries({ queryKey: ['members'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.members() });
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Could not change kind')),
   });
@@ -73,7 +76,7 @@ export function UserDrawer({
     mutationFn: () => api.delete(`/users/${userId}`),
     onSuccess: () => {
       toast.success('Account archived');
-      void queryClient.invalidateQueries({ queryKey: ['members'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.members() });
       onClose();
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Could not archive')),
@@ -85,7 +88,7 @@ export function UserDrawer({
       if (vars.email !== undefined) toast.success(`Email set to ${resp.email}`);
       else if (vars.name !== undefined) toast.success(`Renamed to ${resp.name}`);
       void queryClient.invalidateQueries({ queryKey: ['user-detail', userId] });
-      void queryClient.invalidateQueries({ queryKey: ['members'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.members() });
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Could not save')),
   });
@@ -93,7 +96,7 @@ export function UserDrawer({
     mutationFn: () => api.post(`/users/${userId}/unarchive`, {}),
     onSuccess: () => {
       toast.success('Account restored');
-      void queryClient.invalidateQueries({ queryKey: ['members'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.members() });
       void queryClient.invalidateQueries({ queryKey: ['user-detail', userId] });
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Could not restore')),

@@ -1,7 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+
 import { api } from '../../lib/api';
+import { queryKeys } from '../../lib/query-keys';
+
 import { apiErrorMessage } from './helpers';
 import type { Sprint } from './types';
 
@@ -28,7 +31,7 @@ export function CreateSprintDialog({
     mutationFn: (body: { name: string; startDate?: string; endDate?: string; goal?: string }) =>
       api.post<Sprint>(`/projects/${projectId}/sprints`, body),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['sprints', projectId] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.sprints(projectId) });
       toast.success('Sprint created');
       onClose();
     },

@@ -1,7 +1,9 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
+
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { AuthenticatedUser } from '../auth/types';
+
 import type { SearchInput } from './postgres-search';
 
 // Saved-search CRUD + the promote endpoints that bridge the SavedSearch /

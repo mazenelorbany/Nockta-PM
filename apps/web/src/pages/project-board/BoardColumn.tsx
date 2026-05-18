@@ -1,12 +1,14 @@
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useRef } from 'react';
+
 import { StatusPill } from '../../components/task-bits';
 import {
   ESTIMATED_CARD_HEIGHT,
   useVirtualizer,
   VIRTUALIZE_THRESHOLD,
 } from '../../lib/virtualizer';
+
 import { BoardCard } from './BoardCard';
 import type { Task } from './types';
 

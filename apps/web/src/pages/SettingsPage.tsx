@@ -1,5 +1,6 @@
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { cn } from '@nockta/ui';
+
 import { useAuth } from '../lib/auth-store';
 import { AiSettingsTab } from '../components/settings/AiSettingsTab';
 import { AuditLogTab } from '../components/settings/AuditLogTab';

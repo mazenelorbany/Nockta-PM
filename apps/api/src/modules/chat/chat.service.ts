@@ -1,6 +1,7 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { google, type chat_v1 } from 'googleapis';
 import type { JWT } from 'google-auth-library';
+
 import { Env } from '../../config/env';
 
 @Injectable()

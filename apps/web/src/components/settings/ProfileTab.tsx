@@ -2,9 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { ApiError } from '@nockta/sdk';
+
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth-store';
 import { AvatarCircle } from '../task-bits';
+
 import { Fieldset, SectionTitle } from './primitives';
 
 // =============================================================================

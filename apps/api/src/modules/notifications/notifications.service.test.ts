@@ -1,18 +1,22 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import type { Queue } from 'bullmq';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { makeEventsMock, makePrismaMock } from '../../test-utils/mocks';
+import type { PrismaService } from '../../prisma/prisma.service';
+import type { AuthenticatedUser } from '../auth/types';
+
 import { NotificationsService } from './notifications.service';
 import { NotificationDispatcherService } from './notification-dispatcher.service';
 import { RecipientResolverService } from './recipient-resolver.service';
 import { PreferencesService } from './preferences.service';
 import { NotificationMutesService } from './mutes.service';
+import type { NotificationDigestService } from './digest.service';
+import type {
+  NotificationSnoozeService} from './snooze.service';
 import {
-  isNowInsideRule,
-  NotificationSnoozeService,
+  isNowInsideRule
 } from './snooze.service';
-import { makeEventsMock, makePrismaMock } from '../../test-utils/mocks';
-import type { PrismaService } from '../../prisma/prisma.service';
-import type { AuthenticatedUser } from '../auth/types';
 
 // =============================================================================
 // notifications — the user-facing notification surface is split across four
@@ -417,7 +421,7 @@ function buildDispatcher(): {
     prefs as unknown as PreferencesService,
     mutes as unknown as NotificationMutesService,
     snooze as unknown as NotificationSnoozeService,
-    digest as unknown as import('./digest.service').NotificationDigestService,
+    digest as unknown as NotificationDigestService,
     queue as unknown as Queue,
   );
   return { dispatcher, mocks: { emitter, resolver, prefs, mutes, snooze, digest, queue } };

@@ -1,10 +1,12 @@
 import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { PermissionsService } from '../permissions/permissions.service';
+
+import type { PrismaService } from '../../prisma/prisma.service';
+import type { PermissionsService } from '../permissions/permissions.service';
 import type { AuthenticatedUser } from '../auth/types';
-import { AiCostTrackingService } from './ai-cost-tracking.service';
-import { LlmService } from './llm.service';
-import { QdrantService } from './qdrant.service';
+
+import type { AiCostTrackingService } from './ai-cost-tracking.service';
+import type { LlmService } from './llm.service';
+import type { QdrantService } from './qdrant.service';
 
 /**
  * Synchronous (request-blocking) AI helpers. Each call runs the LLM/embedding

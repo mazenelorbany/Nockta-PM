@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+
 import { AutomationsController } from './automations.controller';
 import { AutomationsListener } from './automations.listener';
 import { AutomationsService } from './automations.service';

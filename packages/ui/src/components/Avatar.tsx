@@ -1,4 +1,5 @@
 import * as React from 'react';
+
 import { cn } from '../lib/cn';
 
 export interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -25,7 +26,6 @@ export const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
       {...rest}
     >
       {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt={name ?? ''} className="h-full w-full object-cover" />
       ) : (
         <span>{initialsOf(name)}</span>

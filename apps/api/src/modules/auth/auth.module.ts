@@ -2,8 +2,10 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+
 import { Env } from '../../config/env';
 import { RedisModule } from '../redis/redis.module';
+
 import { AuditLogService } from './audit-log.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';

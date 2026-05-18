@@ -7,9 +7,11 @@ import {
   ArrayUnique, IsBoolean, IsEmail, IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min,
 } from 'class-validator';
 import { CompanyRole, UserKind } from '@prisma/client';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { UsersService } from './users.service';
+
+import type { UsersService } from './users.service';
 
 class ChangeRoleDto {
   // Accept either `role` or the older `companyRole` body shape so older

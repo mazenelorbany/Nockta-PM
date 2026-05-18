@@ -7,8 +7,10 @@ import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { ApiError } from '@nockta/sdk';
 import { cn, EmptyState, QueryErrorState, SkeletonList } from '@nockta/ui';
+
 import { api } from '../lib/api';
 import { getSocket } from '../lib/socket';
+import { queryKeys } from '../lib/query-keys';
 
 // =============================================================================
 // /inbox — full notifications inbox.
@@ -52,7 +54,7 @@ export function InboxPage(): JSX.Element {
   useEffect(() => { setSelected(new Set()); setCursor(undefined); }, [tab, projectId]);
 
   const projectsQuery = useQuery({
-    queryKey: ['projects'],
+    queryKey: queryKeys.projects(),
     queryFn: () => api.get<ProjectSummary[]>('/projects'),
   });
 
@@ -73,13 +75,22 @@ export function InboxPage(): JSX.Element {
 
   // Live update: when a new notification lands, invalidate the inbox.
   useEffect(() => {
-    const socket = getSocket();
+    let cancelled = false;
+    let cleanup: (() => void) | null = null;
     const onNew = (): void => {
       void queryClient.invalidateQueries({ queryKey: ['inbox'] });
       void queryClient.invalidateQueries({ queryKey: ['notifications'] });
     };
-    socket.on('notification.created', onNew);
-    return () => { socket.off('notification.created', onNew); };
+    void (async () => {
+      const socket = await getSocket();
+      if (cancelled) return;
+      socket.on('notification.created', onNew);
+      cleanup = () => { socket.off('notification.created', onNew); };
+    })();
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
   }, [queryClient]);
 
   const invalidateAll = (): void => {

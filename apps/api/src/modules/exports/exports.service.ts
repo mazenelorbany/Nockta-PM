@@ -1,16 +1,20 @@
 import { randomUUID } from 'node:crypto';
+
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
   type OnModuleInit,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
-import { Prisma } from '@prisma/client';
-import { Queue } from 'bullmq';
-import { PrismaService } from '../../prisma/prisma.service';
+import type { Prisma } from '@prisma/client';
+import type { Queue } from 'bullmq';
+
+import type { PrismaService } from '../../prisma/prisma.service';
 import type { AuthenticatedUser } from '../auth/types';
+import type { PermissionsService } from '../permissions/permissions.service';
 
 // =============================================================================
 // ExportsService — workspace-scoped scheduled/on-demand data exports.
@@ -52,9 +56,14 @@ const DELIVERY_KINDS: ExportDeliveryKind[] = ['download', 'email'];
 export const EXPORT_SIGNED_URL_TTL_SECONDS = 24 * 60 * 60;
 
 /** BullMQ job payload — kept narrow so the processor can rehydrate from
- *  Postgres rather than trusting the queue. */
+ *  Postgres rather than trusting the queue. `actorId` is stamped at enqueue
+ *  time so the processor can re-resolve the actor's project access and
+ *  filter rows accordingly. NULL means the actor was deleted after enqueue
+ *  but before the job ran — the processor treats this as "Admin only" and
+ *  refuses to materialise the export. */
 export interface ExportJobPayload {
   runId: string;
+  actorId: string | null;
 }
 
 export interface CreateScheduleInput {
@@ -93,6 +102,7 @@ export class ExportsService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     @InjectQueue(EXPORTS_QUEUE) private readonly queue: Queue<ExportJobPayload>,
+    private readonly permissions: PermissionsService,
   ) {}
 
   onModuleInit(): void {
@@ -114,6 +124,11 @@ export class ExportsService implements OnModuleInit {
       throw new BadRequestException('deliveryEmail required when deliveryKind=email');
     }
     if (input.scheduleCron) this.validateCron(input.scheduleCron);
+    // Source-access gate. A user can only schedule an export for a source
+    // they currently have access to. Re-checked at fire time in
+    // fireDueSchedules so a later access revocation auto-disables the
+    // schedule.
+    await this.assertSourceAccess(actor, input.sourceKind, input.sourceId ?? null);
 
     // Mirror to legacy `query` blob so a pre-0015 reader can still parse it.
     const legacyQuery: Prisma.InputJsonValue = {
@@ -147,8 +162,15 @@ export class ExportsService implements OnModuleInit {
     return this.shapeSchedule(created);
   }
 
-  async listSchedules(_actor: AuthenticatedUser) {
+  async listSchedules(actor: AuthenticatedUser) {
+    // Admin sees every schedule; everyone else only sees their own. Without
+    // this filter, any internal user could enumerate other users' delivery
+    // emails, configured queries, and last-run timestamps — see the audit
+    // notes for `requireSchedule`.
+    const where: Prisma.ExportScheduleWhereInput =
+      actor.companyRole === 'Admin' ? {} : { createdById: actor.id };
     const rows = await this.prisma.exportSchedule.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
     });
     return rows.map((r) => this.shapeSchedule(r));
@@ -221,18 +243,28 @@ export class ExportsService implements OnModuleInit {
       | { scheduleId?: never; inline: InlineRunInput },
   ) {
     if (args.scheduleId) {
+      // requireSchedule already enforces (createdById === actor.id || Admin),
+      // and the source-access gate ran at createSchedule. We re-assert here
+      // because the actor's project access may have changed between create
+      // and re-run.
       const schedule = await this.requireSchedule(actor, args.scheduleId);
+      await this.assertSourceAccess(
+        actor,
+        schedule.sourceKind as ExportSourceKind,
+        schedule.sourceId,
+      );
       const run = await this.createRun({
         scheduleId: schedule.id,
         kind: schedule.kind as ExportKind,
         sourceKind: schedule.sourceKind as ExportSourceKind,
         sourceId: schedule.sourceId,
+        createdById: actor.id,
       });
       await this.prisma.exportSchedule.update({
         where: { id: schedule.id },
         data: { lastRunAt: new Date() },
       });
-      await this.enqueue(run.id);
+      await this.enqueue(run.id, actor.id);
       return run;
     }
     // args.scheduleId is falsy here, so the discriminated union narrows to
@@ -241,19 +273,24 @@ export class ExportsService implements OnModuleInit {
     if (!inline) throw new BadRequestException('Either scheduleId or inline must be provided');
     this.validateKind(inline.kind);
     this.validateSource(inline.sourceKind, inline.sourceId);
+    await this.assertSourceAccess(actor, inline.sourceKind, inline.sourceId ?? null);
     const run = await this.createRun({
       scheduleId: null,
       kind: inline.kind,
       sourceKind: inline.sourceKind,
       sourceId: inline.sourceId ?? null,
+      createdById: actor.id,
     });
-    await this.enqueue(run.id);
+    await this.enqueue(run.id, actor.id);
     return run;
   }
 
   async listRecentRuns(actor: AuthenticatedUser, opts: { scheduleId?: string; take?: number } = {}) {
     const take = Math.min(200, Math.max(1, opts.take ?? 50));
+    const isAdmin = actor.companyRole === 'Admin';
     if (opts.scheduleId) {
+      // requireSchedule enforces ownership on the schedule; runs under it
+      // are then visible to the same actor.
       await this.requireSchedule(actor, opts.scheduleId);
       const runs = await this.prisma.exportRun.findMany({
         where: { scheduleId: opts.scheduleId },
@@ -262,7 +299,18 @@ export class ExportsService implements OnModuleInit {
       });
       return runs.map((r) => this.shapeRun(r));
     }
+    // No scheduleId filter — return runs the actor owns (scheduled or
+    // inline) plus runs from schedules they own. Admin sees everything.
+    const where: Prisma.ExportRunWhereInput = isAdmin
+      ? {}
+      : {
+          OR: [
+            { createdById: actor.id },
+            { schedule: { createdById: actor.id } },
+          ],
+        };
     const runs = await this.prisma.exportRun.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
       take,
     });
@@ -335,43 +383,129 @@ export class ExportsService implements OnModuleInit {
       ) {
         continue;
       }
+      // Re-validate the creator's source access before firing. If the
+      // creator has lost access (project access revoked, saved view
+      // deleted, user archived), disable the schedule rather than keep
+      // dumping data they shouldn't see anymore. Skip-but-don't-disable
+      // for transient errors (DB hiccups) so a momentary blip doesn't
+      // wipe a user's schedules.
+      const creator = await this.loadCreatorForSchedule(schedule.createdById);
+      if (!creator) {
+        // Creator gone — disable the schedule, log loudly. The run history
+        // remains, but no new runs fire.
+        await this.prisma.exportSchedule.update({
+          where: { id: schedule.id },
+          data: { enabled: false },
+        });
+        this.logger.warn(
+          { scheduleId: schedule.id, createdById: schedule.createdById },
+          'fireDueSchedules: disabled schedule whose creator no longer exists',
+        );
+        continue;
+      }
+      try {
+        await this.assertSourceAccess(
+          creator,
+          schedule.sourceKind as ExportSourceKind,
+          schedule.sourceId,
+        );
+      } catch (err) {
+        if (err instanceof ForbiddenException || err instanceof NotFoundException) {
+          await this.prisma.exportSchedule.update({
+            where: { id: schedule.id },
+            data: { enabled: false },
+          });
+          this.logger.warn(
+            {
+              scheduleId: schedule.id,
+              creatorId: creator.id,
+              sourceKind: schedule.sourceKind,
+              sourceId: schedule.sourceId,
+            },
+            "fireDueSchedules: disabled schedule whose creator lost source access",
+          );
+          continue;
+        }
+        // Re-throw unexpected errors so the scheduler logs them and the
+        // operator notices.
+        throw err;
+      }
       const run = await this.createRun({
         scheduleId: schedule.id,
         kind: schedule.kind as ExportKind,
         sourceKind: schedule.sourceKind as ExportSourceKind,
         sourceId: schedule.sourceId,
+        createdById: creator.id,
       });
       await this.prisma.exportSchedule.update({
         where: { id: schedule.id },
         data: { lastRunAt: minuteStart },
       });
-      await this.enqueue(run.id);
+      await this.enqueue(run.id, creator.id);
       fired++;
     }
     return fired;
+  }
+
+  /**
+   * Resolve a schedule's creator into an AuthenticatedUser-shaped object for
+   * permission checks. Returns null if the user was deleted/archived.
+   */
+  private async loadCreatorForSchedule(
+    createdById: string,
+  ): Promise<AuthenticatedUser | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: createdById },
+      select: { id: true, email: true, kind: true, companyRole: true, archivedAt: true },
+    });
+    if (!user || user.archivedAt) return null;
+    return {
+      id: user.id,
+      email: user.email,
+      kind: user.kind,
+      companyRole: user.companyRole,
+    } as AuthenticatedUser;
   }
 
   // ===========================================================================
   // Internals
   // ===========================================================================
 
-  private async requireSchedule(_actor: AuthenticatedUser, id: string) {
+  private async requireSchedule(actor: AuthenticatedUser, id: string) {
     const row = await this.prisma.exportSchedule.findUnique({ where: { id } });
     if (!row) throw new NotFoundException('Export schedule not found');
+    // Ownership gate. Admins can read/update any schedule; everyone else is
+    // limited to their own rows. Returning NotFound (not Forbidden) when an
+    // unauthorized actor names someone else's id prevents id enumeration.
+    if (row.createdById !== actor.id && actor.companyRole !== 'Admin') {
+      throw new NotFoundException('Export schedule not found');
+    }
     return row;
   }
 
-  private async assertRunOwnership(actor: AuthenticatedUser, run: { scheduleId: string | null }): Promise<void> {
+  private async assertRunOwnership(
+    actor: AuthenticatedUser,
+    run: { scheduleId: string | null; createdById: string | null },
+  ): Promise<void> {
+    const isAdmin = actor.companyRole === 'Admin';
+    if (isAdmin) return;
+    // Inline runs (no schedule) — ownership is the run's createdById. A
+    // NULL createdById means the run pre-dates the ownership model (or its
+    // creator was deleted); only Admin reads in that case.
     if (!run.scheduleId) {
-      // Inline runs have no schedule — accept the read iff the caller is an
-      // internal user. Clients should never see these.
-      if (actor.kind !== 'internal') {
-        throw new NotFoundException('Export run not found');
-      }
-      return;
+      if (run.createdById === actor.id) return;
+      throw new NotFoundException('Export run not found');
     }
-    const schedule = await this.prisma.exportSchedule.findUnique({ where: { id: run.scheduleId } });
-    if (!schedule) throw new NotFoundException('Export run not found');
+    // Scheduled runs — ownership is the schedule's createdById. The run
+    // may have its own createdById (set at the time it was triggered),
+    // in which case the actor who triggered it can also read it.
+    if (run.createdById === actor.id) return;
+    const schedule = await this.prisma.exportSchedule.findUnique({
+      where: { id: run.scheduleId },
+    });
+    if (!schedule || schedule.createdById !== actor.id) {
+      throw new NotFoundException('Export run not found');
+    }
   }
 
   private async createRun(args: {
@@ -379,6 +513,7 @@ export class ExportsService implements OnModuleInit {
     kind: ExportKind;
     sourceKind: ExportSourceKind;
     sourceId: string | null;
+    createdById: string | null;
   }) {
     const expiresAt = new Date(Date.now() + EXPORT_SIGNED_URL_TTL_SECONDS * 1000);
     const row = await this.prisma.exportRun.create({
@@ -390,17 +525,18 @@ export class ExportsService implements OnModuleInit {
         sourceId: args.sourceId,
         status: 'queued',
         expiresAt,
+        createdById: args.createdById,
       },
     });
     return this.shapeRun(row);
   }
 
-  private async enqueue(runId: string): Promise<void> {
+  private async enqueue(runId: string, actorId: string | null): Promise<void> {
     // jobId = runId so a duplicate enqueue (retry / accidental fire) doesn't
     // result in two materialisations of the same logical export.
     await this.queue.add(
       'export',
-      { runId },
+      { runId, actorId },
       {
         jobId: runId,
         removeOnComplete: { count: 100 },
@@ -409,6 +545,39 @@ export class ExportsService implements OnModuleInit {
         backoff: { type: 'exponential', delay: 5_000 },
       },
     );
+  }
+
+  /**
+   * Source-access gate, shared by createSchedule / runOnce inline / runOnce
+   * scheduled / fireDueSchedules. Throws ForbiddenException if the actor
+   * cannot read the requested source.
+   *
+   * - `project`: actor needs at least Viewer on the project.
+   * - `saved_view`: actor must own the SavedSearch row (or be Admin).
+   *   SavedSearch is per-user; there's no project link on the model.
+   * - `all_tasks`: no upfront check — the processor filters by the actor's
+   *   accessibleProjectIds at materialisation time.
+   */
+  private async assertSourceAccess(
+    actor: AuthenticatedUser,
+    sourceKind: ExportSourceKind,
+    sourceId: string | null,
+  ): Promise<void> {
+    if (sourceKind === 'project') {
+      if (!sourceId) throw new BadRequestException('sourceId required for project source');
+      await this.permissions.assertAtLeast(actor, sourceId, 'Viewer');
+      return;
+    }
+    if (sourceKind === 'saved_view') {
+      if (!sourceId) throw new BadRequestException('sourceId required for saved_view source');
+      const view = await this.prisma.savedSearch.findUnique({ where: { id: sourceId } });
+      if (!view) throw new NotFoundException('Saved view not found');
+      if (view.userId !== actor.id && actor.companyRole !== 'Admin') {
+        throw new ForbiddenException('You do not have access to this saved view');
+      }
+      return;
+    }
+    // all_tasks: no upfront check; filtered in the processor.
   }
 
   private validateKind(kind: ExportKind): void {

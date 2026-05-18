@@ -1,7 +1,9 @@
 import { forwardRef, Module } from '@nestjs/common';
+
 import { AiModule } from '../ai/ai.module';
 import { CommentsModule } from '../comments/comments.module';
 import { TasksModule } from '../tasks/tasks.module';
+
 import { ChatBindingController } from './chat-binding.controller';
 import { ChatDispatcherService } from './chat-dispatcher.service';
 import { ChatEventsController } from './chat-events.controller';

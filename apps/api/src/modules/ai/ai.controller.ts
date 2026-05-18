@@ -1,15 +1,17 @@
 import { Body, Controller, ForbiddenException, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
+import type { Queue } from 'bullmq';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { PermissionsService } from '../permissions/permissions.service';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AiCostTrackingService } from './ai-cost-tracking.service';
-import { AiSprintPlanningService } from './ai-sprint-planning.service';
-import { AiStandupService } from './ai-standup.service';
-import { AiSyncService } from './ai-sync.service';
+import type { PermissionsService } from '../permissions/permissions.service';
+import type { PrismaService } from '../../prisma/prisma.service';
+
+import type { AiCostTrackingService } from './ai-cost-tracking.service';
+import type { AiSprintPlanningService } from './ai-sprint-planning.service';
+import type { AiStandupService } from './ai-standup.service';
+import type { AiSyncService } from './ai-sync.service';
 import { AI_DUPLICATE_QUEUE, AI_EMBED_QUEUE, AI_SUMMARIZE_QUEUE } from './ai.queues';
 
 @ApiTags('ai')

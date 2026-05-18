@@ -1,8 +1,10 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
+
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { ChatModule } from '../chat/chat.module';
+
 import { AiController } from './ai.controller';
 import { AiCostTrackingService } from './ai-cost-tracking.service';
 import { AiCronService } from './ai-cron.service';

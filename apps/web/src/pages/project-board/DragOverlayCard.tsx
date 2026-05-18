@@ -4,6 +4,7 @@ import {
   DueDateChip,
   PriorityDot,
 } from '../../components/task-bits';
+
 import type { Priority, Task } from './types';
 
 /**

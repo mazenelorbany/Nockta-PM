@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AiCostTrackingService } from './ai-cost-tracking.service';
+
 import { makePrismaMock } from '../../test-utils/mocks';
 import type { PrismaService } from '../../prisma/prisma.service';
+
+import { AiCostTrackingService } from './ai-cost-tracking.service';
 
 // ai-cost-tracking.service — verifies:
 //   1. record() computes costUsdCents from the static price table and persists

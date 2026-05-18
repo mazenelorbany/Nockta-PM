@@ -18,11 +18,14 @@ import { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { cn, QueryErrorState, Spinner } from '@nockta/ui';
+
 import { ProjectTabs } from '../components/ProjectTabs';
 import { TaskDetailDrawer } from '../components/TaskDetailDrawer';
 import { PullIndicator, usePullToRefresh } from '../hooks/usePullToRefresh';
 import { type Priority } from '../components/task-bits';
 import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
+
 import { BulkMoveMenu } from './project-backlog/BulkMoveMenu';
 import { CreateSprintDialog } from './project-backlog/CreateSprintDialog';
 import { Pill } from './project-backlog/Pill';
@@ -36,7 +39,7 @@ import {
   apiErrorMessage,
   applyFilters,
   toggleSelected,
-  useSprintTasks,
+  useSprintTasksList,
 } from './project-backlog/helpers';
 import type {
   ContainerId,
@@ -61,12 +64,12 @@ export function ProjectBacklogPage(): JSX.Element {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const projectQuery = useQuery({
-    queryKey: ['project', projectId],
+    queryKey: queryKeys.project(projectId),
     queryFn: () => api.get<Project>(`/projects/${projectId}`),
     enabled: Boolean(projectId),
   });
   const sprintsQuery = useQuery({
-    queryKey: ['sprints', projectId],
+    queryKey: queryKeys.sprints(projectId),
     queryFn: () => api.get<Sprint[]>(`/projects/${projectId}/sprints`),
     enabled: Boolean(projectId),
   });
@@ -109,19 +112,21 @@ export function ProjectBacklogPage(): JSX.Element {
   const [priorityFilter, setPriorityFilter] = useState<Priority | ''>('');
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
 
-  // Fetch the tasks for every visible sprint in one go. Each sprint query is
-  // independent so refetches stay cheap.
-  const sprintTasksQueries = orderedSprints.map((s) =>
-    useSprintTasks(s.id, projectId)
+  // Fetch the tasks for every visible sprint in one go via useQueries — the
+  // sprint count varies (toggling "show completed"), so a .map() of useQuery
+  // would violate the rules of hooks.
+  const sprintTasksQueries = useSprintTasksList(
+    orderedSprints.map((s) => s.id),
+    projectId,
   );
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
-    void queryClient.invalidateQueries({ queryKey: ['sprints', projectId] });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.sprints(projectId) });
     for (const s of orderedSprints) {
       void queryClient.invalidateQueries({ queryKey: ['sprint-tasks', s.id] });
     }
-    void queryClient.invalidateQueries({ queryKey: ['tasks', 'project', projectId] });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.projectTasks(projectId) });
   };
 
   const moveOne = useMutation({
@@ -258,7 +263,7 @@ export function ProjectBacklogPage(): JSX.Element {
   const pull = usePullToRefresh({
     onRefresh: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['sprints', projectId] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.sprints(projectId) }),
         queryClient.invalidateQueries({ queryKey: ['backlog', projectId] }),
         queryClient.invalidateQueries({ queryKey: ['sprint-tasks'] }),
       ]);

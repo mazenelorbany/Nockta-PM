@@ -1,4 +1,5 @@
 import { ApiError } from '@nockta/sdk';
+
 import type { KeyResult } from './types';
 
 export function apiErrorMessage(err: unknown, fallback: string): string {

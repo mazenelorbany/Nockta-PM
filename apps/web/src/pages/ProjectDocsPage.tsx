@@ -3,10 +3,11 @@ import { FileText, History, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ProjectTabs } from '../components/ProjectTabs';
-import { PullIndicator, usePullToRefresh } from '../hooks/usePullToRefresh';
 import { ApiError } from '@nockta/sdk';
 import { cn, QueryErrorState, SkeletonList, Spinner } from '@nockta/ui';
+
+import { ProjectTabs } from '../components/ProjectTabs';
+import { PullIndicator, usePullToRefresh } from '../hooks/usePullToRefresh';
 import { AvatarCircle } from '../components/task-bits';
 import { DocEditor as TiptapDocEditor } from '../components/DocEditor';
 import {
@@ -15,6 +16,7 @@ import {
   type PMNode,
 } from '../components/prosemirror-markdown';
 import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 
 // =============================================================================
 // /projects/:projectId/docs[/:docId] — per-project markdown wiki.
@@ -54,7 +56,7 @@ export function ProjectDocsPage(): JSX.Element {
   const queryClient = useQueryClient();
 
   const projectQuery = useQuery({
-    queryKey: ['project', projectId],
+    queryKey: queryKeys.project(projectId),
     queryFn: () => api.get<{ id: string; key: string; name: string }>(`/projects/${projectId}`),
     enabled: Boolean(projectId),
   });
@@ -385,7 +387,7 @@ function DocEditorPane({ docId, projectId }: { docId: string; projectId: string 
 
 function RevisionHistory({
   docId,
-  currentDoc,
+  currentDoc: _currentDoc,
   onClose,
   onRestore,
   onOpenDiff,

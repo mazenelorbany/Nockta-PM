@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
+
 import { api } from './api';
 import { getSocket } from './socket';
 
@@ -76,7 +77,8 @@ export function useNotificationsSurface(): void {
 
   // ---- Socket-driven invalidation + browser push ----
   useEffect(() => {
-    const socket = getSocket();
+    let cancelled = false;
+    let cleanup: (() => void) | null = null;
     function onCreated(ev: NotificationCreated): void {
       void queryClient.invalidateQueries({ queryKey: ['notifications'] });
       void queryClient.invalidateQueries({ queryKey: ['inbox'] });
@@ -111,8 +113,16 @@ export function useNotificationsSurface(): void {
         }
       }
     }
-    socket.on('notification.created', onCreated);
-    return () => { socket.off('notification.created', onCreated); };
+    void (async () => {
+      const socket = await getSocket();
+      if (cancelled) return;
+      socket.on('notification.created', onCreated);
+      cleanup = () => { socket.off('notification.created', onCreated); };
+    })();
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
   }, [queryClient]);
 }
 

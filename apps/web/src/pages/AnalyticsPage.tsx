@@ -1,12 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import {
   Bar, BarChart, CartesianGrid, ComposedChart, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import { cn, NocktaMark, QueryErrorState, Skeleton } from '@nockta/ui';
+
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth-store';
-import { AnalyticsReportsPage } from './AnalyticsReportsPage';
+import { queryKeys } from '../lib/query-keys';
+
+// Reports tab is rarely-used + brings its own form/editor surface — keep it
+// off the analytics initial chunk. The tab strip already shows a skeleton
+// while the chunk streams in.
+const AnalyticsReportsPage = lazy(() =>
+  import('./AnalyticsReportsPage').then((m) => ({ default: m.AnalyticsReportsPage })),
+);
 
 // =============================================================================
 // /analytics — recharts-powered dashboards for personal + org.
@@ -122,7 +130,11 @@ export function AnalyticsPage(): JSX.Element {
         {tab === 'org' && isAdmin && <OrgDashboard />}
         {tab === 'burndown' && <BurndownTab />}
         {tab === 'velocity' && <VelocityTab />}
-        {tab === 'reports' && <AnalyticsReportsPage />}
+        {tab === 'reports' && (
+          <Suspense fallback={<Skeleton className="h-64" />}>
+            <AnalyticsReportsPage />
+          </Suspense>
+        )}
       </div>
     </div>
   );
@@ -232,11 +244,11 @@ function BurndownTab(): JSX.Element {
   const [sprintId, setSprintId] = useState<string>('');
 
   const projectsQuery = useQuery({
-    queryKey: ['projects'],
+    queryKey: queryKeys.projects(),
     queryFn: () => api.get<Project[]>('/projects'),
   });
   const sprintsQuery = useQuery({
-    queryKey: ['sprints', projectId],
+    queryKey: queryKeys.sprints(projectId),
     queryFn: () => api.get<Sprint[]>(`/projects/${projectId}/sprints`),
     enabled: Boolean(projectId),
   });
@@ -314,7 +326,7 @@ function VelocityTab(): JSX.Element {
   const [metric, setMetric] = useState<'count' | 'estimate'>('count');
 
   const projectsQuery = useQuery({
-    queryKey: ['projects'],
+    queryKey: queryKeys.projects(),
     queryFn: () => api.get<Project[]>('/projects'),
   });
   const velocityQuery = useQuery({

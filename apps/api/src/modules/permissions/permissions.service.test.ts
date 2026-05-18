@@ -1,9 +1,11 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { PermissionsService } from './permissions.service';
+
 import { makePrismaMock } from '../../test-utils/mocks';
 import type { AuthenticatedUser } from '../auth/types';
 import type { PrismaService } from '../../prisma/prisma.service';
+
+import { PermissionsService } from './permissions.service';
 
 // =============================================================================
 // permissions.service — the gate every other service consults. Each branch

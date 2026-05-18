@@ -1,13 +1,15 @@
+import type {
+  useSensors} from '@dnd-kit/core';
 import {
   DndContext,
   type DragEndEvent,
   type DragStartEvent,
-  DragOverlay,
-  useSensors,
+  DragOverlay
 } from '@dnd-kit/core';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@nockta/ui';
+
 import { BoardColumn } from './BoardColumn';
 import { DragOverlayCard } from './DragOverlayCard';
 import type { Task } from './types';

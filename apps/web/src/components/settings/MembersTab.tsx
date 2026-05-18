@@ -3,8 +3,11 @@ import { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Search, UserPlus, Users as UsersIcon } from 'lucide-react';
 import { SkeletonList, cn } from '@nockta/ui';
+
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth-store';
+import { queryKeys } from '../../lib/query-keys';
+
 import {
   AdminGate,
   HelpHint,
@@ -50,7 +53,7 @@ export function MembersTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
     enabled: isAdmin,
   });
   const teamsQuery = useQuery({
-    queryKey: ['teams'],
+    queryKey: queryKeys.teams(),
     queryFn: () => api.get<Team[]>('/teams'),
     enabled: isAdmin,
   });
@@ -60,7 +63,7 @@ export function MembersTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
       api.patch(`/users/${input.id}/role`, { role: input.role }),
     onSuccess: () => {
       toast.success('Role updated');
-      void queryClient.invalidateQueries({ queryKey: ['members'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.members() });
       void queryClient.invalidateQueries({ queryKey: ['user-detail'] });
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Could not update role')),
@@ -69,7 +72,7 @@ export function MembersTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
     mutationFn: (id: string) => api.delete(`/users/${id}`),
     onSuccess: () => {
       toast.success('Member archived');
-      void queryClient.invalidateQueries({ queryKey: ['members'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.members() });
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Could not archive member')),
   });
@@ -77,7 +80,7 @@ export function MembersTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
     mutationFn: (id: string) => api.post(`/users/${id}/unarchive`, {}),
     onSuccess: () => {
       toast.success('Member restored');
-      void queryClient.invalidateQueries({ queryKey: ['members'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.members() });
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Could not restore member')),
   });
@@ -291,7 +294,7 @@ export function MembersTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
           onInvited={() => {
             // Refresh members so the new guest appears immediately, and flip
             // the kind tab so the admin sees the new row land in Clients.
-            void queryClient.invalidateQueries({ queryKey: ['members'] });
+            void queryClient.invalidateQueries({ queryKey: queryKeys.members() });
             setKind('client');
             setInviteOpen(false);
           }}

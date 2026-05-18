@@ -3,13 +3,16 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   IsBoolean, IsIn, IsNumber, IsObject, IsOptional, Max, Min,
 } from 'class-validator';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequireCompanyRoles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import type { AuthenticatedUser } from '../auth/types';
+
+import type {
+  WorkspaceAiSettingsService} from './workspace-ai-settings.service';
 import {
-  WorkspaceAiSettingsService,
   type ModelPreference,
   type PriorityWeights,
 } from './workspace-ai-settings.service';

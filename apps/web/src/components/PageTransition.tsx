@@ -1,41 +1,33 @@
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 
 /**
- * Animates route changes. Wrap the <Outlet /> (or whatever holds the routed
- * page content) so each navigation gets a brief opacity + Y slide.
+ * PageTransition — CSS-only route crossfade.
  *
- * Asymmetric timing per Emil — incoming is the deliberate motion (240ms),
- * outgoing is fast and quiet (140ms) so back/forward feels responsive.
+ * Wraps the routed content so each navigation triggers a 240ms opacity + Y
+ * slide-in. Keyed by the first 3 path segments so navigating between sub-
+ * routes inside the same surface (e.g. /projects/:id/board?task=X) doesn't
+ * replay the transition when the drawer opens.
  *
- * Respects prefers-reduced-motion: just opacity, no translate.
+ * The `.page-fade` class + `nockta-page-in` keyframe live in
+ * `packages/ui/src/styles.css`. The keyframe respects `prefers-reduced-motion`
+ * via the global `@media (prefers-reduced-motion: reduce)` rule that strips
+ * all custom animations elsewhere in the stylesheet.
+ *
+ * R9 bundle-shrink note: this used to be a framer-motion `<AnimatePresence>`
+ * mounted in the shell. Replacing it with the CSS class removes
+ * `framer-motion` from the initial bundle entirely (~80KB gzipped saved).
  */
 export function PageTransition({ children }: { children: React.ReactNode }): JSX.Element {
   const location = useLocation();
-  const reduce = useReducedMotion();
-
-  // Key off the first 3 path segments so navigating between subroutes inside
-  // the same surface (e.g. /projects/:id/board?task=X) doesn't replay the
-  // transition every time the drawer opens.
   const segments = location.pathname.split('/').filter(Boolean).slice(0, 3);
   const key = segments.join('/') || 'root';
 
+  // The `key` prop forces React to unmount + remount the div on route change,
+  // which restarts the CSS animation. `h-full` keeps the routed surface
+  // claiming the full viewport height like the framer-motion version did.
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div
-        key={key}
-        initial={{ opacity: 0, y: reduce ? 0 : 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: reduce ? 0 : -4 }}
-        transition={{
-          duration: 0.24,
-          ease: [0.23, 1, 0.32, 1],
-          opacity: { duration: 0.18 },
-        }}
-        className="h-full"
-      >
-        {children}
-      </motion.div>
-    </AnimatePresence>
+    <div key={key} className="page-fade h-full">
+      {children}
+    </div>
   );
 }

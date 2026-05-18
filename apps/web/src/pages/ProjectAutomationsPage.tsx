@@ -3,8 +3,11 @@ import { Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useParams } from 'react-router-dom';
+
 import { ProjectTabs } from '../components/ProjectTabs';
 import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
+
 import { AutomationRow } from './project-automations/AutomationRow';
 import { CreateAutomationDrawer } from './project-automations/CreateAutomationDrawer';
 import { EmptyState, SkeletonList } from './project-automations/EmptyState';
@@ -23,7 +26,7 @@ export function ProjectAutomationsPage(): JSX.Element {
   const queryClient = useQueryClient();
 
   const projectQuery = useQuery({
-    queryKey: ['project', projectId],
+    queryKey: queryKeys.project(projectId),
     queryFn: () => api.get<Project>(`/projects/${projectId}`),
     enabled: Boolean(projectId),
   });
@@ -43,7 +46,7 @@ export function ProjectAutomationsPage(): JSX.Element {
     enabled: Boolean(projectId),
   });
   const sprintsQuery = useQuery({
-    queryKey: ['sprints', projectId],
+    queryKey: queryKeys.sprints(projectId),
     queryFn: () => api.get<SprintRow[]>(`/projects/${projectId}/sprints`),
     enabled: Boolean(projectId),
   });

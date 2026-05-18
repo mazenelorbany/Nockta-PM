@@ -7,9 +7,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [master]
   push:
-    branches: [main]
+    branches: [master]
 
 # Cancel older runs on the same ref so a quick second push doesn't double-spend
 # CI minutes.

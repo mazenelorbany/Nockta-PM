@@ -5,9 +5,11 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   IsInt, IsObject, IsOptional, IsString, IsUUID, MaxLength, Min, MinLength,
 } from 'class-validator';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { DocsService } from './docs.service';
+
+import type { DocsService } from './docs.service';
 import type { ProseMirrorDoc } from './prosemirror-markdown';
 
 class CreateDocDto {

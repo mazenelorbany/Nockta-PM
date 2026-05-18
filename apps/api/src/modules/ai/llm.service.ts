@@ -1,7 +1,9 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import Anthropic from '@anthropic-ai/sdk';
+
 import { Env } from '../../config/env';
-import { WorkspaceAiSettingsService } from './workspace-ai-settings.service';
+
+import type { WorkspaceAiSettingsService } from './workspace-ai-settings.service';
 
 export interface GenerateOptions {
   temperature?: number;

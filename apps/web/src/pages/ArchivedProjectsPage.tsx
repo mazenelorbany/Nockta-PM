@@ -3,7 +3,9 @@ import { Archive, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { ApiError } from '@nockta/sdk';
+
 import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 
 // =============================================================================
 // ArchivedProjectsPage — admin surface for the 7-day archive grace window
@@ -44,7 +46,7 @@ export function ArchivedProjectsPage(): JSX.Element {
   const restoreMut = useMutation({
     mutationFn: (id: string) => api.post(`/projects/${id}/restore`),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['projects'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projects() });
       void queryClient.invalidateQueries({ queryKey: ['projects', 'archived'] });
       toast.success('Project restored');
     },

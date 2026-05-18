@@ -1,5 +1,6 @@
 import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { QdrantClient } from '@qdrant/js-client-rest';
+
 import { Env } from '../../config/env';
 
 export const TASKS_COLLECTION = 'tasks';

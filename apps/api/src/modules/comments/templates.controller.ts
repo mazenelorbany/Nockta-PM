@@ -3,9 +3,11 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { CommentTemplatesService } from './templates.service';
+
+import type { CommentTemplatesService } from './templates.service';
 
 class CreateTemplateDto {
   @IsString() @MaxLength(80) name!: string;

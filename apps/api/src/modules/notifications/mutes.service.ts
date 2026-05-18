@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+
+import type { PrismaService } from '../../prisma/prisma.service';
 
 // =============================================================================
 // NotificationMutesService — per-entity (task | doc) mute lookup + CRUD.

@@ -1,4 +1,6 @@
+import type { EventEmitter2 } from '@nestjs/event-emitter';
 import { vi } from 'vitest';
+
 import type { PrismaService } from '../prisma/prisma.service';
 
 // =============================================================================
@@ -376,7 +378,7 @@ export function makePrismaMock(): PrismaService {
 export function makeEventsMock() {
   const emit = vi.fn();
   return {
-    instance: { emit } as unknown as import('@nestjs/event-emitter').EventEmitter2,
+    instance: { emit } as unknown as EventEmitter2,
     emit,
   };
 }

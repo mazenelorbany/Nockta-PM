@@ -1,6 +1,7 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
-import { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
-import { PrismaService } from '../../prisma/prisma.service';
+
+import type { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
+import type { PrismaService } from '../../prisma/prisma.service';
 
 // =============================================================================
 // WorkloadSnapshotScheduler — writes one DailyWorkloadSnapshot row per active

@@ -3,7 +3,10 @@ import toast from 'react-hot-toast';
 import { Archive, ArchiveRestore, Trash2, UserCog } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@nockta/ui';
+
 import { api } from '../../lib/api';
+import { queryKeys } from '../../lib/query-keys';
+
 import { AdminGate, SectionTitle, apiErrorMessage } from './primitives';
 
 // =============================================================================
@@ -25,7 +28,7 @@ interface AdminProject {
 export function ProjectsAdminTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
   const queryClient = useQueryClient();
   const projectsQuery = useQuery({
-    queryKey: ['projects'],
+    queryKey: queryKeys.projects(),
     queryFn: () => api.get<AdminProject[]>('/projects'),
   });
 
@@ -34,7 +37,7 @@ export function ProjectsAdminTab({ isAdmin }: { isAdmin: boolean }): JSX.Element
       api.patch(`/projects/${id}`, { archivedAt: new Date().toISOString() }),
     onSuccess: () => {
       toast.success('Project archived');
-      void queryClient.invalidateQueries({ queryKey: ['projects'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projects() });
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Could not archive')),
   });
@@ -42,7 +45,7 @@ export function ProjectsAdminTab({ isAdmin }: { isAdmin: boolean }): JSX.Element
     mutationFn: (id: string) => api.patch(`/projects/${id}`, { archivedAt: null }),
     onSuccess: () => {
       toast.success('Project restored');
-      void queryClient.invalidateQueries({ queryKey: ['projects'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projects() });
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Could not restore')),
   });
@@ -50,7 +53,7 @@ export function ProjectsAdminTab({ isAdmin }: { isAdmin: boolean }): JSX.Element
     mutationFn: (id: string) => api.delete(`/projects/${id}`),
     onSuccess: () => {
       toast.success('Project deleted');
-      void queryClient.invalidateQueries({ queryKey: ['projects'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projects() });
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Could not delete')),
   });

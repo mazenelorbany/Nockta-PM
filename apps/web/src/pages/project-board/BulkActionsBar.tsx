@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+
 import { api } from '../../lib/api';
+import { queryKeys } from '../../lib/query-keys';
+
 import type { Priority, User } from './types';
 
 /**
@@ -44,7 +47,7 @@ export function useBulkActions({
       return { succeeded, errorCount: errors.length, firstError: errors[0] };
     },
     onSuccess: ({ succeeded, errorCount, firstError }) => {
-      void queryClient.invalidateQueries({ queryKey: ['tasks', 'project', projectId] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projectTasks(projectId) });
       onClearSelection();
       if (errorCount === 0) {
         toast.success(`Moved ${succeeded} task${succeeded === 1 ? '' : 's'}`);
@@ -74,7 +77,7 @@ export function useBulkActions({
       return { succeeded, errorCount: errors.length, firstError: errors[0], label };
     },
     onSuccess: ({ succeeded, errorCount, firstError, label }) => {
-      void queryClient.invalidateQueries({ queryKey: ['tasks', 'project', projectId] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projectTasks(projectId) });
       onClearSelection();
       if (errorCount === 0) {
         toast.success(`${label}: ${succeeded} task${succeeded === 1 ? '' : 's'}`);
@@ -123,7 +126,7 @@ export function useBulkActions({
       return { succeeded, errorCount: errors.length, firstError: errors[0], mode };
     },
     onSuccess: ({ succeeded, errorCount, firstError, mode }) => {
-      void queryClient.invalidateQueries({ queryKey: ['tasks', 'project', projectId] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projectTasks(projectId) });
       onClearSelection();
       const verb = mode === 'attach' ? 'Labeled' : 'Unlabeled';
       if (errorCount === 0) {
@@ -152,7 +155,7 @@ export function useBulkActions({
       return { succeeded, errorCount: errors.length, firstError: errors[0] };
     },
     onSuccess: ({ succeeded, errorCount, firstError }) => {
-      void queryClient.invalidateQueries({ queryKey: ['tasks', 'project', projectId] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projectTasks(projectId) });
       onClearSelection();
       if (errorCount === 0) {
         toast.success(`Deleted ${succeeded} task${succeeded === 1 ? '' : 's'}`);
@@ -273,11 +276,11 @@ export function BulkActionBar({
   onClear: () => void;
 }): JSX.Element {
   const usersQuery = useQuery({
-    queryKey: ['users', 'list'],
+    queryKey: queryKeys.usersList(),
     queryFn: () => api.get<{ items: User[]; nextCursor: string | null }>('/users?limit=100'),
   });
   const sprintsQuery = useQuery({
-    queryKey: ['sprints', projectId],
+    queryKey: queryKeys.sprints(projectId),
     queryFn: () => api.get<Array<{ id: string; name: string; state: 'planned' | 'active' | 'completed' }>>(`/projects/${projectId}/sprints`),
     enabled: Boolean(projectId && sprintsEnabled),
   });

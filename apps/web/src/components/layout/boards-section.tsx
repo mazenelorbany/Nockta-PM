@@ -2,7 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { cn } from '@nockta/ui';
 import { Bookmark, LayoutGrid } from 'lucide-react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
+
 import { api } from '../../lib/api';
+import { queryKeys } from '../../lib/query-keys';
+
 import { Section } from './section';
 
 // -----------------------------------------------------------------------------
@@ -25,7 +28,7 @@ interface SidebarSavedView {
 export function BoardsSection(): JSX.Element {
   const navigate = useNavigate();
   const viewsQuery = useQuery({
-    queryKey: ['saved-views'],
+    queryKey: queryKeys.savedViews(),
     queryFn: () => api.get<SidebarSavedView[]>('/saved-views'),
     staleTime: 30_000,
   });

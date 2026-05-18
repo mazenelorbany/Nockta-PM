@@ -7,9 +7,11 @@ import { AttachmentParentType, Visibility } from '@prisma/client';
 import {
   IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength,
 } from 'class-validator';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { AttachmentsService } from './attachments.service';
+
+import type { AttachmentsService } from './attachments.service';
 
 class SignUploadDto {
   @IsEnum(AttachmentParentType) parentType!: AttachmentParentType;

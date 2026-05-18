@@ -2,7 +2,10 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { AlertTriangle, Trash2 } from 'lucide-react';
+
 import { api } from '../../lib/api';
+import { queryKeys } from '../../lib/query-keys';
+
 import { Section } from './shared';
 import { apiErrorMessage } from './utils';
 import type { Project } from './types';
@@ -21,7 +24,7 @@ export function DangerSection({
     mutationFn: () => api.delete(`/projects/${projectId}`),
     onSuccess: () => {
       toast.success('Project archived');
-      void queryClient.invalidateQueries({ queryKey: ['projects'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projects() });
       navigate('/projects');
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Archive failed')),

@@ -1,5 +1,6 @@
 import { History, Power, Trash2, Zap } from 'lucide-react';
 import { cn } from '@nockta/ui';
+
 import type { Automation, Label } from './types';
 import { humanizeAction, humanizeTrigger, timeAgo } from './utils';
 

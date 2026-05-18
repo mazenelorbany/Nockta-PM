@@ -72,29 +72,9 @@ ALTER TABLE "Comment"
   GENERATED ALWAYS AS (to_tsvector('english', coalesce("bodyMd", ''))) STORED;
 CREATE INDEX IF NOT EXISTS "Comment_search_vector_idx" ON "Comment" USING GIN ("search_vector");
 
--- 5c. SprintTaskMembership backfill. The model is created by `prisma db push`
--- (declared in schema.prisma). On the FIRST boot after the model lands, the
--- table is empty even though tasks already have Task.sprintId values. This
--- block creates one open membership row per existing task→sprint link so
--- the burndown rebuilder works against historical data.
---
--- Idempotent: only inserts a row if no existing membership for that
--- (taskId, sprintId, addedAt = task.createdAt) tuple exists. Re-runs are
--- no-ops.
-INSERT INTO "SprintTaskMembership" ("id", "sprintId", "taskId", "addedAt", "removedAt")
-SELECT
-  gen_random_uuid(),
-  t."sprintId",
-  t."id",
-  t."createdAt",
-  NULL
-FROM "Task" t
-WHERE t."sprintId" IS NOT NULL
-  AND NOT EXISTS (
-    SELECT 1 FROM "SprintTaskMembership" m
-    WHERE m."sprintId" = t."sprintId" AND m."taskId" = t."id"
-  )
-ON CONFLICT DO NOTHING;
+-- 5c. SprintTaskMembership backfill moved into 0022_schema_reconciliation,
+-- which is now the migration that creates the table. Companion.sql is the
+-- "things Prisma can't express" file, not a model-bootstrap file.
 
 -- 5b. Doc full-text search column + GIN index. Weighted same as Task: A for
 -- title, B for body. SearchService.searchDocs prefers this path and falls

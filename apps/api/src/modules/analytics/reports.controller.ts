@@ -5,10 +5,13 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   ArrayMaxSize, ArrayMinSize, IsArray, IsIn, IsObject, IsOptional, IsString, IsUUID, MaxLength,
 } from 'class-validator';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import {
-  CustomReportsService, REPORT_DIMENSIONS, REPORT_METRICS,
+
+import type {
+  CustomReportsService} from './reports.service';
+import { REPORT_DIMENSIONS, REPORT_METRICS,
   type ReportDimension, type ReportMetric,
 } from './reports.service';
 

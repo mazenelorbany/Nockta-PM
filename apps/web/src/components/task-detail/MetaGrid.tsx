@@ -7,12 +7,16 @@ import {
   Hash,
   Layers,
   Link2 as Link2Icon,
+  Tag as TagIcon,
   Timer,
   User as UserIcon,
 } from 'lucide-react';
+
 import { api } from '../../lib/api';
 import { AvatarCircle, type Priority, type TaskType } from '../task-bits';
+
 import { PRESET_STATUSES } from './constants';
+import { LabelsPicker } from './Labels';
 import { AssigneePicker } from './pickers/AssigneePicker';
 import { DateRangePicker } from './pickers/DateRangePicker';
 import { EstimatePill } from './pickers/EstimatePill';
@@ -97,6 +101,9 @@ export function MetaGrid({
               users={users}
               onChangePrimary={(id) => onPatch({ reporterUserId: id })}
             />
+          </RailRow>
+          <RailRow icon={<TagIcon className="h-3.5 w-3.5 text-muted-foreground/70" />} label="Labels">
+            <LabelsPicker taskId={task.id} projectId={task.projectId} />
           </RailRow>
         </div>
         {/* Right column */}

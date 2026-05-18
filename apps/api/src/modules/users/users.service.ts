@@ -1,9 +1,10 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
 import type { CompanyRole, UserKind } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
+
+import type { PrismaService } from '../../prisma/prisma.service';
 import { paginate, normalizeLimit } from '../../common/pagination/cursor-pagination';
-import { AuthService } from '../auth/auth.service';
+import type { AuthService } from '../auth/auth.service';
 import type { AuthenticatedUser } from '../auth/types';
 import { Env } from '../../config/env';
 

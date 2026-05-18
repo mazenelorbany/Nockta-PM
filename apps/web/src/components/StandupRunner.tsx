@@ -11,7 +11,10 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '@nockta/ui';
+
 import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
+
 import { AvatarCircle } from './task-bits';
 
 // =============================================================================
@@ -70,7 +73,7 @@ export function StandupRunner({
   // Teams come from the workspace-level /teams endpoint. Cheap query, cached
   // long enough that bouncing through the standup doesn't refetch it.
   const teamsQuery = useQuery({
-    queryKey: ['teams'],
+    queryKey: queryKeys.teams(),
     queryFn: () => api.get<Team[]>('/teams'),
     staleTime: 5 * 60_000,
   });

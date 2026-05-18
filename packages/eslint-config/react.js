@@ -6,5 +6,8 @@ module.exports = {
   rules: {
     'react/react-in-jsx-scope': 'off',
     'react/prop-types': 'off',
+    // Modern React renders `'` and `"` in JSX text correctly. Plain prose
+    // copy reads better with the raw characters than with HTML entities.
+    'react/no-unescaped-entities': 'off',
   },
 };

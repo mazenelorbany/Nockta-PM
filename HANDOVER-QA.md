@@ -53,8 +53,8 @@ A: Single API replica → CPU-bound. Postgres connections are pooled but the Eve
 **Q: What about Redis?**
 A: One Redis instance handles BullMQ, sessions, the Socket.IO adapter, presence, and scheduler locks. Railway's plugin is sized fine for 30 users. If it ever hits 70%+ memory, the BullMQ completed-job retention is the cheap thing to lower.
 
-**Q: Why is `apps/workers` empty?**
-A: Conscious deviation from the spec. At 30 engineers the operational cost of a second deployable doesn't pay for itself, and BullMQ + `@nestjs/schedule` are happy in-process. Documented in `GRILL-SUMMARY.md` §21. The folder remains as a stub for when we revisit.
+**Q: Where do the BullMQ workers run?**
+A: In-process inside `apps/api`. Conscious deviation from the original spec, which contemplated a separate `apps/workers` deployable; that folder was retired. At 30 engineers the operational cost of a second deployable doesn't pay for itself, and BullMQ + `@nestjs/schedule` are happy in-process. The day we measure sustained CPU > 60% on the `api` replica is the day we split them back out — until then, fewer moving parts.
 
 **Q: Multiple sprints active at once — possible?**
 A: No. `companion.sql` line 12: `CREATE UNIQUE INDEX sprint_active_per_project_unique ON "Sprint" ("projectId") WHERE state = 'active'`. The DB rejects a second active-sprint INSERT for the same project.
@@ -110,7 +110,7 @@ A: `IdentityAwareThrottlerGuard` namespaces by JWT subject when authenticated, f
 
 Be honest:
 
-1. Move BullMQ workers into a real `apps/workers` deployable so Redis pressure doesn't compete with HTTP.
+1. Split BullMQ workers out into a separate deployable (a real `apps/workers`) so Redis pressure doesn't compete with HTTP. Trigger: sustained CPU > 60% on a single `api` replica.
 2. Promtail config exists; the loop is fully wired (Grafana datasource UIDs, dashboards, scrape config). But I haven't validated it under Railway's networking. Worth a 1-hour sanity test.
 3. CI/CD: there's a `.github/workflows/ci.yml` that runs typecheck + tests; no auto-deploy. Add a deploy stage that triggers Railway's deploy webhook on a push to `main`.
 4. Mobile pass on the remaining 11 non-driver pages.

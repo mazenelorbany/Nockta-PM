@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { cn } from '@nockta/ui';
+
 import { getSocket } from '../../../lib/socket';
 
 /**
@@ -29,7 +30,8 @@ export function useImportProgress(runId: string | null): {
     }
     setDone('running');
     setErrorSummary(null);
-    const socket = getSocket();
+    let cancelled = false;
+    let cleanup: (() => void) | null = null;
     const onProgress = (payload: { runId: string; processed: number; total: number }): void => {
       if (payload.runId !== runId) return;
       setProcessed(payload.processed);
@@ -48,13 +50,21 @@ export function useImportProgress(runId: string | null): {
       setDone(payload.status);
       setErrorSummary(payload.errorSummary ?? null);
     };
-    socket.emit('import:join', { runId });
-    socket.on('import.progress', onProgress);
-    socket.on('import.done', onDone);
+    void (async () => {
+      const socket = await getSocket();
+      if (cancelled) return;
+      socket.emit('import:join', { runId });
+      socket.on('import.progress', onProgress);
+      socket.on('import.done', onDone);
+      cleanup = () => {
+        socket.off('import.progress', onProgress);
+        socket.off('import.done', onDone);
+        socket.emit('import:leave', { runId });
+      };
+    })();
     return () => {
-      socket.off('import.progress', onProgress);
-      socket.off('import.done', onDone);
-      socket.emit('import:leave', { runId });
+      cancelled = true;
+      cleanup?.();
     };
   }, [runId]);
 

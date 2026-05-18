@@ -7,7 +7,9 @@ import {
   UserCog,
 } from 'lucide-react';
 import { cn } from '@nockta/ui';
+
 import { AvatarCircle } from '../../task-bits';
+
 import type { CompanyRole, MemberUser, SortDir, SortField } from './types';
 
 // =============================================================================

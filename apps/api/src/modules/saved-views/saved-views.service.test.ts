@@ -1,9 +1,11 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { SavedViewsService } from './saved-views.service';
+
 import { makePrismaMock } from '../../test-utils/mocks';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { AuthenticatedUser } from '../auth/types';
+
+import { SavedViewsService } from './saved-views.service';
 
 // =============================================================================
 // saved-views.service — per-user persisted board/list filters. The service is

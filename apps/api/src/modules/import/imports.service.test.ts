@@ -1,16 +1,19 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
-import { ImportService } from './import.service';
-import { ImportRunsService } from './import-runs.service';
-import { ImportsDryRunService } from './imports-dry-run.service';
-import { JiraCsvImporter } from './jira-csv/jira-csv.importer';
+
 import { makePrismaMock } from '../../test-utils/mocks';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { PermissionsService } from '../permissions/permissions.service';
 import type { TasksService } from '../tasks/tasks.service';
 import type { AuthenticatedUser } from '../auth/types';
+
+import { JiraCsvImporter } from './jira-csv/jira-csv.importer';
+import { ImportsDryRunService } from './imports-dry-run.service';
+import { ImportRunsService } from './import-runs.service';
+import { ImportService } from './import.service';
 
 // =============================================================================
 // imports.service.test.ts — Pass D Imports overhaul.
@@ -52,10 +55,11 @@ function build(): Built {
   // Cast through `any` — Prisma's create call signature is enormously
   // overloaded (it returns a thenable client). For mocks we only care that the
   // implementation produces a plausible row.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   vi.mocked(prisma.importRun.create).mockImplementation((async ({ data }: { data: unknown }) => {
     return { id: 'run-1', ...(data as object) };
   }) as any);
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   vi.mocked(prisma.importRun.update).mockResolvedValue({
     createdRows: 0,
     skippedRows: 0,

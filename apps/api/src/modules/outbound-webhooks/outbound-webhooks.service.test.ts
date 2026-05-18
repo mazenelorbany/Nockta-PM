@@ -1,20 +1,23 @@
 import { createHmac } from 'node:crypto';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Queue } from 'bullmq';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+
 import { makePrismaMock } from '../../test-utils/mocks';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { AuthenticatedUser } from '../auth/types';
+
 import {
   AUTO_DISABLE_THRESHOLD,
   OutboundWebhooksService,
   RETRY_ATTEMPTS,
   RETRY_BACKOFF_MS,
 } from './outbound-webhooks.service';
+import { customBackoffStrategy } from './outbound-webhooks.processor';
 
 // Legacy constant retained for tests that pre-date the workspace removal.
 const DEFAULT_WORKSPACE_ID = 'default';
-import { customBackoffStrategy } from './outbound-webhooks.processor';
 
 // =============================================================================
 // outbound-webhooks.service — the behaviors that absolutely must not regress:

@@ -9,14 +9,14 @@ import {
   LogOut,
   Monitor,
   ShieldCheck,
-  ShieldOff,
   Smartphone,
   X,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@nockta/ui';
+
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth-store';
+
 import { Fieldset, HelpHint, SectionTitle } from './primitives';
 
 // =============================================================================
@@ -428,7 +428,7 @@ function prettyAuditAction(action: string): string {
 // Shared bits
 // =============================================================================
 
-function ModalShell({
+function _ModalShell({
   title,
   onClose,
   children,

@@ -2,9 +2,12 @@ import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Query } from
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Priority } from '@prisma/client';
 import { IsBoolean, IsDateString, IsEnum, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { type SearchInput, SearchService } from './search.service';
+
+import type { SearchService } from './search.service';
+import { type SearchInput } from './search.service';
 
 class SaveSearchDto {
   @IsString() @MinLength(1) @MaxLength(80) name!: string;

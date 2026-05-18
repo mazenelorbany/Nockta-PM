@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+
+import type { PrismaService } from '../../prisma/prisma.service';
 
 // =============================================================================
 // NotificationSnoozeService — per-user weekly DND rules. The dispatcher

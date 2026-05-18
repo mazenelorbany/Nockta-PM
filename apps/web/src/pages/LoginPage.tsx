@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '@nockta/sdk';
 import { NocktaLogo } from '@nockta/ui';
+
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth-store';
 import { API_PREFIX, API_URL } from '../lib/env';
@@ -40,7 +41,7 @@ export function LoginPage(): JSX.Element {
     staleTime: 5 * 60_000,
     retry: false,
   });
-  const config = configQuery.data;
+  const _config = configQuery.data;
 
   async function devLogin(persona: Persona): Promise<void> {
     setLoadingPersona(persona);

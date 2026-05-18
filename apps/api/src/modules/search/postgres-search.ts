@@ -1,6 +1,8 @@
 import { Prisma, type Priority } from '@prisma/client';
+
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { AuthenticatedUser } from '../auth/types';
+
 import type { ParsedFilters } from './query-parser';
 
 // Postgres full-text search building blocks: the FTS candidate query, the

@@ -3,9 +3,11 @@ import { Download, Timer } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { cn, EmptyState, QueryErrorState, SkeletonList } from '@nockta/ui';
+
 import { ProjectTabs } from '../components/ProjectTabs';
 import { AvatarCircle } from '../components/task-bits';
 import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 
 // =============================================================================
 // /projects/:projectId/worklog
@@ -42,7 +44,7 @@ export function ProjectWorklogReportPage(): JSX.Element {
   const [weeks, setWeeks] = useState<number>(12);
 
   const projectQuery = useQuery({
-    queryKey: ['project', projectId],
+    queryKey: queryKeys.project(projectId),
     queryFn: () => api.get<Project>(`/projects/${projectId}`),
     enabled: Boolean(projectId),
   });

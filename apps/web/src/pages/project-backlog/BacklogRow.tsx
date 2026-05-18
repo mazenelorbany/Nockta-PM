@@ -1,6 +1,7 @@
 import { useDraggable } from '@dnd-kit/core';
 import { Clock, GripVertical } from 'lucide-react';
 import { cn } from '@nockta/ui';
+
 import {
   AvatarCircle,
   BlockedBadge,
@@ -8,6 +9,7 @@ import {
   StatusPill,
   TypeBadge,
 } from '../../components/task-bits';
+
 import type { ContainerId, PlannerTask } from './types';
 
 // =============================================================================

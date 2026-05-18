@@ -1,11 +1,13 @@
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ProjectsService } from './projects.service';
+
 import { makeEventsMock, makePrismaMock } from '../../test-utils/mocks';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { PermissionsService } from '../permissions/permissions.service';
 import type { AuthenticatedUser } from '../auth/types';
+
+import { ProjectsService } from './projects.service';
 
 // =============================================================================
 // projects.service — covers the behaviors that aren't bare CRUD:

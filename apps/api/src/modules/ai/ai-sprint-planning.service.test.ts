@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AiSprintPlanningService } from './ai-sprint-planning.service';
+
 import { makePrismaMock } from '../../test-utils/mocks';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { AnalyticsService } from '../analytics/analytics.service';
 import type { PermissionsService } from '../permissions/permissions.service';
 import type { AuthenticatedUser } from '../auth/types';
+
+import { AiSprintPlanningService } from './ai-sprint-planning.service';
 
 // ai-sprint-planning.service — deterministic capacity + task ranking. The
 // whole service is plain arithmetic + Prisma reads, so the tests pin:

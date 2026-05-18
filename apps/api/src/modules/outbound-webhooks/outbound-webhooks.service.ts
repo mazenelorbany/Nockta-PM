@@ -1,4 +1,5 @@
 import { createHmac, randomUUID } from 'node:crypto';
+
 import {
   BadRequestException,
   ForbiddenException,
@@ -8,10 +9,12 @@ import {
   type OnModuleInit,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Prisma } from '@prisma/client';
-import { Queue, type JobsOptions } from 'bullmq';
-import { PrismaService } from '../../prisma/prisma.service';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
+import type { Prisma } from '@prisma/client';
+import type { Queue} from 'bullmq';
+import { type JobsOptions } from 'bullmq';
+
+import type { PrismaService } from '../../prisma/prisma.service';
 import type { AuthenticatedUser } from '../auth/types';
 
 // =============================================================================

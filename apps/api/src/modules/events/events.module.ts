@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+
 import { AuditLogController } from './audit-log.controller';
 import { EventWriterService } from './event-writer.service';
 import { EventsService } from './events.service';

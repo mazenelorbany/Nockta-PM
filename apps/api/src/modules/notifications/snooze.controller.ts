@@ -21,11 +21,14 @@ import {
   Max,
   Min,
 } from 'class-validator';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
+
+import type {
+  NotificationSnoozeService} from './snooze.service';
 import {
   ISO_DAYS,
-  NotificationSnoozeService,
   type IsoDay,
 } from './snooze.service';
 

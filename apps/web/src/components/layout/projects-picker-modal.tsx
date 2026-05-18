@@ -3,6 +3,7 @@ import { FolderKanban, Search } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
+
 import { projectAccent } from './project-tree-item';
 import { pushRecentProject } from './recent-projects';
 import type { ProjectSummary } from './types';

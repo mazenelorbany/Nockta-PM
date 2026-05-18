@@ -16,6 +16,7 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@nockta/ui';
+
 import { useAuth } from '../lib/auth-store';
 import {
   type DefaultProjectView,

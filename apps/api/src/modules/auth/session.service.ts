@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type Redis from 'ioredis';
+
 import { REDIS_CLIENT } from '../redis/redis.module';
 import { Env } from '../../config/env';
 

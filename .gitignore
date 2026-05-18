@@ -44,5 +44,16 @@ coverage/
 # Generated
 apps/api/prisma/generated/
 
+# tsc build artifacts. Source dirs (src/, scripts/) hold .ts only; the
+# matching .js / .d.ts / .map outputs should never be committed.
+packages/*/src/*.js
+packages/*/src/*.js.map
+packages/*/src/*.d.ts
+packages/*/src/*.d.ts.map
+apps/api/scripts/*.js
+apps/api/scripts/*.js.map
+apps/api/scripts/*.d.ts
+apps/api/scripts/*.d.ts.map
+
 # Misc
 *.tgz

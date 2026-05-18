@@ -17,6 +17,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Trash2 } from 'lucide-react';
 import { cn } from '@nockta/ui';
+
 import type { KeyResult, KeyResultRowCallbacks } from './types';
 import { krPercent } from './util';
 

@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DigestScheduler } from './digest.scheduler';
+
 import { makePrismaMock } from '../../test-utils/mocks';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
+
+import { DigestScheduler } from './digest.scheduler';
 
 // =============================================================================
 // digest.scheduler — three regressions to guard:

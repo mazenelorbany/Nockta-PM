@@ -3,8 +3,10 @@ import { Sparkles, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { cn } from '@nockta/ui';
+
 import { PriorityDot, type Priority } from '../../components/task-bits';
 import { api } from '../../lib/api';
+
 import { apiErrorMessage } from './helpers';
 import type { CapacityResponse, PlanResponse, Sprint } from './types';
 

@@ -18,10 +18,13 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
+
+import type {
+  OutboundWebhooksService} from './outbound-webhooks.service';
 import {
-  OutboundWebhooksService,
   type WebhookInput,
 } from './outbound-webhooks.service';
 

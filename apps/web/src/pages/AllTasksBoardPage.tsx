@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Play, Sun } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { cn, QueryErrorState, SkeletonList } from '@nockta/ui';
+
 import {
   BoardToolbar,
   EMPTY_FILTERS,
@@ -23,6 +24,7 @@ import {
   type TaskType,
 } from '../components/task-bits';
 import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 
 // =============================================================================
 // /board — workspace-scope kanban. Aggregates tasks across every project the
@@ -141,7 +143,7 @@ export function AllTasksBoardPage(): JSX.Element {
   // Same pattern the project board uses — keeps sidebar "Boards" links working.
   const savedViewParam = searchParams.get('savedView');
   const savedViewsQuery = useQuery({
-    queryKey: ['saved-views'],
+    queryKey: queryKeys.savedViews(),
     queryFn: () =>
       api.get<{ id: string; query: { projectId?: string; filters: TaskFilters; view: BoardView } }[]>('/saved-views'),
     enabled: Boolean(savedViewParam),
@@ -164,7 +166,7 @@ export function AllTasksBoardPage(): JSX.Element {
   }, [savedViewParam, savedViewsQuery.data]);
 
   const projectsQuery = useQuery({
-    queryKey: ['projects'],
+    queryKey: queryKeys.projects(),
     queryFn: () => api.get<Project[]>('/projects'),
   });
   const projects = useMemo(

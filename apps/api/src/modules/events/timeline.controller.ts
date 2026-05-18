@@ -1,8 +1,10 @@
 import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { EventsService } from './events.service';
+
+import type { EventsService } from './events.service';
 
 @ApiTags('timeline')
 @ApiBearerAuth()

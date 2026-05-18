@@ -3,8 +3,11 @@ import { FileSpreadsheet, Upload } from 'lucide-react';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { cn } from '@nockta/ui';
+
 import { api } from '../../../lib/api';
 import { apiErrorMessage } from '../primitives';
+import { queryKeys } from '../../../lib/query-keys';
+
 import { ImportProgressBar, useImportProgress } from './useImportProgress';
 import { Stat } from './shared';
 
@@ -50,7 +53,7 @@ interface CommitResponseShape {
 
 export function CsvImporter(): JSX.Element {
   const projectsQuery = useQuery({
-    queryKey: ['projects'],
+    queryKey: queryKeys.projects(),
     queryFn: () => api.get<Array<{ id: string; key: string; name: string }>>('/projects'),
   });
   const projects = projectsQuery.data ?? [];

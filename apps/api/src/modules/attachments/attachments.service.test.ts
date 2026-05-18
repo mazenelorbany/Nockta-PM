@@ -1,11 +1,13 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AttachmentsService } from './attachments.service';
+
 import { makeEventsMock, makePrismaMock } from '../../test-utils/mocks';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { PermissionsService } from '../permissions/permissions.service';
 import type { StorageService } from '../storage/storage.service';
 import type { AuthenticatedUser } from '../auth/types';
+
+import { AttachmentsService } from './attachments.service';
 
 // =============================================================================
 // attachments.service — signed-URL upload + confirm + download flow. The

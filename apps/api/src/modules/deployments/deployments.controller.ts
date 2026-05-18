@@ -1,9 +1,11 @@
 import { Controller, Get, Param, ParseIntPipe, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { DeploymentSource } from '@prisma/client';
+import type { DeploymentSource } from '@prisma/client';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { DeploymentsService } from './deployments.service';
+
+import type { DeploymentsService } from './deployments.service';
 
 @ApiTags('deployments')
 @ApiBearerAuth()

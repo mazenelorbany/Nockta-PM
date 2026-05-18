@@ -5,9 +5,12 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   IsBoolean, IsEnum, IsObject, IsOptional, IsString, MaxLength, MinLength,
 } from 'class-validator';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { AutomationsService, type AutomationInput } from './automations.service';
+
+import type { AutomationsService} from './automations.service';
+import { type AutomationInput } from './automations.service';
 
 const TRIGGERS = [
   'task_created', 'task_status_changed', 'task_assigned', 'task_unassigned',

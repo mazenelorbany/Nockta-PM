@@ -1,8 +1,9 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Prisma } from '@prisma/client';
-import { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
-import { PrismaService } from '../../prisma/prisma.service';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
+import type { Prisma } from '@prisma/client';
+
+import type { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
+import type { PrismaService } from '../../prisma/prisma.service';
 
 // =============================================================================
 // NotificationDigestService — Pass I (Notifications 8 → 9).
@@ -136,7 +137,7 @@ export class NotificationDigestService implements OnModuleInit, OnModuleDestroy 
         // Hard cap — flush this row out of the way and start a fresh one in
         // the same call so the caller's item is never dropped.
         await this.flushOne(open.id).catch(() => undefined);
-        const fresh = await this.prisma.notificationDigest.create({
+        const _fresh = await this.prisma.notificationDigest.create({
           data: {
             userId: input.recipientUserId,
             channelKind: channel,

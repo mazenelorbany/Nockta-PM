@@ -1,11 +1,13 @@
-import {
+import type {
   CallHandler,
-  ExecutionContext,
+  ExecutionContext} from '@nestjs/common';
+import {
   Injectable,
   type NestInterceptor,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { type Observable, tap } from 'rxjs';
+
 import { httpRequestDurationSeconds, httpRequestsTotal } from '../../health/metrics.controller';
 
 /**

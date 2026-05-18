@@ -4,7 +4,10 @@ import { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { ApiError } from '@nockta/sdk';
 import { cn } from '@nockta/ui';
+
 import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
+
 import { applyTaskFilters, type TaskFilters } from './board-toolbar';
 import {
   AvatarCircle,
@@ -427,10 +430,10 @@ function TaskRow({
 }): JSX.Element {
   const queryClient = useQueryClient();
   const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ['tasks', 'project', project.id] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.projectTasks(project.id) });
 
   const usersQuery = useQuery({
-    queryKey: ['users', 'list'],
+    queryKey: queryKeys.usersList(),
     queryFn: () => api.get<UserListResponse>('/users?limit=100'),
   });
 

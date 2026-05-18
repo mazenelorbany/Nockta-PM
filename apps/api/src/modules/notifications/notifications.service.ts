@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+
+import type { PrismaService } from '../../prisma/prisma.service';
 import { paginate, normalizeLimit } from '../../common/pagination/cursor-pagination';
 import type { AuthenticatedUser } from '../auth/types';
 

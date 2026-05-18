@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+
 import { api } from '../../lib/api';
 import { StatusPill } from '../task-bits';
+
 import type { SimilarTask } from './types';
 
 export function SimilarTasksSection({ taskId }: { taskId: string }): JSX.Element {

@@ -3,9 +3,11 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsHexadecimal, IsOptional, IsString, Length, MaxLength, MinLength } from 'class-validator';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { LabelsService } from './labels.service';
+
+import type { LabelsService } from './labels.service';
 
 class CreateLabelDto {
   @IsString() @MinLength(1) @MaxLength(40) name!: string;

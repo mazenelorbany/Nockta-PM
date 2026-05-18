@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { NotificationChannel } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
+
+import type { PrismaService } from '../../prisma/prisma.service';
 
 interface ChannelDecision {
   inApp: boolean;

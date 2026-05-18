@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@nockta/ui';
+
 import { StatusPill, TypeBadge } from '../task-bits';
 import { TaskDependencyGraph } from '../TaskDependencyGraph';
+
 import { Section } from './Section';
 import type { LinkType, TaskDetail } from './types';
 

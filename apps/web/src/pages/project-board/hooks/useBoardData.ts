@@ -1,9 +1,11 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { useMemo } from 'react';
+
 import { applyTaskFilters, type BoardView, type TaskFilters } from '../../../components/board-toolbar';
 import { api } from '../../../lib/api';
 import { PRESET_STATUSES } from '../constants';
 import type { ActiveSprint, Project, Task } from '../types';
+import { queryKeys } from '../../../lib/query-keys';
 
 export interface UseBoardDataResult {
   projectQuery: UseQueryResult<Project>;
@@ -31,22 +33,22 @@ export function useBoardData({
   savedViewParam: string | null;
 }): UseBoardDataResult {
   const projectQuery = useQuery({
-    queryKey: ['project', projectId],
+    queryKey: queryKeys.project(projectId),
     queryFn: () => api.get<Project>(`/projects/${projectId}`),
     enabled: Boolean(projectId),
   });
   const tasksQuery = useQuery({
-    queryKey: ['tasks', 'project', projectId],
+    queryKey: queryKeys.projectTasks(projectId),
     queryFn: () => api.get<Task[]>(`/tasks/project/${projectId}`),
     enabled: Boolean(projectId),
   });
   const sprintsQuery = useQuery({
-    queryKey: ['sprints', projectId],
+    queryKey: queryKeys.sprints(projectId),
     queryFn: () => api.get<ActiveSprint[]>(`/projects/${projectId}/sprints`),
     enabled: Boolean(projectId && projectQuery.data?.sprintsEnabled),
   });
   const savedViewsQuery = useQuery({
-    queryKey: ['saved-views'],
+    queryKey: queryKeys.savedViews(),
     queryFn: () =>
       api.get<{ id: string; name: string; query: { projectId?: string; filters: TaskFilters; view: BoardView } }[]>('/saved-views'),
     enabled: Boolean(savedViewParam),

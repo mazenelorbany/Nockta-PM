@@ -1,25 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useSearchParams } from 'react-router-dom';
 import { cn } from '@nockta/ui';
 import { CheckCircle2, MessageSquarePlus, UserPlus } from 'lucide-react';
+
 import { api } from '../lib/api';
-import { ConfirmDialog, PromptDialog } from './dialogs';
 import { useOnline } from '../hooks/useOnline';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { usePresence } from '../hooks/usePresence';
-import { resolveSwipe } from '../hooks/useSwipeGesture';
-import { enqueue as enqueueOffline } from '../lib/offline-mutation-queue';
-import { API_PREFIX, API_URL } from '../lib/env';
 import { getSocket } from '../lib/socket';
-import { type Priority } from './task-bits';
+import { queryKeys } from '../lib/query-keys';
+
+import { ConfirmDialog, PromptDialog } from './dialogs';
 import { ActivitySection, ActivityTab, CommentsThread } from './task-detail/Activity';
 import { AttachmentsSection } from './task-detail/Attachments';
 import { CustomFieldsSection } from './task-detail/CustomFields';
 import { DescriptionField } from './task-detail/DescriptionField';
 import { DrawerHeader } from './task-detail/DrawerHeader';
-import { LabelsSection } from './task-detail/Labels';
 import { MetaGrid } from './task-detail/MetaGrid';
 import { RecurrenceSection } from './task-detail/Recurrence';
 import { SimilarTasksSection } from './task-detail/SimilarTasks';
@@ -31,6 +29,9 @@ import type {
   UserListResponse,
 } from './task-detail/types';
 import { apiErrorMessage } from './task-detail/utils';
+import { useTaskDrawerState } from './task-detail/useTaskDrawerState';
+import { useOfflineTaskUpdate } from './task-detail/useOfflineMutations';
+
 
 // Re-exports for backward compat: external importers of TaskDetailDrawer.tsx
 // named exports keep working after the decomposition.
@@ -58,12 +59,6 @@ export type {
   WorklogSummary,
 } from './task-detail/types';
 
-/**
- * Mobile-only tabs shown at the top of the sheet. Desktop renders the side
- * panel directly so the comment thread is visible alongside the form.
- */
-type MobileTab = 'details' | 'activity' | 'subtasks' | 'attachments';
-
 export function TaskDetailDrawer({
   taskId,
   onClose,
@@ -75,20 +70,16 @@ export function TaskDetailDrawer({
   // tabs (instead of side-by-side panes), and the swipe-down-to-dismiss
   // gesture. Matches the same breakpoint Tailwind uses for md:.
   const isMobile = useMediaQuery('(max-width: 768px)');
-  // Asymmetric close: trigger an exit transition (200ms ease-out) before the
-  // parent unmounts. Without this, the drawer pops out instantly while the
-  // open feels deliberate — Emil's "system response should be quick, but
-  // visible" pattern.
-  const [closing, setClosing] = useState(false);
-  const closeTimerRef = useRef<number | null>(null);
-  const requestClose = useCallback(() => {
-    if (closing) return;
-    setClosing(true);
-    closeTimerRef.current = window.setTimeout(() => onClose(), 200);
-  }, [closing, onClose]);
-  useEffect(() => () => {
-    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
-  }, []);
+  const {
+    closing,
+    requestClose,
+    activityTab,
+    setActivityTab,
+    mobileTab,
+    setMobileTab,
+    dragOffsetY,
+    dragHandlers,
+  } = useTaskDrawerState({ isMobile, onClose });
   const queryClient = useQueryClient();
   // Drawer-internal navigation: clicking a subtask or the parent breadcrumb
   // updates ?task=ID, which re-renders this drawer with the new id. Pages that
@@ -111,7 +102,7 @@ export function TaskDetailDrawer({
     queryFn: () => api.get<Comment[]>(`/tasks/${taskId}/comments`),
   });
   const usersQuery = useQuery({
-    queryKey: ['users', 'list'],
+    queryKey: queryKeys.usersList(),
     queryFn: () => api.get<UserListResponse>('/users?limit=100'),
   });
 
@@ -124,44 +115,44 @@ export function TaskDetailDrawer({
 
   // Realtime: join the task room and refetch on relevant events.
   useEffect(() => {
-    const socket = getSocket();
-    socket.emit('task:join', { taskId });
+    let cancelled = false;
+    let cleanup: (() => void) | null = null;
     const refetchTask = () => queryClient.invalidateQueries({ queryKey: ['task', taskId] });
     const refetchComments = () => queryClient.invalidateQueries({ queryKey: ['comments', taskId] });
     const refetchActivity = () => queryClient.invalidateQueries({ queryKey: ['activity', taskId] });
-    socket.on('task.updated', refetchTask);
-    socket.on('task.status_changed', refetchTask);
-    socket.on('task.blocked', refetchTask);
-    socket.on('task.unblocked', refetchTask);
-    socket.on('comment.added', refetchComments);
-    socket.on('comment.edited', refetchComments);
-    socket.on('comment.deleted', refetchComments);
-    socket.on('comment.reaction_added', refetchComments);
-    socket.on('comment.reaction_removed', refetchComments);
-    socket.on('event.created', refetchActivity);
+    void (async () => {
+      const socket = await getSocket();
+      if (cancelled) return;
+      socket.emit('task:join', { taskId });
+      socket.on('task.updated', refetchTask);
+      socket.on('task.status_changed', refetchTask);
+      socket.on('task.blocked', refetchTask);
+      socket.on('task.unblocked', refetchTask);
+      socket.on('comment.added', refetchComments);
+      socket.on('comment.edited', refetchComments);
+      socket.on('comment.deleted', refetchComments);
+      socket.on('comment.reaction_added', refetchComments);
+      socket.on('comment.reaction_removed', refetchComments);
+      socket.on('event.created', refetchActivity);
+      cleanup = () => {
+        socket.emit('task:leave', { taskId });
+        socket.off('task.updated', refetchTask);
+        socket.off('task.status_changed', refetchTask);
+        socket.off('task.blocked', refetchTask);
+        socket.off('task.unblocked', refetchTask);
+        socket.off('comment.added', refetchComments);
+        socket.off('comment.edited', refetchComments);
+        socket.off('comment.deleted', refetchComments);
+        socket.off('comment.reaction_added', refetchComments);
+        socket.off('comment.reaction_removed', refetchComments);
+        socket.off('event.created', refetchActivity);
+      };
+    })();
     return () => {
-      socket.emit('task:leave', { taskId });
-      socket.off('task.updated', refetchTask);
-      socket.off('task.status_changed', refetchTask);
-      socket.off('task.blocked', refetchTask);
-      socket.off('task.unblocked', refetchTask);
-      socket.off('comment.added', refetchComments);
-      socket.off('comment.edited', refetchComments);
-      socket.off('comment.deleted', refetchComments);
-      socket.off('comment.reaction_added', refetchComments);
-      socket.off('comment.reaction_removed', refetchComments);
-      socket.off('event.created', refetchActivity);
+      cancelled = true;
+      cleanup?.();
     };
   }, [taskId, queryClient]);
-
-  // Close on Escape.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') requestClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [requestClose]);
 
   const task = taskQuery.data;
   const users = usersQuery.data?.items ?? [];
@@ -171,45 +162,14 @@ export function TaskDetailDrawer({
   // instead of letting them fail at the network layer.
   const isOnline = useOnline();
 
-  const updateMutation = useMutation({
-    mutationFn: async (patch: Partial<{
-      title: string;
-      description: string | null;
-      priority: Priority;
-      assigneeUserId: string | null;
-      dueDate: string | null;
-      estimate: number | null;
-      sprintId: string | null;
-    }>) => {
-      if (!isOnline) {
-        // Stash the mutation in IDB so the drainer replays it when we
-        // come back online. The drawer is rendered read-only in this state
-        // but inline edits that slip through (e.g. via keyboard shortcuts)
-        // get queued instead of failing.
-        await enqueueOffline({
-          method: 'PATCH',
-          url: `${API_URL}${API_PREFIX}/tasks/${taskId}`,
-          body: patch,
-          meta: { taskId, label: 'task.update' },
-        });
-        toast.success('Saved offline — will sync when you reconnect');
-        return task as TaskDetail;
-      }
-      return api.patch<TaskDetail>(`/tasks/${taskId}`, patch);
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['task', taskId] });
-      void queryClient.invalidateQueries({ queryKey: ['tasks', 'project', task?.projectId] });
-    },
-    onError: (err) => toast.error(apiErrorMessage(err, 'Update failed')),
-  });
+  const updateMutation = useOfflineTaskUpdate({ taskId, task, isOnline });
 
   const statusMutation = useMutation({
     mutationFn: (status: string) =>
       api.patch<TaskDetail>(`/tasks/${taskId}/status`, { status }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['task', taskId] });
-      void queryClient.invalidateQueries({ queryKey: ['tasks', 'project', task?.projectId] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projectTasks(task?.projectId) });
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Status change failed')),
   });
@@ -219,7 +179,7 @@ export function TaskDetailDrawer({
       api.patch(`/tasks/${taskId}/blocked`, { blocked, ...(reason ? { reason } : {}) }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['task', taskId] });
-      void queryClient.invalidateQueries({ queryKey: ['tasks', 'project', task?.projectId] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projectTasks(task?.projectId) });
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Could not update blocked')),
   });
@@ -239,7 +199,7 @@ export function TaskDetailDrawer({
     mutationFn: () => api.delete<void>(`/tasks/${taskId}`),
     onSuccess: () => {
       toast.success('Task deleted');
-      void queryClient.invalidateQueries({ queryKey: ['tasks', 'project', task?.projectId] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projectTasks(task?.projectId) });
       onClose();
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Delete failed')),
@@ -264,56 +224,6 @@ export function TaskDetailDrawer({
       setBlockReasonOpen(true);
     }
   }
-
-  const [activityTab, setActivityTab] = useState<'comments' | 'activity'>('comments');
-  const [mobileTab, setMobileTab] = useState<MobileTab>('details');
-
-  // -------------------------------------------------------------------------
-  // Swipe-down-to-close — mobile only. Pointer events on the drawer header
-  // track a vertical drag; releasing past ~30px down triggers requestClose.
-  // The drawer follows the finger via a translateY style so it feels physical.
-  // We use pointer events (not touch) so it works on hybrid devices and is
-  // simpler to test in jsdom-free vitest (the math lives in useSwipeGesture).
-  // -------------------------------------------------------------------------
-  const dragStartRef = useRef<{ y: number; x: number; id: number } | null>(null);
-  const [dragOffsetY, setDragOffsetY] = useState(0);
-  const dragHandlers = isMobile
-    ? {
-        onPointerDown: (e: React.PointerEvent) => {
-          // Ignore drags that start on interactive elements inside the header.
-          const target = e.target as HTMLElement;
-          if (target.closest('button, a, input, select, textarea')) return;
-          dragStartRef.current = { y: e.clientY, x: e.clientX, id: e.pointerId };
-          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-        },
-        onPointerMove: (e: React.PointerEvent) => {
-          const start = dragStartRef.current;
-          if (!start || start.id !== e.pointerId) return;
-          const dy = Math.max(0, e.clientY - start.y);
-          setDragOffsetY(dy);
-        },
-        onPointerUp: (e: React.PointerEvent) => {
-          const start = dragStartRef.current;
-          if (!start || start.id !== e.pointerId) {
-            setDragOffsetY(0);
-            return;
-          }
-          const outcome = resolveSwipe(
-            { dx: e.clientX - start.x, dy: e.clientY - start.y },
-            { horizontalThreshold: 9999, verticalThreshold: 30, allowHorizontal: false },
-          );
-          dragStartRef.current = null;
-          setDragOffsetY(0);
-          if (outcome.kind === 'down') {
-            requestClose();
-          }
-        },
-        onPointerCancel: () => {
-          dragStartRef.current = null;
-          setDragOffsetY(0);
-        },
-      }
-    : {};
 
   // -------------------------------------------------------------------------
   // Mobile bottom-bar action handlers. Reassign / Status open lightweight
@@ -527,10 +437,6 @@ export function TaskDetailDrawer({
                     onStatusChange={(s) => statusMutation.mutate(s)}
                     onPatch={(p) => updateMutation.mutate(p)}
                   />
-                  {/* Labels sit with the primary metadata, not buried below
-                      description / similar tasks. They're a categorisation
-                      facet like priority, so they belong at the top. */}
-                  <LabelsSection taskId={taskId} projectId={task.projectId} />
                   <DescriptionField
                     value={task.description ?? ''}
                     taskId={taskId}
@@ -703,9 +609,6 @@ export function TaskDetailDrawer({
                   onStatusChange={(s) => statusMutation.mutate(s)}
                   onPatch={(p) => updateMutation.mutate(p)}
                 />
-                {/* Labels sit with the primary metadata. They're a
-                    categorisation facet like priority, not a footer item. */}
-                <LabelsSection taskId={taskId} projectId={task.projectId} />
                 <DescriptionField
                   value={task.description ?? ''}
                   taskId={taskId}

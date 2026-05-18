@@ -1,6 +1,8 @@
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
+
 import { AI_SUMMARIZE_QUEUE } from '../ai/ai.queues';
+
 import { AutoStatusService } from './auto-status.service';
 import { GithubAppService } from './github-app.service';
 import { GithubEventsService } from './github-events.service';

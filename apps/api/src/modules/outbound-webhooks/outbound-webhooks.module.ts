@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
+
 import { OutboundWebhooksController } from './outbound-webhooks.controller';
 import { OutboundWebhookProcessor } from './outbound-webhooks.processor';
 import {

@@ -4,8 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { cn } from '@nockta/ui';
+
 import { api } from '../lib/api';
 import { getSocket } from '../lib/socket';
+import { queryKeys } from '../lib/query-keys';
 
 interface Notification {
   id: string;
@@ -88,20 +90,29 @@ export function NotificationsBell(): JSX.Element {
   });
 
   const projectsQuery = useQuery({
-    queryKey: ['projects'],
+    queryKey: queryKeys.projects(),
     queryFn: () => api.get<ProjectSummary[]>('/projects'),
     enabled: open,
   });
 
   // Realtime — new notifications bump the badge immediately.
   useEffect(() => {
-    const socket = getSocket();
+    let cancelled = false;
+    let cleanup: (() => void) | null = null;
     const onNew = (): void => {
       void queryClient.invalidateQueries({ queryKey: ['notifications'] });
     };
-    socket.on('notification.created', onNew);
+    void (async () => {
+      const socket = await getSocket();
+      if (cancelled) return;
+      socket.on('notification.created', onNew);
+      cleanup = () => {
+        socket.off('notification.created', onNew);
+      };
+    })();
     return () => {
-      socket.off('notification.created', onNew);
+      cancelled = true;
+      cleanup?.();
     };
   }, [queryClient]);
 
@@ -135,7 +146,7 @@ export function NotificationsBell(): JSX.Element {
   const snooze = useMutation({
     mutationFn: (minutes: number) =>
       api.patch('/notifications/preferences/snooze-all', { minutes }),
-    onSuccess: (_, minutes) => {
+    onSuccess: (_, _minutes) => {
       void queryClient.invalidateQueries({ queryKey: ['notification-prefs'] });
       // No invalidation of unread-count needed — in-app stays on by design.
     },

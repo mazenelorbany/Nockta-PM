@@ -1,5 +1,7 @@
 import { ArrowRight, FileText, Sparkles } from 'lucide-react';
+
 import { StatusPill, TypeBadge } from '../task-bits';
+
 import { ResultRow } from './ResultRow';
 import { ResultSection } from './ResultSection';
 import type { Hit } from './types';

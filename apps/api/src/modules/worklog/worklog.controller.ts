@@ -1,9 +1,11 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { WorklogService } from './worklog.service';
+
+import type { WorklogService } from './worklog.service';
 
 class StartTimerDto {
   @IsOptional() @IsString() @MaxLength(500) note?: string;

@@ -1,10 +1,21 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { BadRequestException, Body, Controller, Headers, HttpCode, HttpStatus, Logger, Post, Req, UnauthorizedException } from '@nestjs/common';
+
+import { BadRequestException, Body, Controller, Headers, HttpCode, HttpStatus, Inject, Logger, Post, Req, UnauthorizedException } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
+import type Redis from 'ioredis';
+
 import { Public } from '../auth/decorators/public.decorator';
 import { Env } from '../../config/env';
-import { GithubEventsService } from './github-events.service';
+import { REDIS_CLIENT } from '../redis/redis.module';
+
+import type { GithubEventsService } from './github-events.service';
+
+/** GitHub re-delivers webhooks for up to ~30 days after the initial fire on
+ *  ping/network errors. 24h covers the realistic redelivery window plus a
+ *  comfortable margin without holding ids in Redis for longer than the
+ *  protocol needs. */
+const DELIVERY_DEDUPE_TTL_SECONDS = 24 * 60 * 60;
 
 interface WebhookHeaders {
   'x-github-event'?: string;
@@ -17,7 +28,10 @@ interface WebhookHeaders {
 export class GithubWebhookController {
   private readonly logger = new Logger(GithubWebhookController.name);
 
-  constructor(private readonly events: GithubEventsService) {}
+  constructor(
+    private readonly events: GithubEventsService,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+  ) {}
 
   @Public()
   @Post()
@@ -40,6 +54,34 @@ export class GithubWebhookController {
     if (signature.length !== expected.length ||
         !timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
       throw new UnauthorizedException('Bad signature');
+    }
+
+    // Replay protection. GitHub stamps every delivery with a unique
+    // X-GitHub-Delivery id. We claim it in Redis SETNX-style; if the claim
+    // fails the same id has been processed (or is being processed) within
+    // the dedupe TTL and we no-op. Returning 204 (the default for this
+    // route) keeps GitHub from retrying, and the dispatcher never runs
+    // twice for the same delivery — which would otherwise create duplicate
+    // task comments, double-fire auto-status transitions, etc.
+    const deliveryId = headers['x-github-delivery'];
+    if (deliveryId) {
+      const claimed = await this.redis.set(
+        `gh:delivery:${deliveryId}`,
+        '1',
+        'EX',
+        DELIVERY_DEDUPE_TTL_SECONDS,
+        'NX',
+      );
+      if (claimed !== 'OK') {
+        this.logger.log({ deliveryId }, 'replay rejected — delivery already processed');
+        return;
+      }
+    } else {
+      // Missing delivery id is unusual but not impossible (test clients,
+      // misconfigured proxies). Log and proceed — the signature check
+      // already passed, so the request is authenticated; we just can't
+      // dedupe it.
+      this.logger.warn({ event }, 'webhook missing x-github-delivery — dedupe skipped');
     }
 
     await this.dispatch(event, body);

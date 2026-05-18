@@ -3,6 +3,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { CheckCircle2, Clock } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { cn } from '@nockta/ui';
+
 import {
   AtRiskBadge,
   AvatarCircle,
@@ -13,6 +14,7 @@ import {
   TypeBadge,
 } from '../../components/task-bits';
 import { isHorizontalDominant } from '../../hooks/useSwipeGesture';
+
 import type { CustomFieldValue, Task } from './types';
 
 /**

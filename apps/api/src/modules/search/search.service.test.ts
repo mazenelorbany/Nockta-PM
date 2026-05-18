@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { SearchService } from './search.service';
+
 import { makePrismaMock } from '../../test-utils/mocks';
 import type { PrismaService } from '../../prisma/prisma.service';
-import type { ElasticSearchService } from './elastic-search.service';
 import type { AuthenticatedUser } from '../auth/types';
+
+import type { ElasticSearchService } from './elastic-search.service';
+import { SearchService } from './search.service';
 
 // =============================================================================
 // search.service — focused tests on the listSaved dedup fix (Batch A item A1)

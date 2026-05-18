@@ -1,6 +1,8 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
-import { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
-import { ExportsService } from './exports.service';
+
+import type { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
+
+import type { ExportsService } from './exports.service';
 
 // =============================================================================
 // ExportsScheduler — one-minute tick that scans ExportSchedule rows whose

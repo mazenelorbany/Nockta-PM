@@ -3,12 +3,13 @@ import 'reflect-metadata';
 // loads apps/api/.env via Node's built-in env-file loader so subsequent imports
 // (./config/env, etc.) see the populated process.env.
 import './bootstrap-env';
-import { maybeInitSentry } from './bootstrap-sentry';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
+
+import { maybeInitSentry } from './bootstrap-sentry';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { CorrelationIdInterceptor } from './common/interceptors/correlation-id.interceptor';
@@ -29,10 +30,40 @@ async function bootstrap(): Promise<void> {
   app.useLogger(app.get(Logger));
 
   app.use(helmet({ contentSecurityPolicy: false }));
-  // Auth is bearer-token only (see Swagger addBearerAuth + JwtAuthGuard). We
-  // intentionally do NOT enable cookie credentials — no CSRF surface, no
-  // need for csurf middleware. Allowed origins are still scoped via
-  // CORS_ORIGINS to reduce cross-origin XHR exposure of the token in dev.
+  // ─────────────────────────────────────────────────────────────────────────
+  // CSRF: intentionally NOT mounted. Close-out for GRILL-SUMMARY §23
+  // ("CSRF protection for cookie-based session flows").
+  //
+  // GRILL §23 scopes CSRF protection to cookie-based session flows. This
+  // service has none. Specifically:
+  //
+  //   1. Authentication is JWT bearer-token only (see Swagger addBearerAuth
+  //      + JwtAuthGuard + JwtStrategy.fromAuthHeaderAsBearerToken). The
+  //      access token is delivered to the SPA via URL fragment after the
+  //      Google OAuth callback (auth.controller.ts googleCallback) or as
+  //      a JSON body on /auth/magic-link/verify and /auth/dev-login —
+  //      never via Set-Cookie. The SPA stores it in localStorage (Zustand
+  //      persist) and attaches it on every XHR as `Authorization: Bearer`.
+  //
+  //   2. CORS is opened with `credentials: false` (see below). Browsers
+  //      will not attach cookies on cross-origin requests, and we accept
+  //      no ambient credentials. An attacker on evil.example cannot forge
+  //      an authenticated request from a victim's browser because they
+  //      cannot read localStorage (same-origin policy) and therefore
+  //      cannot set the Authorization header.
+  //
+  //   3. No code path calls res.cookie() or uses cookie-parser. The only
+  //      `cookie` references in src/ are (a) pino redact rules for
+  //      defense-in-depth log scrubbing and (b) comments explaining this
+  //      stance (see github-install.controller.ts: OAuth state lives in
+  //      Redis, not a cookie, for the same reason).
+  //
+  // If a future flow ever calls res.cookie() — e.g. a session cookie for
+  // a server-rendered admin page, or a SameSite=None refresh cookie — it
+  // MUST be paired with double-submit CSRF (the maintained `csrf-csrf`
+  // package; `csurf` is deprecated). Mount it ONLY on the cookie-bearing
+  // routes, never on the bearer-token API surface, and update this block.
+  // ─────────────────────────────────────────────────────────────────────────
   app.enableCors({
     origin: Env.CORS_ORIGINS,
     credentials: false,

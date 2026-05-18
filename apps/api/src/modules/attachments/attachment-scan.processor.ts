@@ -1,10 +1,12 @@
 import { Logger } from '@nestjs/common';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
 import type { Job } from 'bullmq';
-import { PrismaService } from '../../prisma/prisma.service';
-import { StorageService } from '../storage/storage.service';
-import { ClamAVService } from './clamav.service';
+
+import type { PrismaService } from '../../prisma/prisma.service';
+import type { StorageService } from '../storage/storage.service';
+
+import type { ClamAVService } from './clamav.service';
 import { ATTACHMENT_SCAN_QUEUE } from './attachments.service';
 
 @Processor(ATTACHMENT_SCAN_QUEUE)

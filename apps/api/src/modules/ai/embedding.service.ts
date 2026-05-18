@@ -1,8 +1,11 @@
 import { createHash } from 'node:crypto';
+
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { LlmService } from './llm.service';
-import { QdrantService } from './qdrant.service';
+
+import type { PrismaService } from '../../prisma/prisma.service';
+
+import type { LlmService } from './llm.service';
+import type { QdrantService } from './qdrant.service';
 
 function hashSource(title: string, description: string | null): string {
   return createHash('sha256').update(`${title}\n${description ?? ''}`).digest('hex');

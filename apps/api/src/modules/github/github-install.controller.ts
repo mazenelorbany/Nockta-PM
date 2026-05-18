@@ -1,3 +1,5 @@
+import { randomBytes } from 'crypto';
+
 import {
   Controller,
   Get,
@@ -13,11 +15,11 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
-import { randomBytes } from 'crypto';
 import type Redis from 'ioredis';
+
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { REDIS_CLIENT } from '../redis/redis.module';
-import { PrismaService } from '../../prisma/prisma.service';
+import type { PrismaService } from '../../prisma/prisma.service';
 import { Env } from '../../config/env';
 
 /**

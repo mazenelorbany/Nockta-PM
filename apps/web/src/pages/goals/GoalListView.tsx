@@ -2,7 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { Target } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@nockta/ui';
+
 import { api } from '../../lib/api';
+
 import { CreateGoalDialog } from './CreateGoalDialog';
 import { EmptyState } from './EmptyState';
 import { GoalCard } from './GoalCard';

@@ -1,7 +1,9 @@
 import { Check } from 'lucide-react';
 import { cn } from '@nockta/ui';
+
 import { TypeBadge, type TaskType } from '../../task-bits';
 import { usePopover } from '../utils';
+
 import { PopoverShell, ValuePill } from './Popover';
 
 /**

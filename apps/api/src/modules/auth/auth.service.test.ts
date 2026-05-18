@@ -1,6 +1,11 @@
 import { createHash } from 'node:crypto';
+
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+import { makeEventsMock, makePrismaMock } from '../../test-utils/mocks';
+import type { PrismaService } from '../../prisma/prisma.service';
+
 import { AuthService } from './auth.service';
 import type { TokenPair } from './types';
 
@@ -9,8 +14,6 @@ import type { TokenPair } from './types';
 function isMfaChallenge(_outcome: TokenPair): _outcome is never {
   return false;
 }
-import { makeEventsMock, makePrismaMock } from '../../test-utils/mocks';
-import type { PrismaService } from '../../prisma/prisma.service';
 
 // =============================================================================
 // auth.service — the highest-blast-radius surface in the API. Each test pins

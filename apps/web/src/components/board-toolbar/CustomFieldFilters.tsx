@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
+
 import { api } from '../../lib/api';
+
 import { FilterChip } from './FilterChip';
 import { FilterPopover, PopoverList, PopoverRow } from './FilterPopover';
 import type { CustomFieldDef } from './types';

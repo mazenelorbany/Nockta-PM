@@ -5,7 +5,9 @@ import { ArrowUpRight, FolderPlus, Search } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ApiError } from '@nockta/sdk';
 import { cn, QueryErrorState } from '@nockta/ui';
+
 import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 
 interface Project {
   id: string;
@@ -43,7 +45,7 @@ function suggestKey(name: string): string {
 
 export function ProjectsListPage(): JSX.Element {
   const projectsQuery = useQuery({
-    queryKey: ['projects'],
+    queryKey: queryKeys.projects(),
     queryFn: () => api.get<Project[]>('/projects'),
   });
   const { data, isLoading, isError } = projectsQuery;
@@ -327,7 +329,7 @@ function CreateProjectDialog({ onClose }: { onClose: () => void }): JSX.Element 
   const mutation = useMutation({
     mutationFn: (input: CreateProjectInput) => api.post<Project>('/projects', input),
     onSuccess: async (project) => {
-      await queryClient.invalidateQueries({ queryKey: ['projects'] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.projects() });
       toast.success(`Created ${project.key}`);
       onClose();
       navigate(`/projects/${project.id}/board`);

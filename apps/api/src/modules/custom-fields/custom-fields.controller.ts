@@ -4,9 +4,12 @@ import { CustomFieldKind } from '@prisma/client';
 import {
   IsArray, IsBoolean, IsEnum, IsInt, IsObject, IsOptional, IsString, MaxLength, MinLength,
 } from 'class-validator';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { CustomFieldsService, type CustomFieldInput, type CustomFieldOption, type RollupConfig } from './custom-fields.service';
+
+import type { CustomFieldsService} from './custom-fields.service';
+import { type CustomFieldInput, type CustomFieldOption, type RollupConfig } from './custom-fields.service';
 import type { VisibilityRule } from './formula-evaluator';
 
 class CreateFieldDto {

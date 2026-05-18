@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AutomationsService } from './automations.service';
+
+import type { PrismaService } from '../../prisma/prisma.service';
+
+import type { AutomationsService } from './automations.service';
 
 /**
  * Hooks event-emitter events into the automation engine.

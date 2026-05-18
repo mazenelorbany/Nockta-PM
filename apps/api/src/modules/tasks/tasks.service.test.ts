@@ -1,11 +1,13 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { TasksService } from './tasks.service';
+
 import { makeEventsMock, makePrismaMock } from '../../test-utils/mocks';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { PermissionsService } from '../permissions/permissions.service';
 import type { AuthenticatedUser } from '../auth/types';
+
+import { TasksService } from './tasks.service';
 
 // tasks.service — pins the rules that aren't pure CRUD: per-actor permission
 // gates on create, hierarchy walking on update (cycles + Subtask-in-chain),

@@ -1,5 +1,6 @@
 import { Play, Sparkles, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
 import { RunRetroButton } from './RetroModal';
 import type { Sprint } from './types';
 

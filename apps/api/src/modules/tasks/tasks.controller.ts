@@ -7,9 +7,11 @@ import {
   IsBoolean, IsDateString, IsEnum, IsInt, IsOptional, IsString,
   IsUUID, MaxLength, Min, MinLength,
 } from 'class-validator';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { TasksService } from './tasks.service';
+
+import type { TasksService } from './tasks.service';
 
 class CreateTaskDto {
   @IsUUID() projectId!: string;

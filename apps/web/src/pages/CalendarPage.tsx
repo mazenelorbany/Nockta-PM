@@ -8,9 +8,11 @@ import toast from 'react-hot-toast';
 import { useSearchParams } from 'react-router-dom';
 import { ApiError } from '@nockta/sdk';
 import { cn, NocktaMark, QueryErrorState, Skeleton } from '@nockta/ui';
+
 import { TaskDetailDrawer } from '../components/TaskDetailDrawer';
 import { PriorityDot, StatusPill, type Priority } from '../components/task-bits';
 import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 
 // =============================================================================
 // /calendar — month grid showing tasks with due dates. Drag tasks across days
@@ -52,7 +54,7 @@ export function CalendarPage(): JSX.Element {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const projectsQuery = useQuery({
-    queryKey: ['projects'],
+    queryKey: queryKeys.projects(),
     queryFn: () => api.get<Project[]>('/projects'),
   });
 

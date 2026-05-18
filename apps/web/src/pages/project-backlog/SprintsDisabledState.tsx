@@ -1,7 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Target } from 'lucide-react';
 import toast from 'react-hot-toast';
+
 import { api } from '../../lib/api';
+import { queryKeys } from '../../lib/query-keys';
+
 import { apiErrorMessage } from './helpers';
 
 // =============================================================================
@@ -13,8 +16,8 @@ export function SprintsDisabledState({ projectId, projectName }: { projectId: st
   const enable = useMutation({
     mutationFn: () => api.patch(`/projects/${projectId}`, { sprintsEnabled: true }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-      void queryClient.invalidateQueries({ queryKey: ['projects'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projects() });
       toast.success('Sprints enabled');
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Could not enable sprints')),

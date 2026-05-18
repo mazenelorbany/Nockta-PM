@@ -1,7 +1,8 @@
 import { Injectable, type OnModuleInit } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Queue } from 'bullmq';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
+import type { Queue } from 'bullmq';
+
 import { AI_DUPLICATE_QUEUE, AI_EMBED_QUEUE, AI_PRIORITIZE_QUEUE, AI_SUMMARIZE_QUEUE } from './ai.queues';
 
 @Injectable()

@@ -2,6 +2,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { ChevronDown, ChevronRight, Clock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { cn } from '@nockta/ui';
+
 import { BacklogRow } from './BacklogRow';
 import type { ContainerId, PlannerTask, Sprint } from './types';
 

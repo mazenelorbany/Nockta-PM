@@ -1,21 +1,24 @@
 import { defineConfig } from 'vitest/config';
 
 // =============================================================================
-// Frontend Vitest config — pure-function tests only (no jsdom / RTL).
+// Frontend Vitest config.
 //
-// Security-critical UI logic (auth guards, role gates, visibility filters)
-// lives in `src/lib/guards.ts` as pure predicates that the React components
-// call. Testing the predicates directly catches the bug-class we care about
-// (a wrong condition lets the wrong user see the wrong thing) without
-// loading a full DOM environment. When we eventually want to test rendered
-// trees, add `@testing-library/react` + `jsdom` and a separate "ui-tests"
-// pattern; this config stays focused on the predicate layer.
+// Default environment is `node` so pure-function tests (guards, formula
+// evaluator, query-key builders) stay fast. RTL tests opt in to jsdom per
+// file via the `// @vitest-environment jsdom` directive at the top of the
+// file.
+//
+// `setupFiles` registers jest-dom matchers + RTL cleanup. Without the
+// cleanup, `render()` calls accumulate into a shared `document.body` across
+// tests in the same file — visible as "Found multiple elements with the
+// text X" failures across the dashboard suite.
 // =============================================================================
 
 export default defineConfig({
   test: {
     globals: false,
     environment: 'node',
+    setupFiles: ['./vitest.setup.ts'],
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
   },
 });

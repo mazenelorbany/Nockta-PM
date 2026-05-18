@@ -1,15 +1,17 @@
 import { randomUUID } from 'node:crypto';
+
 import {
   BadRequestException, ForbiddenException, Injectable, NotFoundException,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
 import { type AttachmentParentType, type Visibility } from '@prisma/client';
-import { Queue } from 'bullmq';
-import { PrismaService } from '../../prisma/prisma.service';
+import type { Queue } from 'bullmq';
+
+import type { PrismaService } from '../../prisma/prisma.service';
 import type { AuthenticatedUser } from '../auth/types';
-import { PermissionsService } from '../permissions/permissions.service';
-import { StorageService } from '../storage/storage.service';
+import type { PermissionsService } from '../permissions/permissions.service';
+import type { StorageService } from '../storage/storage.service';
 
 export const ATTACHMENT_SCAN_QUEUE = 'attachment-scan';
 export const ATTACHMENT_THUMB_QUEUE = 'attachment-thumb';

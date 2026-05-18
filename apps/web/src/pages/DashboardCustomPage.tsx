@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ApiError } from '@nockta/sdk';
 import { cn } from '@nockta/ui';
+
 import {
   AvatarCircle,
   BlockedBadge,
@@ -15,6 +16,7 @@ import {
   type TaskType,
 } from '../components/task-bits';
 import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 
 // =============================================================================
 // /dashboards/:id — custom dashboard page that renders a user-defined set of
@@ -427,7 +429,7 @@ function WorkloadBarsWidget({ filters: _filters }: { filters: TaskFilter }): JSX
     queryFn: () => api.get<OrgAnalytics>('/analytics/org'),
   });
   const usersQuery = useQuery({
-    queryKey: ['users', 'list'],
+    queryKey: queryKeys.usersList(),
     queryFn: () => api.get<{ items: { id: string; name: string }[] }>('/users?limit=200'),
   });
   const rows = (query.data?.workloadTop ?? []).slice(0, 10);
@@ -499,12 +501,13 @@ function Tile({ label, value, tone }: { label: string; value: number; tone?: 'wa
 // =============================================================================
 
 function SprintBurndownWidget({ filters }: { filters: TaskFilter }): JSX.Element {
-  if (!filters.projectId) {
-    return <p className="text-xs text-muted-foreground">Pick a project in this widget's filter to show burndown.</p>;
-  }
+  // Hooks must always be called in the same order — keep them at the top
+  // and gate the actual network call with `enabled`. The early-return
+  // branches below render placeholder content without skipping hooks.
   const sprintsQuery = useQuery({
     queryKey: ['sprints', filters.projectId],
     queryFn: () => api.get<{ id: string; name: string; state: string }[]>(`/projects/${filters.projectId}/sprints`),
+    enabled: Boolean(filters.projectId),
   });
   const active = (sprintsQuery.data ?? []).find((s) => s.state === 'active');
   const sprintId = filters.sprintId ?? active?.id;
@@ -515,6 +518,9 @@ function SprintBurndownWidget({ filters }: { filters: TaskFilter }): JSX.Element
     ),
     enabled: Boolean(sprintId),
   });
+  if (!filters.projectId) {
+    return <p className="text-xs text-muted-foreground">Pick a project in this widget&apos;s filter to show burndown.</p>;
+  }
   if (!sprintId) return <p className="text-xs text-muted-foreground">No active sprint.</p>;
   if (burndownQuery.isLoading) return <p className="text-xs text-muted-foreground">Loading…</p>;
   const points = burndownQuery.data?.points ?? [];
@@ -554,12 +560,12 @@ function WidgetFilterMenu({
 }): JSX.Element {
   const [open, setOpen] = useState(false);
   const projectsQuery = useQuery({
-    queryKey: ['projects'],
+    queryKey: queryKeys.projects(),
     queryFn: () => api.get<{ id: string; key: string; name: string }[]>('/projects'),
     enabled: open,
   });
   const usersQuery = useQuery({
-    queryKey: ['users', 'list'],
+    queryKey: queryKeys.usersList(),
     queryFn: () => api.get<{ items: { id: string; name: string }[] }>('/users?limit=200'),
     enabled: open,
   });

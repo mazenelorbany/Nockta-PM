@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
+
 import { PriorityDot, type Priority } from '../task-bits';
+
 import { FilterChip } from './FilterChip';
 import { FilterPopover, PopoverList, PopoverRow } from './FilterPopover';
 import { PRIORITIES } from './types';

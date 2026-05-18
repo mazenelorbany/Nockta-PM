@@ -2,8 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bookmark, BookmarkPlus, Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+
 import { api } from '../../lib/api';
 import { PromptDialog } from '../dialogs';
+import { queryKeys } from '../../lib/query-keys';
+
 import type { BoardView, SavedView, TaskFilters } from './types';
 
 // =============================================================================
@@ -26,7 +29,7 @@ export function SavedViewsMenu({
   const queryClient = useQueryClient();
 
   const viewsQuery = useQuery({
-    queryKey: ['saved-views'],
+    queryKey: queryKeys.savedViews(),
     queryFn: () => api.get<SavedView[]>('/saved-views'),
   });
   // On a single-project board, only show views saved for that project. On a
@@ -43,7 +46,7 @@ export function SavedViewsMenu({
         query: { projectId, filters: currentFilters, view: currentView },
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['saved-views'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.savedViews() });
       toast.success('View saved');
     },
     onError: () => toast.error('Could not save view'),
@@ -60,7 +63,7 @@ export function SavedViewsMenu({
         },
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['saved-views'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.savedViews() });
       toast.success('View updated');
     },
     onError: () => toast.error('Could not update view'),
@@ -69,7 +72,7 @@ export function SavedViewsMenu({
     mutationFn: ({ id, name }: { id: string; name: string }) =>
       api.patch<SavedView>(`/saved-views/${id}`, { name }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['saved-views'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.savedViews() });
       toast.success('Renamed');
     },
     onError: () => toast.error('Could not rename view'),
@@ -77,7 +80,7 @@ export function SavedViewsMenu({
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/saved-views/${id}`),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['saved-views'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.savedViews() });
     },
   });
 

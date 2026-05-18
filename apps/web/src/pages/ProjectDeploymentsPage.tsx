@@ -2,8 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { ExternalLink, Rocket } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { cn, EmptyState, QueryErrorState, SkeletonList } from '@nockta/ui';
+
 import { ProjectTabs } from '../components/ProjectTabs';
 import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 
 // =============================================================================
 // /projects/:projectId/deployments
@@ -43,7 +45,7 @@ export function ProjectDeploymentsPage(): JSX.Element {
   const { projectId = '' } = useParams<{ projectId: string }>();
 
   const projectQuery = useQuery({
-    queryKey: ['project', projectId],
+    queryKey: queryKeys.project(projectId),
     queryFn: () => api.get<Project>(`/projects/${projectId}`),
     enabled: Boolean(projectId),
   });

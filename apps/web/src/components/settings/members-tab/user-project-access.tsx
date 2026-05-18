@@ -3,8 +3,11 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { Trash2 } from 'lucide-react';
 import { cn } from '@nockta/ui';
+
 import { api } from '../../../lib/api';
 import { SectionTitle, apiErrorMessage } from '../primitives';
+import { queryKeys } from '../../../lib/query-keys';
+
 import type { UserDetail } from './types';
 
 // =============================================================================
@@ -29,7 +32,7 @@ export function UserProjectAccess({
 
   type ProjectOption = { id: string; key: string; name: string };
   const projectsQuery = useQuery({
-    queryKey: ['projects'],
+    queryKey: queryKeys.projects(),
     queryFn: () => api.get<ProjectOption[]>('/projects'),
   });
   const allProjects = projectsQuery.data ?? [];
@@ -38,7 +41,7 @@ export function UserProjectAccess({
 
   const refresh = (): void => {
     void queryClient.invalidateQueries({ queryKey: ['user-detail', userId] });
-    void queryClient.invalidateQueries({ queryKey: ['members'] });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.members() });
   };
 
   const grant = useMutation({

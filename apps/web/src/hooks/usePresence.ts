@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+
 import { useAuth } from '../lib/auth-store';
 import { getSocket } from '../lib/socket';
 
@@ -47,7 +48,8 @@ export function usePresence(taskId: string | null | undefined): {
 
   useEffect(() => {
     if (!taskId) return undefined;
-    const socket = getSocket();
+    let cancelled = false;
+    let cleanup: (() => void) | null = null;
     const presenceRoom = `task:${taskId}:presence`;
 
     // Listeners — both attached BEFORE we emit join so we never miss the
@@ -74,38 +76,50 @@ export function usePresence(taskId: string | null | undefined): {
         return next;
       });
     }
-    socket.on('presence', onPresence);
-    socket.on('presence.ping', onPing);
-    socket.on('presence.leave', onLeave);
 
-    // Join the presence sub-room. The gateway responds with an initial
-    // `presence` broadcast carrying the current viewer set.
-    socket.emit('presence:join', { taskId });
+    void (async () => {
+      const socket = await getSocket();
+      if (cancelled) return;
+      socket.on('presence', onPresence);
+      socket.on('presence.ping', onPing);
+      socket.on('presence.leave', onLeave);
 
-    // Auto-ping every 10s. We send the last-known cursor as a courtesy so a
-    // user who hasn't moved still shows up as "active" in the viewer list.
-    const interval = setInterval(() => {
-      socket.emit('presence:ping', {
-        taskId,
-        cursorPosition: lastCursorRef.current ?? null,
-      });
-    }, PING_INTERVAL_MS);
+      // Join the presence sub-room. The gateway responds with an initial
+      // `presence` broadcast carrying the current viewer set.
+      socket.emit('presence:join', { taskId });
+
+      // Auto-ping every 10s. We send the last-known cursor as a courtesy so a
+      // user who hasn't moved still shows up as "active" in the viewer list.
+      const interval = setInterval(() => {
+        socket.emit('presence:ping', {
+          taskId,
+          cursorPosition: lastCursorRef.current ?? null,
+        });
+      }, PING_INTERVAL_MS);
+
+      cleanup = () => {
+        clearInterval(interval);
+        socket.emit('presence:leave', { taskId });
+        socket.off('presence', onPresence);
+        socket.off('presence.ping', onPing);
+        socket.off('presence.leave', onLeave);
+        setActiveUserIds([]);
+        setCursorByUser({});
+      };
+    })();
 
     return () => {
-      clearInterval(interval);
-      socket.emit('presence:leave', { taskId });
-      socket.off('presence', onPresence);
-      socket.off('presence.ping', onPing);
-      socket.off('presence.leave', onLeave);
-      setActiveUserIds([]);
-      setCursorByUser({});
+      cancelled = true;
+      cleanup?.();
     };
   }, [taskId, me?.id]);
 
   const sendPing = (cursor?: PresenceCursor): void => {
     if (!taskId) return;
     lastCursorRef.current = cursor;
-    getSocket().emit('presence:ping', { taskId, cursorPosition: cursor ?? null });
+    void getSocket().then((socket) => {
+      socket.emit('presence:ping', { taskId, cursorPosition: cursor ?? null });
+    });
   };
 
   return { activeUserIds, cursorByUser, sendPing };
@@ -131,7 +145,8 @@ export function useCommentTyping(taskId: string | null | undefined): {
 
   useEffect(() => {
     if (!taskId) return undefined;
-    const socket = getSocket();
+    let cancelled = false;
+    let cleanup: (() => void) | null = null;
 
     function onTyping(payload: { userId: string; taskId: string; state: 'start' | 'stop' }): void {
       if (payload.taskId !== taskId) return;
@@ -155,21 +170,31 @@ export function useCommentTyping(taskId: string | null | undefined): {
       timeoutsRef.current.set(payload.userId, timer);
     }
 
-    socket.on('comment.typing', onTyping);
-    socket.emit('comment:typing_join', { taskId });
+    void (async () => {
+      const socket = await getSocket();
+      if (cancelled) return;
+      socket.on('comment.typing', onTyping);
+      socket.emit('comment:typing_join', { taskId });
+      cleanup = () => {
+        socket.off('comment.typing', onTyping);
+        socket.emit('comment:typing_leave', { taskId });
+        for (const t of timeoutsRef.current.values()) clearTimeout(t);
+        timeoutsRef.current.clear();
+        setTypingUserIds([]);
+      };
+    })();
 
     return () => {
-      socket.off('comment.typing', onTyping);
-      socket.emit('comment:typing_leave', { taskId });
-      for (const t of timeoutsRef.current.values()) clearTimeout(t);
-      timeoutsRef.current.clear();
-      setTypingUserIds([]);
+      cancelled = true;
+      cleanup?.();
     };
   }, [taskId, me?.id]);
 
   function notifyTyping(state: 'start' | 'stop'): void {
     if (!taskId) return;
-    getSocket().emit('comment:typing', { taskId, state });
+    void getSocket().then((socket) => {
+      socket.emit('comment:typing', { taskId, state });
+    });
   }
 
   return { typingUserIds, notifyTyping };

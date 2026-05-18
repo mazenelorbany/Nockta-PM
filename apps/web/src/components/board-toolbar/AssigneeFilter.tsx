@@ -1,5 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
+
 import { AvatarCircle } from '../task-bits';
+
 import { FilterChip } from './FilterChip';
 import { FilterPopover, PopoverList, PopoverRow } from './FilterPopover';
 import type { ToolbarUser } from './types';

@@ -6,9 +6,12 @@ import { DashboardScope } from '@prisma/client';
 import {
   IsArray, IsEnum, IsObject, IsOptional, IsString, IsUUID, MaxLength, MinLength,
 } from 'class-validator';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { DashboardsService, type DashboardInput } from './dashboards.service';
+
+import type { DashboardsService} from './dashboards.service';
+import { type DashboardInput } from './dashboards.service';
 
 class CreateDashboardDto {
   @IsString() @MinLength(1) @MaxLength(120) name!: string;

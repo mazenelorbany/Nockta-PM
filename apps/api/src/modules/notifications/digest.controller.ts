@@ -1,10 +1,12 @@
 import { Body, Controller, Get, Patch } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsBoolean, IsIn, IsOptional } from 'class-validator';
-import { PrismaService } from '../../prisma/prisma.service';
+
+import type { PrismaService } from '../../prisma/prisma.service';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { NotificationDigestService } from './digest.service';
+
+import type { NotificationDigestService } from './digest.service';
 
 class UpdateDigestPreferencesDto {
   @IsOptional() @IsBoolean() enabled?: boolean;

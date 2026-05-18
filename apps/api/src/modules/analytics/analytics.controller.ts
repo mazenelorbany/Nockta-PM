@@ -1,8 +1,10 @@
 import { Controller, Get, Param, ParseIntPipe, ParseUUIDPipe, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { AnalyticsService } from './analytics.service';
+
+import type { AnalyticsService } from './analytics.service';
 
 @ApiTags('analytics')
 @ApiBearerAuth()

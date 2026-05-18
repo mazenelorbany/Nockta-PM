@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { cn } from '@nockta/ui';
+
 import { api } from '../../lib/api';
 import {
   BlockedBadge,
@@ -10,6 +11,7 @@ import {
   TypeBadge,
 } from '../task-bits';
 import { PresenceAvatars } from '../PresenceAvatars';
+
 import type { TaskDetail } from './types';
 import { apiErrorMessage } from './utils';
 

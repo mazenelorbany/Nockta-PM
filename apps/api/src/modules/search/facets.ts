@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+
 import type { PrismaService } from '../../prisma/prisma.service';
 
 // Facet aggregation for the search panel. Given a where clause (already

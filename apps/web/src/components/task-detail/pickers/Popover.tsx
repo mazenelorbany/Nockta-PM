@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, ChevronDown } from 'lucide-react';
 import { cn } from '@nockta/ui';
+
 import { PILL_CLASS } from '../constants';
 
 export function ValuePill({

@@ -1,5 +1,6 @@
 import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import nodemailer, { type Transporter } from 'nodemailer';
+
 import { Env } from '../../config/env';
 
 interface SendOptions {

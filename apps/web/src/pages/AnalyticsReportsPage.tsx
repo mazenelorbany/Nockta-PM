@@ -6,6 +6,7 @@ import {
   Bar, BarChart, CartesianGrid, Cell, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import { cn, QueryErrorState, Skeleton } from '@nockta/ui';
+
 import { api } from '../lib/api';
 
 // =============================================================================

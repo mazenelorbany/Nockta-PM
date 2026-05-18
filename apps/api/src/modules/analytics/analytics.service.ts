@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { PermissionsService } from '../permissions/permissions.service';
+
+import type { PrismaService } from '../../prisma/prisma.service';
+import type { PermissionsService } from '../permissions/permissions.service';
 import type { AuthenticatedUser } from '../auth/types';
+
 import { personal as personalMetric } from './metrics/personal';
 import { project as projectMetric } from './metrics/project-dashboard';
 import { teamStats as teamStatsMetric } from './metrics/team-stats';

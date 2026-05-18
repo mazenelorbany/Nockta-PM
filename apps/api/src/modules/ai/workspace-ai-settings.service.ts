@@ -1,6 +1,8 @@
 import { ForbiddenException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
-import { Prisma, type WorkspaceAiSettings } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
+import type { Prisma} from '@prisma/client';
+import { type WorkspaceAiSettings } from '@prisma/client';
+
+import type { PrismaService } from '../../prisma/prisma.service';
 import type { AuthenticatedUser } from '../auth/types';
 
 // =============================================================================

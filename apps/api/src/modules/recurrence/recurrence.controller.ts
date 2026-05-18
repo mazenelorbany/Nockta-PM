@@ -3,9 +3,12 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsEnum, IsInt, IsOptional, IsString, Max, Min,
 } from 'class-validator';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { RecurrenceService, type RecurrenceInput } from './recurrence.service';
+
+import type { RecurrenceService} from './recurrence.service';
+import { type RecurrenceInput } from './recurrence.service';
 
 const FREQUENCIES = ['daily', 'weekly', 'monthly'] as const;
 

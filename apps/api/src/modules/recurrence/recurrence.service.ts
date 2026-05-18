@@ -1,9 +1,10 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import type { RecurrenceFrequency } from '@prisma/client';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
+import type { Priority, RecurrenceFrequency, Visibility } from '@prisma/client';
 import { generateKeyBetween } from 'fractional-indexing';
-import { PrismaService } from '../../prisma/prisma.service';
-import { PermissionsService } from '../permissions/permissions.service';
+
+import type { PrismaService } from '../../prisma/prisma.service';
+import type { PermissionsService } from '../permissions/permissions.service';
 import type { AuthenticatedUser } from '../auth/types';
 
 export interface RecurrenceInput {
@@ -126,7 +127,7 @@ export class RecurrenceService {
   private async spawnOne(r: {
     id: string; taskId: string; frequency: RecurrenceFrequency;
     interval: number; weekdays: number[]; dayOfMonth: number | null;
-    task: { projectId: string; title: string; description: string | null; priority: import('@prisma/client').Priority; assigneeUserId: string | null; reporterUserId: string; createdById: string; estimate: number | null; sprintId: string | null; status: string; visibility: import('@prisma/client').Visibility; labels: { label: { id: string } }[] };
+    task: { projectId: string; title: string; description: string | null; priority: Priority; assigneeUserId: string | null; reporterUserId: string; createdById: string; estimate: number | null; sprintId: string | null; status: string; visibility: Visibility; labels: { label: { id: string } }[] };
   }): Promise<void> {
     const project = await this.prisma.project.findUniqueOrThrow({
       where: { id: r.task.projectId },

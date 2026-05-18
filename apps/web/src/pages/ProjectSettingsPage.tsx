@@ -2,8 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+
 import { ProjectTabs } from '../components/ProjectTabs';
 import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
+
 import { SettingsRail } from './project-settings/SettingsRail';
 import { OverviewSection } from './project-settings/OverviewSection';
 import { AccessSection } from './project-settings/AccessSection';
@@ -27,7 +30,7 @@ export function ProjectSettingsPage(): JSX.Element {
   const location = useLocation();
 
   const projectQuery = useQuery({
-    queryKey: ['project', projectId],
+    queryKey: queryKeys.project(projectId),
     queryFn: () => api.get<Project>(`/projects/${projectId}`),
     enabled: Boolean(projectId),
   });
@@ -146,8 +149,8 @@ export function ProjectSettingsPage(): JSX.Element {
     mutationFn: (patch: Partial<Project>) =>
       api.patch<Project>(`/projects/${projectId}`, patch),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-      void queryClient.invalidateQueries({ queryKey: ['projects'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projects() });
       toast.success('Saved');
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Save failed')),

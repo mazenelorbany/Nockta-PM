@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { LayoutGrid, List as ListIcon, X } from 'lucide-react';
 import { useMemo } from 'react';
+
 import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
+
 import { AssigneeFilter } from './board-toolbar/AssigneeFilter';
 import { CustomFieldFilters } from './board-toolbar/CustomFieldFilters';
 import { ToggleChip } from './board-toolbar/FilterChip';
@@ -122,7 +125,7 @@ export function BoardToolbar({
   }, [tasks]);
 
   const sprintsQuery = useQuery({
-    queryKey: ['sprints', projectId],
+    queryKey: queryKeys.sprints(projectId),
     queryFn: () => api.get<Sprint[]>(`/projects/${projectId}/sprints`),
     enabled: Boolean(projectId && sprintsEnabled),
   });

@@ -67,7 +67,7 @@ The "Continue with Google" button still won't work until you set real `GOOGLE_OA
 - **"prisma db push" fails with "Can't reach database server"** — Docker isn't up yet, or Postgres is still booting. `docker compose -f infra/docker-compose.yml ps` should show `nockta-postgres` healthy.
 - **API exits at boot with a zod error listing missing env vars** — Make sure `apps/api/.env` exists (not just `.env` at the repo root). The Prisma CLI also reads from `apps/api/.env`, so don't move it.
 - **`POST /auth/dev-login` returns 400** — `NODE_ENV` is set to `production` somewhere, or your email isn't on the `@nockta.com` domain. The service rejects both.
-- **`apps/workers` was deleted** — workers now run in-process inside `apps/api` (see GRILL-SUMMARY §21). If a stale `pnpm-lock.yaml` still references it, run `pnpm install` to refresh.
+- **`apps/workers` was deleted** — workers now run in-process inside `apps/api` (see `CONTEXT.md` § "Non-obvious architectural choices"). If a stale `pnpm-lock.yaml` still references it, run `pnpm install` to refresh.
 - **MinIO console** at <http://localhost:9001> (user `nockta_minio`, password `nockta_minio_dev_pw`) — useful for sanity-checking attachment uploads.
 - **Mailhog UI** at <http://localhost:8025> — magic-link emails land here, not in a real inbox.
 

@@ -1,18 +1,21 @@
 import { randomBytes, createHash } from 'node:crypto';
+
 import {
   BadRequestException,
   Injectable,
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import type { JwtService } from '@nestjs/jwt';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
 import { ulid } from 'ulid';
+
 import { Env } from '../../config/env';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AuditLogService } from './audit-log.service';
-import { MailService } from './mail.service';
-import { SessionService } from './session.service';
+import type { PrismaService } from '../../prisma/prisma.service';
+
+import type { AuditLogService } from './audit-log.service';
+import type { MailService } from './mail.service';
+import type { SessionService } from './session.service';
 import type { GoogleProfile } from './strategies/google.strategy';
 import type { JwtPayload, TokenPair } from './types';
 

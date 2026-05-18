@@ -22,16 +22,18 @@ import {
   IsString,
 } from 'class-validator';
 import type { Request, Response } from 'express';
+
 import { Env } from '../../config/env';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AuditLogService } from './audit-log.service';
-import { AuthService } from './auth.service';
+import type { PrismaService } from '../../prisma/prisma.service';
+
+import type { AuditLogService } from './audit-log.service';
+import type { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
-import { MagicLinkRequestDto } from './dto/magic-link-request.dto';
-import { MagicLinkVerifyDto } from './dto/magic-link-verify.dto';
-import { RefreshDto } from './dto/refresh.dto';
-import { SessionsService } from './sessions.service';
+import type { MagicLinkRequestDto } from './dto/magic-link-request.dto';
+import type { MagicLinkVerifyDto } from './dto/magic-link-verify.dto';
+import type { RefreshDto } from './dto/refresh.dto';
+import type { SessionsService } from './sessions.service';
 import type { GoogleProfile } from './strategies/google.strategy';
 import type { AuthenticatedUser, TokenPair } from './types';
 

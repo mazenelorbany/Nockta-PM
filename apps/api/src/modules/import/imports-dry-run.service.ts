@@ -4,10 +4,12 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { PermissionsService } from '../permissions/permissions.service';
-import type { AuthenticatedUser } from '../auth/types';
 import type { Priority, TaskType, WorkflowPreset } from '@prisma/client';
+
+import type { PrismaService } from '../../prisma/prisma.service';
+import type { PermissionsService } from '../permissions/permissions.service';
+import type { AuthenticatedUser } from '../auth/types';
+
 import {
   JIRA_STATUS_PRESETS,
   type JiraCsvMapping,

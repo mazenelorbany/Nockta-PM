@@ -6,8 +6,10 @@ import {
   type WorkflowPreset,
 } from '@prisma/client';
 import { generateKeyBetween } from 'fractional-indexing';
-import { PrismaService } from '../../prisma/prisma.service';
-import { ImportRunsService } from './import-runs.service';
+
+import type { PrismaService } from '../../prisma/prisma.service';
+
+import type { ImportRunsService } from './import-runs.service';
 
 // =============================================================================
 // Linear → Nockta importer, refactored from scripts/import-from-linear.ts into

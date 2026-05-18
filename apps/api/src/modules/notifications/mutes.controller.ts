@@ -11,9 +11,12 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsIn, IsUUID } from 'class-validator';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { NotificationMutesService, type MuteableEntityType } from './mutes.service';
+
+import type { NotificationMutesService} from './mutes.service';
+import { type MuteableEntityType } from './mutes.service';
 
 class MuteDto {
   @IsIn(['task', 'doc'])

@@ -297,6 +297,7 @@ model User {
   outboundWebhooksCreated OutboundWebhook[]      @relation("OutboundWebhookCreator")
   aiUsageEvents         AiUsageEvent[]            @relation("AiUsageEventUser")
   exportSchedulesCreated ExportSchedule[]         @relation("ExportScheduleCreator")
+  exportRunsCreated      ExportRun[]              @relation("ExportRunCreator")
   // Pass I (Notifications 8→9) — batched digest queue, one row per user/channel.
   notificationDigests   NotificationDigest[]
   // Pass I (Sprints 8→9) — retro authorship + goal-hit evaluation.
@@ -1948,12 +1949,20 @@ model ExportRun {
   errorSummary String?
   createdAt    DateTime  @default(now())
   completedAt  DateTime?
+  /// Who triggered this run. For inline runs this is the request actor; for
+  /// scheduled runs it's the schedule's creator at fire time. Nullable so a
+  /// user-deletion (SetNull FK) doesn't cascade-delete the run history.
+  /// A NULL value means "the original actor is gone" — the service treats
+  /// NULL as Admin-only read.
+  createdById  String?   @db.Uuid
 
   schedule ExportSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  creator  User?           @relation("ExportRunCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([scheduleId, createdAt(sort: Desc)])
   @@index([status, createdAt])
   @@index([sourceKind, sourceId])
+  @@index([createdById, createdAt(sort: Desc)])
 }
 
 // =============================================================================

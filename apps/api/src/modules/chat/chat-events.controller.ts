@@ -3,14 +3,16 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { OAuth2Client } from 'google-auth-library';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
+
 import { Env } from '../../config/env';
-import { PrismaService } from '../../prisma/prisma.service';
+import type { PrismaService } from '../../prisma/prisma.service';
 import { Public } from '../auth/decorators/public.decorator';
-import { CommentsService } from '../comments/comments.service';
-import { TasksService } from '../tasks/tasks.service';
-import { ChatEventsService } from './chat-events.service';
-import { ChatService } from './chat.service';
+import type { CommentsService } from '../comments/comments.service';
+import type { TasksService } from '../tasks/tasks.service';
+
+import type { ChatEventsService } from './chat-events.service';
+import type { ChatService } from './chat.service';
 
 const googleClient = new OAuth2Client();
 

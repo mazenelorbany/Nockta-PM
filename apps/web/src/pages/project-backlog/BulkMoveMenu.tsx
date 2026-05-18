@@ -1,6 +1,7 @@
 import { Inbox, MoreHorizontal, Target } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@nockta/ui';
+
 import type { ContainerId, Sprint } from './types';
 
 // =============================================================================

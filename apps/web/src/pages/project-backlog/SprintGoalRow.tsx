@@ -3,7 +3,10 @@ import { Target } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { cn } from '@nockta/ui';
+
 import { api } from '../../lib/api';
+import { queryKeys } from '../../lib/query-keys';
+
 import { apiErrorMessage } from './helpers';
 import type { Sprint } from './types';
 
@@ -36,7 +39,7 @@ export function SprintGoalRow({
     mutationFn: (next: string | null) =>
       api.patch<Sprint>(`/sprints/${sprintId}`, { goal: next }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['sprints', projectId] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.sprints(projectId) });
       toast.success(state === 'active' ? 'Goal updated' : 'Goal saved');
       setEditing(false);
     },

@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Job } from 'bullmq';
+
+import { makeEventsMock, makePrismaMock } from '../../test-utils/mocks';
+import type { PrismaService } from '../../prisma/prisma.service';
+
 import {
   BlockerPredictionProcessor,
   DuplicateDetectionProcessor,
   PrioritizeProcessor,
 } from './ai.processors';
-import { makeEventsMock, makePrismaMock } from '../../test-utils/mocks';
-import type { PrismaService } from '../../prisma/prisma.service';
 import type { AiCostTrackingService } from './ai-cost-tracking.service';
 import type { EmbeddingService } from './embedding.service';
 import type { LlmService } from './llm.service';

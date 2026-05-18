@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { NotificationDigestService } from './digest.service';
+
 import { makeEventsMock, makePrismaMock } from '../../test-utils/mocks';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
+
+import { NotificationDigestService } from './digest.service';
 
 // =============================================================================
 // NotificationDigestService — Pass I (Notifications 8 → 9).
@@ -199,7 +201,7 @@ describe('NotificationDigestService.enqueueOrBatch', () => {
       digestChannel: 'email',
     } as never);
 
-    let buckets: { id: string; items: unknown[]; sentAt: Date | null }[] = [];
+    const buckets: { id: string; items: unknown[]; sentAt: Date | null }[] = [];
     let nextId = 0;
     digestModel(mocks.prisma).findFirst.mockImplementation(async () => {
       const open = buckets.find((b) => b.sentAt === null);

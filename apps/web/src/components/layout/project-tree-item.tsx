@@ -1,5 +1,6 @@
 import { cn } from '@nockta/ui';
 import { Link, useParams } from 'react-router-dom';
+
 import type { ProjectSummary } from './types';
 
 // -----------------------------------------------------------------------------

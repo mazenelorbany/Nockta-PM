@@ -8,13 +8,14 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { JwtService } from '@nestjs/jwt';
+import type { JwtService } from '@nestjs/jwt';
 import type { Server, Socket } from 'socket.io';
+
 import { Env } from '../../config/env';
-import { PrismaService } from '../../prisma/prisma.service';
-import { SessionService } from '../auth/session.service';
+import type { PrismaService } from '../../prisma/prisma.service';
+import type { SessionService } from '../auth/session.service';
 import type { AuthenticatedUser, JwtPayload } from '../auth/types';
-import { PermissionsService } from '../permissions/permissions.service';
+import type { PermissionsService } from '../permissions/permissions.service';
 
 interface SocketData {
   user?: AuthenticatedUser;

@@ -2,9 +2,10 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { LoggerModule } from 'nestjs-pino';
+
 import { SchedulingModule } from './common/scheduling/scheduling.module';
 import { IdentityAwareThrottlerGuard } from './common/throttler/identity-throttler.guard';
-import { LoggerModule } from 'nestjs-pino';
 import { Env } from './config/env';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';

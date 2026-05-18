@@ -1,22 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
 import {
-  ArrowUpRight, BarChart3, FileText, Flame, Inbox, LayoutDashboard, ListTodo,
+  ArrowUpRight, BarChart3, FileText, Flame, Inbox, LayoutDashboard,
   Settings, Sparkles, Target, Timer, Zap,
 } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { cn } from '@nockta/ui';
+
 import {
   AvatarCircle,
-  BlockedBadge,
-  PriorityDot,
-  StatusPill,
-  TypeBadge,
   type Priority,
   type TaskType,
 } from '../components/task-bits';
 import { api } from '../lib/api';
 import { ProjectTabs } from '../components/ProjectTabs';
+import { queryKeys } from '../lib/query-keys';
 
 // =============================================================================
 // /projects/:projectId — the project's home page. Replaces the old "click =
@@ -77,17 +75,17 @@ export function ProjectOverviewPage(): JSX.Element {
   const { projectId = '' } = useParams<{ projectId: string }>();
 
   const projectQuery = useQuery({
-    queryKey: ['project', projectId],
+    queryKey: queryKeys.project(projectId),
     queryFn: () => api.get<Project>(`/projects/${projectId}`),
     enabled: Boolean(projectId),
   });
   const tasksQuery = useQuery({
-    queryKey: ['tasks', 'project', projectId],
+    queryKey: queryKeys.projectTasks(projectId),
     queryFn: () => api.get<Task[]>(`/tasks/project/${projectId}`),
     enabled: Boolean(projectId),
   });
   const sprintsQuery = useQuery({
-    queryKey: ['sprints', projectId],
+    queryKey: queryKeys.sprints(projectId),
     queryFn: () => api.get<SprintRow[]>(`/projects/${projectId}/sprints`),
     enabled: Boolean(projectId),
   });

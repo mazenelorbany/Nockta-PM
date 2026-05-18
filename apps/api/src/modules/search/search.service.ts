@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+
+import type { PrismaService } from '../../prisma/prisma.service';
 import { normalizeLimit, paginate } from '../../common/pagination/cursor-pagination';
 import type { AuthenticatedUser } from '../auth/types';
-import { ElasticSearchService } from './elastic-search.service';
+
+import type { ElasticSearchService } from './elastic-search.service';
 import { parseQuery, type ParsedFilters, type ParsedQuery } from './query-parser';
 import {
   buildWhere,

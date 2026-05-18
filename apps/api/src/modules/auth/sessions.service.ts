@@ -1,7 +1,10 @@
 import { createHash } from 'node:crypto';
+
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AuditLogService } from './audit-log.service';
+
+import type { PrismaService } from '../../prisma/prisma.service';
+
+import type { AuditLogService } from './audit-log.service';
 
 // =============================================================================
 // SessionsService — user-facing refresh-token (= "session") management.

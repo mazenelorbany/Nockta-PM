@@ -3,8 +3,11 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { UserMinus } from 'lucide-react';
 import { SkeletonList, Spinner } from '@nockta/ui';
+
 import { api } from '../../lib/api';
 import { AvatarCircle } from '../task-bits';
+import { queryKeys } from '../../lib/query-keys';
+
 import { AdminGate, Fieldset, HelpHint, SectionTitle, apiErrorMessage } from './primitives';
 
 // =============================================================================
@@ -44,7 +47,7 @@ interface PickerUser {
 export function TeamsTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
   const queryClient = useQueryClient();
   const teamsQuery = useQuery({
-    queryKey: ['teams'],
+    queryKey: queryKeys.teams(),
     queryFn: () => api.get<Team[]>('/teams'),
   });
   const [openCreate, setOpenCreate] = useState(false);
@@ -54,8 +57,8 @@ export function TeamsTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
     mutationFn: (id: string) => api.delete(`/teams/${id}`),
     onSuccess: () => {
       toast.success('Team deleted');
-      void queryClient.invalidateQueries({ queryKey: ['teams'] });
-      void queryClient.invalidateQueries({ queryKey: ['members'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.teams() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.members() });
       setExpandedId(null);
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Could not delete team')),
@@ -159,7 +162,7 @@ export function TeamsTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
         <CreateTeamDialog
           onClose={() => setOpenCreate(false)}
           onCreated={() => {
-            queryClient.invalidateQueries({ queryKey: ['teams'] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.teams() });
             setOpenCreate(false);
           }}
         />
@@ -202,8 +205,8 @@ function TeamDetailPanel({
     onSuccess: () => {
       toast.success('Member added');
       void queryClient.invalidateQueries({ queryKey: ['team-detail', teamId] });
-      void queryClient.invalidateQueries({ queryKey: ['teams'] });
-      void queryClient.invalidateQueries({ queryKey: ['members'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.teams() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.members() });
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Could not add member')),
   });
@@ -213,8 +216,8 @@ function TeamDetailPanel({
     onSuccess: () => {
       toast.success('Member removed');
       void queryClient.invalidateQueries({ queryKey: ['team-detail', teamId] });
-      void queryClient.invalidateQueries({ queryKey: ['teams'] });
-      void queryClient.invalidateQueries({ queryKey: ['members'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.teams() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.members() });
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Could not remove member')),
   });
@@ -227,7 +230,7 @@ function TeamDetailPanel({
     onSuccess: () => {
       toast.success('Team updated');
       void queryClient.invalidateQueries({ queryKey: ['team-detail', teamId] });
-      void queryClient.invalidateQueries({ queryKey: ['teams'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.teams() });
       setEditing(false);
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Could not save')),

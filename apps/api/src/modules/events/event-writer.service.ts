@@ -1,6 +1,8 @@
 import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { PrismaService } from '../../prisma/prisma.service';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
+
+import type { PrismaService } from '../../prisma/prisma.service';
+
 import { EVENT_MAP } from './event-map';
 
 /**

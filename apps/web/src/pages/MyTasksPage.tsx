@@ -1,17 +1,17 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, LayoutGrid, List as ListIcon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import toast from 'react-hot-toast';
 import { useSearchParams } from 'react-router-dom';
-import { ApiError } from '@nockta/sdk';
 import { cn, EmptyState, NocktaMark, QueryErrorState, SkeletonList } from '@nockta/ui';
+
 import { TaskDetailDrawer } from '../components/TaskDetailDrawer';
 import {
-  AvatarCircle, BlockedBadge, DueDateChip, PriorityDot, StatusPill, TypeBadge,
+  BlockedBadge, DueDateChip, PriorityDot, StatusPill, TypeBadge,
   type Priority, type TaskType,
 } from '../components/task-bits';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth-store';
+import { queryKeys } from '../lib/query-keys';
 
 // =============================================================================
 // /my-tasks — cross-project task board. Backed by /search/tasks since it's the
@@ -56,11 +56,6 @@ interface Project {
   name: string;
 }
 
-interface Label {
-  id: string;
-  name: string;
-  color: string;
-}
 
 export function MyTasksPage(): JSX.Element {
   const { user } = useAuth();
@@ -74,7 +69,7 @@ export function MyTasksPage(): JSX.Element {
   const [hideDone, setHideDone] = useState(true);
 
   const projectsQuery = useQuery({
-    queryKey: ['projects'],
+    queryKey: queryKeys.projects(),
     queryFn: () => api.get<Project[]>('/projects'),
   });
 

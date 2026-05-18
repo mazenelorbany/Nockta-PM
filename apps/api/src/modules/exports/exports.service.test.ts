@@ -1,8 +1,12 @@
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Queue } from 'bullmq';
+
 import { makePrismaMock } from '../../test-utils/mocks';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { AuthenticatedUser } from '../auth/types';
+import type { PermissionsService } from '../permissions/permissions.service';
+
 import {
   ExportsService,
   EXPORT_SIGNED_URL_TTL_SECONDS,
@@ -37,17 +41,34 @@ interface Built {
   service: ExportsService;
   prisma: PrismaService;
   queue: { add: ReturnType<typeof vi.fn> };
+  permissions: {
+    assertAtLeast: ReturnType<typeof vi.fn>;
+    effectiveRole: ReturnType<typeof vi.fn>;
+    canSeeTask: ReturnType<typeof vi.fn>;
+  };
 }
 
+/**
+ * Build a service under test. By default the permissions mock is permissive
+ * (assertAtLeast resolves silently, effectiveRole returns 'Manager') because
+ * most existing tests run as Admin and don't care about authorisation. The
+ * authz-specific describe blocks below override these to reject.
+ */
 function build(): Built {
   const prisma = makePrismaMock();
   const queue = { add: vi.fn().mockResolvedValue({ id: 'job-1' }) };
+  const permissions = {
+    assertAtLeast: vi.fn().mockResolvedValue(undefined),
+    effectiveRole: vi.fn().mockResolvedValue('Manager'),
+    canSeeTask: vi.fn().mockResolvedValue(true),
+  };
   const service = new ExportsService(
     prisma,
     queue as unknown as Queue,
+    permissions as unknown as PermissionsService,
   );
   service.onModuleInit();
-  return { service, prisma, queue };
+  return { service, prisma, queue, permissions };
 }
 
 // =============================================================================
@@ -247,8 +268,18 @@ describe('fireDueSchedules', () => {
         deliveryEmailNew: null,
         enabled: true,
         lastRunAt: null,
+        createdById: ADMIN.id,
       } as never,
     ]);
+    // fireDueSchedules re-resolves the creator before firing to verify
+    // they still have source access.
+    vi.mocked(built.prisma.user.findUnique).mockResolvedValueOnce({
+      id: ADMIN.id,
+      email: ADMIN.email,
+      kind: ADMIN.kind,
+      companyRole: ADMIN.companyRole,
+      archivedAt: null,
+    } as never);
     vi.mocked(built.prisma.exportRun.create).mockResolvedValueOnce({
       id: 'run-1',
       scheduleId: 'sched-1',
@@ -276,7 +307,7 @@ describe('fireDueSchedules', () => {
     expect(built.queue.add).toHaveBeenCalledTimes(1);
     const addCall = built.queue.add.mock.calls[0];
     expect(addCall?.[0]).toBe('export');
-    expect(addCall?.[1]).toEqual({ runId: 'run-1' });
+    expect(addCall?.[1]).toEqual({ runId: 'run-1', actorId: ADMIN.id });
     expect(addCall?.[2]?.jobId).toBe('run-1');
   });
 
@@ -380,7 +411,10 @@ describe('runOnce (inline)', () => {
 
     expect(run.status).toBe('queued');
     expect(built.queue.add).toHaveBeenCalledTimes(1);
-    expect(built.queue.add.mock.calls[0]?.[1]).toEqual({ runId: 'run-x' });
+    expect(built.queue.add.mock.calls[0]?.[1]).toEqual({
+      runId: 'run-x',
+      actorId: ADMIN.id,
+    });
   });
 
   it('rejects an inline run with sourceKind=project but no sourceId', async () => {
@@ -390,5 +424,309 @@ describe('runOnce (inline)', () => {
         inline: { kind: 'csv', sourceKind: 'project' } as never,
       }),
     ).rejects.toThrow(/sourceId required/);
+  });
+});
+
+// =============================================================================
+// Authorisation — the P0 security gap audit-fixed in 0023.
+//
+// Before 0023 the exports module had no project-access checks at all: any
+// internal user with a JWT could exfiltrate any project's tasks by posting
+// `{sourceKind:'project', sourceId:'<UUID>'}` to /exports/run. These tests
+// are the regression guard so the gap can never reopen silently.
+// =============================================================================
+
+const MEMBER: AuthenticatedUser = {
+  id: '00000000-0000-0000-0000-000000000010',
+  email: 'member@nockta.com',
+  kind: 'internal',
+  companyRole: 'Member',
+} as AuthenticatedUser;
+
+const OTHER_MEMBER: AuthenticatedUser = {
+  id: '00000000-0000-0000-0000-000000000011',
+  email: 'other@nockta.com',
+  kind: 'internal',
+  companyRole: 'Member',
+} as AuthenticatedUser;
+
+describe('authorisation — runOnce inline', () => {
+  it('rejects when a Member lacks Viewer on the requested project', async () => {
+    const built = build();
+    built.permissions.assertAtLeast.mockRejectedValueOnce(
+      new ForbiddenException('No project access'),
+    );
+    await expect(
+      built.service.runOnce(MEMBER, {
+        inline: { kind: 'csv', sourceKind: 'project', sourceId: 'project-secret' },
+      }),
+    ).rejects.toThrow(ForbiddenException);
+    expect(built.prisma.exportRun.create).not.toHaveBeenCalled();
+    expect(built.queue.add).not.toHaveBeenCalled();
+  });
+
+  it('accepts when the Member does have Viewer on the project', async () => {
+    const built = build();
+    // assertAtLeast resolves silently — actor has access.
+    vi.mocked(built.prisma.exportRun.create).mockResolvedValueOnce({
+      id: 'run-ok',
+      scheduleId: null,
+      kind: 'csv',
+      status: 'queued',
+      signedUrl: null,
+      storageKey: null,
+      expiresAt: new Date(Date.now() + EXPORT_SIGNED_URL_TTL_SECONDS * 1000),
+      fileSize: 0,
+      rowCount: 0,
+      sourceKind: 'project',
+      sourceId: 'project-ok',
+      errorMessage: null,
+      createdAt: new Date(),
+      completedAt: null,
+    } as never);
+
+    await built.service.runOnce(MEMBER, {
+      inline: { kind: 'csv', sourceKind: 'project', sourceId: 'project-ok' },
+    });
+
+    expect(built.permissions.assertAtLeast).toHaveBeenCalledWith(
+      MEMBER,
+      'project-ok',
+      'Viewer',
+    );
+    expect(built.prisma.exportRun.create).toHaveBeenCalledTimes(1);
+    expect(built.queue.add).toHaveBeenCalledWith(
+      'export',
+      { runId: 'run-ok', actorId: MEMBER.id },
+      expect.any(Object),
+    );
+  });
+
+  it('rejects a saved_view source when it belongs to another user', async () => {
+    const built = build();
+    vi.mocked(built.prisma.savedSearch.findUnique).mockResolvedValueOnce({
+      id: 'view-1',
+      userId: OTHER_MEMBER.id,
+      name: 'Not yours',
+    } as never);
+    await expect(
+      built.service.runOnce(MEMBER, {
+        inline: { kind: 'csv', sourceKind: 'saved_view', sourceId: 'view-1' },
+      }),
+    ).rejects.toThrow(ForbiddenException);
+    expect(built.queue.add).not.toHaveBeenCalled();
+  });
+});
+
+describe('authorisation — listSchedules / requireSchedule', () => {
+  it('listSchedules: a Member sees only their own schedules', async () => {
+    const built = build();
+    vi.mocked(built.prisma.exportSchedule.findMany).mockResolvedValueOnce([] as never);
+
+    await built.service.listSchedules(MEMBER);
+
+    expect(built.prisma.exportSchedule.findMany).toHaveBeenCalledWith({
+      where: { createdById: MEMBER.id },
+      orderBy: { createdAt: 'desc' },
+    });
+  });
+
+  it('listSchedules: an Admin sees every schedule', async () => {
+    const built = build();
+    vi.mocked(built.prisma.exportSchedule.findMany).mockResolvedValueOnce([] as never);
+
+    await built.service.listSchedules(ADMIN);
+
+    expect(built.prisma.exportSchedule.findMany).toHaveBeenCalledWith({
+      where: {},
+      orderBy: { createdAt: 'desc' },
+    });
+  });
+
+  it("getSchedule: a Member naming another user's id gets NotFound (no enumeration)", async () => {
+    const built = build();
+    vi.mocked(built.prisma.exportSchedule.findUnique).mockResolvedValueOnce({
+      id: 'sched-other',
+      createdById: OTHER_MEMBER.id,
+      sourceKind: 'project',
+      sourceId: 'p',
+      kind: 'csv',
+      name: 'Not yours',
+    } as never);
+
+    await expect(
+      built.service.getSchedule(MEMBER, 'sched-other'),
+    ).rejects.toThrow(NotFoundException);
+  });
+
+  it("updateSchedule: a Member cannot rewrite another user's deliveryEmail", async () => {
+    const built = build();
+    vi.mocked(built.prisma.exportSchedule.findUnique).mockResolvedValueOnce({
+      id: 'sched-other',
+      createdById: OTHER_MEMBER.id,
+      sourceKind: 'project',
+      sourceId: 'p',
+      kind: 'csv',
+      name: 'Not yours',
+    } as never);
+
+    await expect(
+      built.service.updateSchedule(MEMBER, 'sched-other', {
+        deliveryEmail: 'attacker@evil.example',
+      }),
+    ).rejects.toThrow(NotFoundException);
+    expect(built.prisma.exportSchedule.update).not.toHaveBeenCalled();
+  });
+
+  it('updateSchedule: Admin can rewrite any schedule', async () => {
+    const built = build();
+    vi.mocked(built.prisma.exportSchedule.findUnique).mockResolvedValueOnce({
+      id: 'sched-other',
+      createdById: OTHER_MEMBER.id,
+      sourceKind: 'all_tasks',
+      sourceId: null,
+      kind: 'csv',
+      name: 'Anyone',
+    } as never);
+    vi.mocked(built.prisma.exportSchedule.update).mockResolvedValueOnce({
+      id: 'sched-other',
+      name: 'Anyone',
+      kind: 'csv',
+      sourceKind: 'all_tasks',
+      sourceId: null,
+      scheduleCron: null,
+      deliveryKind: 'download',
+      deliveryEmailNew: null,
+      enabled: true,
+      lastRunAt: null,
+      createdAt: new Date(),
+      createdById: OTHER_MEMBER.id,
+    } as never);
+
+    await built.service.updateSchedule(ADMIN, 'sched-other', { enabled: false });
+
+    expect(built.prisma.exportSchedule.update).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('authorisation — getDownloadUrl', () => {
+  it("rejects when a Member asks for another user's inline run", async () => {
+    const built = build();
+    vi.mocked(built.prisma.exportRun.findUnique).mockResolvedValueOnce({
+      id: 'run-other',
+      scheduleId: null,
+      createdById: OTHER_MEMBER.id,
+      status: 'completed',
+      signedUrl: 'https://example/signed',
+      expiresAt: new Date(Date.now() + 60_000),
+      createdAt: new Date(),
+    } as never);
+
+    await expect(
+      built.service.getDownloadUrl(MEMBER, 'run-other'),
+    ).rejects.toThrow(NotFoundException);
+  });
+
+  it("rejects when a Member asks for a scheduled run they didn't create and don't own the schedule for", async () => {
+    const built = build();
+    vi.mocked(built.prisma.exportRun.findUnique).mockResolvedValueOnce({
+      id: 'run-sched-other',
+      scheduleId: 'sched-other',
+      createdById: OTHER_MEMBER.id,
+      status: 'completed',
+      signedUrl: 'https://example/signed',
+      expiresAt: new Date(Date.now() + 60_000),
+      createdAt: new Date(),
+    } as never);
+    vi.mocked(built.prisma.exportSchedule.findUnique).mockResolvedValueOnce({
+      id: 'sched-other',
+      createdById: OTHER_MEMBER.id,
+    } as never);
+
+    await expect(
+      built.service.getDownloadUrl(MEMBER, 'run-sched-other'),
+    ).rejects.toThrow(NotFoundException);
+  });
+});
+
+describe('authorisation — fireDueSchedules creator access revalidation', () => {
+  it('disables a schedule whose creator has lost project access', async () => {
+    const built = build();
+    const tick = new Date('2024-01-01T09:00:00Z');
+
+    vi.mocked(built.prisma.exportSchedule.findMany).mockResolvedValueOnce([
+      {
+        id: 'sched-stale',
+        name: 'Stale daily',
+        kind: 'csv',
+        sourceKind: 'project',
+        sourceId: 'project-secret',
+        scheduleCron: '0 9 * * 1',
+        deliveryKind: 'download',
+        deliveryEmailNew: 'admin@example',
+        enabled: true,
+        lastRunAt: null,
+        createdById: MEMBER.id,
+      } as never,
+    ]);
+    vi.mocked(built.prisma.user.findUnique).mockResolvedValueOnce({
+      id: MEMBER.id,
+      email: MEMBER.email,
+      kind: MEMBER.kind,
+      companyRole: MEMBER.companyRole,
+      archivedAt: null,
+    } as never);
+    // Creator lost project access — assertAtLeast rejects.
+    built.permissions.assertAtLeast.mockRejectedValueOnce(
+      new ForbiddenException('No project access'),
+    );
+    vi.mocked(built.prisma.exportSchedule.update).mockResolvedValueOnce({} as never);
+
+    const fired = await built.service.fireDueSchedules(tick);
+
+    expect(fired).toBe(0);
+    expect(built.prisma.exportRun.create).not.toHaveBeenCalled();
+    expect(built.queue.add).not.toHaveBeenCalled();
+    expect(built.prisma.exportSchedule.update).toHaveBeenCalledWith({
+      where: { id: 'sched-stale' },
+      data: { enabled: false },
+    });
+  });
+
+  it('disables a schedule whose creator has been archived', async () => {
+    const built = build();
+    const tick = new Date('2024-01-01T09:00:00Z');
+
+    vi.mocked(built.prisma.exportSchedule.findMany).mockResolvedValueOnce([
+      {
+        id: 'sched-archived',
+        name: 'Archived owner',
+        kind: 'csv',
+        sourceKind: 'all_tasks',
+        sourceId: null,
+        scheduleCron: '0 9 * * 1',
+        deliveryKind: 'download',
+        deliveryEmailNew: null,
+        enabled: true,
+        lastRunAt: null,
+        createdById: MEMBER.id,
+      } as never,
+    ]);
+    vi.mocked(built.prisma.user.findUnique).mockResolvedValueOnce({
+      id: MEMBER.id,
+      email: MEMBER.email,
+      kind: MEMBER.kind,
+      companyRole: MEMBER.companyRole,
+      archivedAt: new Date('2024-01-01'),
+    } as never);
+    vi.mocked(built.prisma.exportSchedule.update).mockResolvedValueOnce({} as never);
+
+    const fired = await built.service.fireDueSchedules(tick);
+
+    expect(fired).toBe(0);
+    expect(built.prisma.exportSchedule.update).toHaveBeenCalledWith({
+      where: { id: 'sched-archived' },
+      data: { enabled: false },
+    });
   });
 });

@@ -1,7 +1,9 @@
 import { useState } from 'react';
+
 import { AvatarCircle } from '../../task-bits';
 import type { User } from '../types';
 import { usePopover } from '../utils';
+
 import { PopoverItem, PopoverList, PopoverShell, ValuePill } from './Popover';
 
 export function AssigneePicker({

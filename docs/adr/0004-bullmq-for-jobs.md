@@ -24,7 +24,7 @@ We already need Redis for sessions and the Socket.IO adapter, so BullMQ piggybac
 
 ## Decision
 
-Use **BullMQ 5** for all background work. Queues live in-process inside `apps/api` (the `apps/workers` folder is empty by design; see `HANDOVER.md §9`). Each queue has:
+Use **BullMQ 5** for all background work. Queues live in-process inside `apps/api`. There is no separate `apps/workers` deployable; see `CONTEXT.md` § "Non-obvious architectural choices" for the rationale. Each queue has:
 
 - A typed processor class (`@Processor(name)`) registered as a Nest provider.
 - Default attempts: 3 (5 for outbound webhooks). Exponential backoff starting at 5 s.
@@ -49,5 +49,5 @@ Scheduled jobs run inside in-process schedulers (`@nestjs/schedule`), wrapped in
 - **+** Workers self-balance across replicas via Redis (BullMQ contract).
 - **+** Visibility via Bull Board (gated behind admin auth in prod).
 - **−** Redis is now a critical dependency for queue durability; we accept this.
-- **−** Workers run in the same process as the API. Under sustained CPU load this can affect HTTP latency. Documented threshold in `HANDOVER.md`: revisit when sustained CPU > 60% on a single replica. The fix is splitting `apps/workers` back out.
+- **−** Workers run in the same process as the API. Under sustained CPU load this can affect HTTP latency. Documented threshold in `HANDOVER.md`: revisit when sustained CPU > 60% on a single replica. The fix is splitting workers out into a separate deployable.
 - **−** Long-running jobs (imports) need to checkpoint so they survive a process restart; this is enforced by the `ImportRun.status` machine.

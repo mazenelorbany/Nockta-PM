@@ -1,11 +1,12 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import type { Priority, TaskType } from '@prisma/client';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { PermissionsService } from '../../permissions/permissions.service';
-import { TasksService } from '../../tasks/tasks.service';
+
+import type { PrismaService } from '../../../prisma/prisma.service';
+import type { PermissionsService } from '../../permissions/permissions.service';
+import type { TasksService } from '../../tasks/tasks.service';
 import type { AuthenticatedUser } from '../../auth/types';
-import { ImportRunsService } from '../import-runs.service';
+import type { ImportRunsService } from '../import-runs.service';
 import type {
   DryRunResult,
   DryRunRowError,

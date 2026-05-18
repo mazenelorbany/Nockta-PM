@@ -3,6 +3,7 @@ import { Clock, ListChecks, ShieldAlert, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { cn } from '@nockta/ui';
+
 import { ProjectTabs } from '../components/ProjectTabs';
 import { TaskDetailDrawer } from '../components/TaskDetailDrawer';
 import {
@@ -16,6 +17,7 @@ import {
   type TaskType,
 } from '../components/task-bits';
 import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 
 // =============================================================================
 // /projects/:projectId/dashboard
@@ -81,7 +83,7 @@ export function ProjectDashboardPage(): JSX.Element {
   const [assigneeFilter, setAssigneeFilter] = useState<string | null>(null);
 
   const projectQuery = useQuery({
-    queryKey: ['project', projectId],
+    queryKey: queryKeys.project(projectId),
     queryFn: () => api.get<Project>(`/projects/${projectId}`),
     enabled: Boolean(projectId),
   });
@@ -91,7 +93,7 @@ export function ProjectDashboardPage(): JSX.Element {
     enabled: Boolean(projectId),
   });
   const tasksQuery = useQuery({
-    queryKey: ['tasks', 'project', projectId],
+    queryKey: queryKeys.projectTasks(projectId),
     queryFn: () => api.get<Task[]>(`/tasks/project/${projectId}`),
     enabled: Boolean(projectId),
   });

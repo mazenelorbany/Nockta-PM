@@ -4,6 +4,7 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import Redis from 'ioredis';
 import type { ServerOptions } from 'socket.io';
+
 import { Env } from '../../config/env';
 
 /**

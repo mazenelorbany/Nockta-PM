@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual, createHash } from 'node:crypto';
+
 import {
   BadRequestException, Body, Controller, Headers, HttpCode, HttpStatus,
   Logger, Param, Post, Req, UnauthorizedException,
@@ -6,8 +7,10 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { DeploymentSource } from '@prisma/client';
 import type { Request } from 'express';
+
 import { Public } from '../auth/decorators/public.decorator';
-import { DeploymentsService } from './deployments.service';
+
+import type { DeploymentsService } from './deployments.service';
 import {
   normalizeGeneric, normalizeGithubActions, normalizeRailway, normalizeVercel,
 } from './source-adapters';

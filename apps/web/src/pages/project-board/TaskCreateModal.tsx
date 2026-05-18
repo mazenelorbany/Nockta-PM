@@ -4,8 +4,11 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { ApiError } from '@nockta/sdk';
 import { cn } from '@nockta/ui';
+
 import { TypeBadge, type TaskType } from '../../components/task-bits';
 import { api } from '../../lib/api';
+import { queryKeys } from '../../lib/query-keys';
+
 import type { Priority, Project, Task, User } from './types';
 
 // =============================================================================
@@ -73,7 +76,7 @@ export function CreateTaskDialog({
   const [gallerySearch, setGallerySearch] = useState('');
 
   const usersQuery = useQuery({
-    queryKey: ['users', 'list'],
+    queryKey: queryKeys.usersList(),
     queryFn: () => api.get<UserListResponse>('/users?limit=100'),
   });
 
@@ -133,7 +136,7 @@ export function CreateTaskDialog({
       return created;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['tasks', 'project', project.id] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.projectTasks(project.id) });
       toast.success('Task created');
       onClose();
     },

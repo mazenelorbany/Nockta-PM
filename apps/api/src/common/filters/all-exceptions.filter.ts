@@ -1,5 +1,6 @@
+import type {
+  ArgumentsHost} from '@nestjs/common';
 import {
-  ArgumentsHost,
   Catch,
   type ExceptionFilter,
   HttpException,

@@ -588,14 +588,28 @@
     animation: nockta-count-in 360ms var(--ease-out) both;
   }
 
-  /* Page transition pair — used by framer-motion's <PageTransition>. CSS
-   * fallback for non-JS environments. The actual transition is JS-driven. */
+  /* Page transition — CSS-only. Used by <PageTransition> wrapping the routed
+   * <Outlet/>. Restarts on key change (which forces remount). */
   .page-fade {
     animation: nockta-page-in 240ms var(--ease-out) both;
   }
   @keyframes nockta-page-in {
     from { opacity: 0; transform: translateY(6px); }
     to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Command-palette entry — CSS-only replacement for the framer-motion
+   * <AnimatePresence> wrapper. No exit animation (palette closes fast on
+   * Esc / outside-click; instant unmount feels responsive). */
+  .cmdk-scrim-fade { animation: nockta-cmdk-scrim 160ms var(--ease-out) both; }
+  .cmdk-panel-pop  { animation: nockta-cmdk-panel 180ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+  @keyframes nockta-cmdk-scrim {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes nockta-cmdk-panel {
+    from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)    scale(1); }
   }
 
   /* Magnetic hover — subtle lift + glow for premium cards. Pair with .card-hover

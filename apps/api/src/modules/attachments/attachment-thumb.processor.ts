@@ -2,12 +2,15 @@ import { spawn } from 'node:child_process';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
 import { Logger } from '@nestjs/common';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import type { Job } from 'bullmq';
 import sharp from 'sharp';
-import { PrismaService } from '../../prisma/prisma.service';
-import { StorageService } from '../storage/storage.service';
+
+import type { PrismaService } from '../../prisma/prisma.service';
+import type { StorageService } from '../storage/storage.service';
+
 import { ATTACHMENT_THUMB_QUEUE } from './attachments.service';
 
 /**

@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { cn } from '@nockta/ui';
+
 import { AvatarCircle } from '../../components/task-bits';
+
 import { GoalStatusPill } from './GoalStatusPill';
 import type { GoalListItem } from './types';
 

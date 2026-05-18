@@ -1,20 +1,35 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQueries } from '@tanstack/react-query';
 import { ApiError } from '@nockta/sdk';
+
 import { api } from '../../lib/api';
-import type { PlannerTask } from './types';
 import type { Priority } from '../../components/task-bits';
 
-export function useSprintTasks(sprintId: string, projectId: string): { sprintId: string; data: PlannerTask[] | undefined } {
-  // useQuery in a child position — same call shape every render, so the lint
-  // rule about "hooks in loops" is satisfied as long as the sprint list is
-  // stable. We accept that adding/removing sprints triggers a remount of
-  // this hook chain, which is fine in practice.
-  const q = useQuery({
-    queryKey: ['sprint-tasks', sprintId],
-    queryFn: () => api.get<PlannerTask[]>(`/sprints/${sprintId}/tasks`),
-    enabled: Boolean(sprintId && projectId),
+import type { PlannerTask } from './types';
+
+/**
+ * Fetch the tasks for every supplied sprint in parallel. Uses TanStack's
+ * `useQueries` because the number of sprints is variable across renders
+ * (toggling "show completed", an Admin archiving a sprint, etc.) and a
+ * `.map(useSprintTasks)` would violate the rules of hooks.
+ *
+ * The return shape keeps the legacy `{ sprintId, data }` per-row contract
+ * so existing callers don't need to change.
+ */
+export function useSprintTasksList(
+  sprintIds: string[],
+  projectId: string,
+): Array<{ sprintId: string; data: PlannerTask[] | undefined }> {
+  const results = useQueries({
+    queries: sprintIds.map((sprintId) => ({
+      queryKey: ['sprint-tasks', sprintId] as const,
+      queryFn: () => api.get<PlannerTask[]>(`/sprints/${sprintId}/tasks`),
+      enabled: Boolean(sprintId && projectId),
+    })),
   });
-  return { sprintId, data: q.data };
+  return sprintIds.map((sprintId, idx) => ({
+    sprintId,
+    data: results[idx]?.data,
+  }));
 }
 
 export function applyFilters(

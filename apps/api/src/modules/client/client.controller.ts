@@ -1,8 +1,10 @@
 import { Controller, ForbiddenException, Get, ParseIntPipe, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { ClientService } from './client.service';
+
+import type { ClientService } from './client.service';
 
 // =============================================================================
 // /client/* — endpoints that power the client portal dashboard. Mounted under

@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AiStandupService } from './ai-standup.service';
+
 import { makePrismaMock } from '../../test-utils/mocks';
 import type { PrismaService } from '../../prisma/prisma.service';
+import type { AuthenticatedUser } from '../auth/types';
+
+import { AiStandupService } from './ai-standup.service';
 import type { LlmService } from './llm.service';
 import type { WorkspaceAiSettingsService } from './workspace-ai-settings.service';
 import type { AiCostTrackingService } from './ai-cost-tracking.service';
-import type { AuthenticatedUser } from '../auth/types';
+
 
 // ai-standup.service — STRUCTURED standup synthesis with quoted citations.
 // We pin:

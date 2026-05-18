@@ -1,7 +1,9 @@
 import { ForbiddenException } from '@nestjs/common';
+
 import type { PrismaService } from '../../../prisma/prisma.service';
 import type { PermissionsService } from '../../permissions/permissions.service';
 import type { AuthenticatedUser } from '../../auth/types';
+
 import { accessibleProjectIds } from './_shared';
 
 /** 30-element [{date}] series oldest→newest, used as a base for trend fills. */

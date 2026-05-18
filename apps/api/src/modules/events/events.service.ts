@@ -1,8 +1,9 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import type { EventVisibility, Prisma } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
+
+import type { PrismaService } from '../../prisma/prisma.service';
 import { paginate, normalizeLimit } from '../../common/pagination/cursor-pagination';
-import { PermissionsService } from '../permissions/permissions.service';
+import type { PermissionsService } from '../permissions/permissions.service';
 import type { AuthenticatedUser } from '../auth/types';
 
 interface BrowseParams {

@@ -2,9 +2,12 @@ import { Body, Controller, DefaultValuePipe, Delete, Get, Param, ParseIntPipe, P
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Visibility } from '@prisma/client';
 import { IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min, MinLength, ValidateIf } from 'class-validator';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { ALLOWED_REACTION_EMOJIS, CommentsService } from './comments.service';
+
+import type { CommentsService } from './comments.service';
+import { ALLOWED_REACTION_EMOJIS } from './comments.service';
 
 class CreateCommentDto {
   @IsString() @MinLength(1) @MaxLength(10_000) body!: string;

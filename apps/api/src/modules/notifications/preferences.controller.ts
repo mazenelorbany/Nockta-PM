@@ -4,9 +4,10 @@ import { NotificationChannel } from '@prisma/client';
 import {
   IsBoolean, IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, Min,
 } from 'class-validator';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { PrismaService } from '../../prisma/prisma.service';
+import type { PrismaService } from '../../prisma/prisma.service';
 
 class UpsertPrefDto {
   @IsEnum(NotificationChannel) channel!: NotificationChannel;

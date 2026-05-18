@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { ApiError } from '@nockta/sdk';
 import { QueryErrorState, Spinner } from '@nockta/ui';
+
 import {
   BoardToolbar,
   EMPTY_FILTERS,
@@ -20,6 +21,8 @@ import { TaskDetailDrawer } from '../components/TaskDetailDrawer';
 import { PullIndicator, usePullToRefresh } from '../hooks/usePullToRefresh';
 import { api } from '../lib/api';
 import { getSocket } from '../lib/socket';
+import { queryKeys } from '../lib/query-keys';
+
 import { ActiveSprintBanner } from './project-board/ActiveSprintBanner';
 import { BoardCanvas } from './project-board/BoardCanvas';
 import { BulkActionsContainer } from './project-board/BulkActionsBar';
@@ -193,23 +196,32 @@ export function ProjectBoardPage(): JSX.Element {
   // Realtime: join the project room and refetch on relevant events.
   useEffect(() => {
     if (!projectId) return;
-    const socket = getSocket();
-    socket.emit('project:join', { projectId });
-    const invalidate = () => queryClient.invalidateQueries({ queryKey: ['tasks', 'project', projectId] });
-    socket.on('task.created', invalidate);
-    socket.on('task.updated', invalidate);
-    socket.on('task.status_changed', invalidate);
-    socket.on('task.blocked', invalidate);
-    socket.on('task.unblocked', invalidate);
-    socket.on('task.deleted', invalidate);
+    let cancelled = false;
+    let cleanup: (() => void) | null = null;
+    const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKeys.projectTasks(projectId) });
+    void (async () => {
+      const socket = await getSocket();
+      if (cancelled) return;
+      socket.emit('project:join', { projectId });
+      socket.on('task.created', invalidate);
+      socket.on('task.updated', invalidate);
+      socket.on('task.status_changed', invalidate);
+      socket.on('task.blocked', invalidate);
+      socket.on('task.unblocked', invalidate);
+      socket.on('task.deleted', invalidate);
+      cleanup = () => {
+        socket.emit('project:leave', { projectId });
+        socket.off('task.created', invalidate);
+        socket.off('task.updated', invalidate);
+        socket.off('task.status_changed', invalidate);
+        socket.off('task.blocked', invalidate);
+        socket.off('task.unblocked', invalidate);
+        socket.off('task.deleted', invalidate);
+      };
+    })();
     return () => {
-      socket.emit('project:leave', { projectId });
-      socket.off('task.created', invalidate);
-      socket.off('task.updated', invalidate);
-      socket.off('task.status_changed', invalidate);
-      socket.off('task.blocked', invalidate);
-      socket.off('task.unblocked', invalidate);
-      socket.off('task.deleted', invalidate);
+      cancelled = true;
+      cleanup?.();
     };
   }, [projectId, queryClient]);
 
@@ -238,7 +250,7 @@ export function ProjectBoardPage(): JSX.Element {
         try {
           await api.patch(`/tasks/${taskId}/status`, { status: terminal });
           toast.success(`${target.key} marked ${terminal.toLowerCase()}`);
-          void queryClient.invalidateQueries({ queryKey: ['tasks', 'project', projectId] });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.projectTasks(projectId) });
         } catch (err) {
           const detail = err instanceof ApiError ? err.problem.title || err.message : 'Could not update';
           toast.error(detail);
@@ -249,7 +261,7 @@ export function ProjectBoardPage(): JSX.Element {
         try {
           await api.patch(`/tasks/${taskId}`, { dueDate: next.toISOString() });
           toast.success(`Snoozed ${target.key} 1 day`);
-          void queryClient.invalidateQueries({ queryKey: ['tasks', 'project', projectId] });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.projectTasks(projectId) });
         } catch (err) {
           const detail = err instanceof ApiError ? err.problem.title || err.message : 'Could not snooze';
           toast.error(detail);
@@ -285,8 +297,8 @@ export function ProjectBoardPage(): JSX.Element {
   const pull = usePullToRefresh({
     onRefresh: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['tasks', 'project', projectId] }),
-        queryClient.invalidateQueries({ queryKey: ['sprints', projectId] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.projectTasks(projectId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.sprints(projectId) }),
       ]);
     },
   });

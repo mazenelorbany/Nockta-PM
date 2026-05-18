@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type Redis from 'ioredis';
+
 import { schedulerLockAcquisitions } from '../../health/metrics.controller';
 import { REDIS_CLIENT } from '../../modules/redis/redis.module';
 

@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
+
 import { StorageModule } from '../storage/storage.module';
+
 import { AttachmentScanProcessor } from './attachment-scan.processor';
 import { AttachmentThumbnailProcessor } from './attachment-thumb.processor';
 import { ATTACHMENT_SCAN_QUEUE, ATTACHMENT_THUMB_QUEUE, AttachmentsService } from './attachments.service';

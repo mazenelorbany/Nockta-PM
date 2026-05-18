@@ -1,4 +1,5 @@
 import { cn } from '@nockta/ui';
+
 import type { GoalStatus } from './types';
 
 export function GoalStatusPill({ status }: { status: GoalStatus }): JSX.Element {

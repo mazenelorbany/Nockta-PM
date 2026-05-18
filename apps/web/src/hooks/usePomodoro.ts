@@ -149,7 +149,7 @@ export function phaseLabel(phase: PomodoroPhase): string {
   }
 }
 
-const IDLE_STATE: PomodoroState = {
+const _IDLE_STATE: PomodoroState = {
   phase: 'idle',
   cycle: 0,
   remainingSec: 0,

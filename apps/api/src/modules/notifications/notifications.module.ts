@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
+
 import { Env } from '../../config/env';
 import { AuthModule } from '../auth/auth.module';
+
 import { NotificationDigestService } from './digest.service';
 import { DigestPreferencesController } from './digest.controller';
 import { NotificationMutesController } from './mutes.controller';

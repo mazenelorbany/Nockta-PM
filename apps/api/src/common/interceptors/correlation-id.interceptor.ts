@@ -1,6 +1,7 @@
-import {
+import type {
   CallHandler,
-  ExecutionContext,
+  ExecutionContext} from '@nestjs/common';
+import {
   Injectable,
   type NestInterceptor,
 } from '@nestjs/common';

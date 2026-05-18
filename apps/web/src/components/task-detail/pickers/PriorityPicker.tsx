@@ -1,8 +1,10 @@
 import { useState } from 'react';
+
 import { PriorityDot, type Priority } from '../../task-bits';
 import { PRIORITY_OPTIONS } from '../constants';
 import type { TaskDetail } from '../types';
 import { usePopover } from '../utils';
+
 import { PopoverItem, PopoverList, PopoverShell, ValuePill } from './Popover';
 
 // AiWhyChip — the "AI · why?" affordance next to the priority picker.

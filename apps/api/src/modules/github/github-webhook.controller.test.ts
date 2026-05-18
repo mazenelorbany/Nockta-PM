@@ -1,8 +1,32 @@
 import { createHmac } from 'node:crypto';
+
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import type Redis from 'ioredis';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { Env } from '../../config/env';
+
 import { GithubWebhookController } from './github-webhook.controller';
 import type { GithubEventsService } from './github-events.service';
+
+/**
+ * Stateful Redis stub that mimics SET key value EX ttl NX semantics: first
+ * call for a key returns 'OK' and remembers it; subsequent calls for the
+ * same key return null. Sufficient for testing the replay-protection path
+ * without spinning up a real Redis.
+ */
+function makeRedisStub(): Redis {
+  const seen = new Set<string>();
+  return {
+    set: vi.fn(
+      async (key: string, _value: string, _modeEx: string, _ttl: number, modeNx: string) => {
+        if (modeNx === 'NX' && seen.has(key)) return null;
+        seen.add(key);
+        return 'OK';
+      },
+    ),
+  } as unknown as Redis;
+}
 
 // =============================================================================
 // github-webhook controller — HMAC verification ONLY.
@@ -22,7 +46,6 @@ import type { GithubEventsService } from './github-events.service';
 // We need to mutate Env at runtime to control which secret the controller
 // validates against. The controller imports Env eagerly, so we mutate the
 // already-loaded module rather than juggling vi.resetModules.
-import { Env } from '../../config/env';
 
 const SECRET = 'super-shhh-github-webhook-secret-1234567890';
 
@@ -40,7 +63,7 @@ interface Mocks {
   };
 }
 
-function build(): { controller: GithubWebhookController; mocks: Mocks } {
+function build(): { controller: GithubWebhookController; mocks: Mocks; redis: Redis } {
   const events = {
     onInstallationCreated: vi.fn().mockResolvedValue(undefined),
     onInstallationSuspended: vi.fn().mockResolvedValue(undefined),
@@ -48,10 +71,12 @@ function build(): { controller: GithubWebhookController; mocks: Mocks } {
     onPush: vi.fn().mockResolvedValue(undefined),
     onPullRequest: vi.fn().mockResolvedValue(undefined),
   };
+  const redis = makeRedisStub();
   const controller = new GithubWebhookController(
     events as unknown as GithubEventsService,
+    redis,
   );
-  return { controller, mocks: { events } };
+  return { controller, mocks: { events }, redis };
 }
 
 describe('GithubWebhookController.receive — signature verification', () => {
@@ -249,15 +274,96 @@ describe('GithubWebhookController.receive — signature verification', () => {
 // =============================================================================
 
 describe('GithubWebhookController.receive — replay protection', () => {
-  it.skip('rejects a re-delivered request with the same X-GitHub-Delivery id', () => {
-    // SKIPPED: the controller does not currently track delivery ids. A signed
-    // request captured by an on-path attacker (or a duplicated GitHub delivery)
-    // will be accepted twice. When the implementation lands, the test should:
-    //
-    //   1. Send a valid request with X-GitHub-Delivery: dlv-1 — accepted.
-    //   2. Send the SAME signed payload + dlv-1 — assert 200/204 but
-    //      mocks.events.onPush called only ONCE total.
-    //
-    // Leaving this as a placeholder so the gap is visible in test output.
+  let originalSecret: string | undefined;
+
+  beforeEach(() => {
+    originalSecret = (Env as { GITHUB_APP_WEBHOOK_SECRET?: string }).GITHUB_APP_WEBHOOK_SECRET;
+    (Env as { GITHUB_APP_WEBHOOK_SECRET?: string }).GITHUB_APP_WEBHOOK_SECRET = SECRET;
+  });
+
+  afterEach(() => {
+    (Env as { GITHUB_APP_WEBHOOK_SECRET?: string }).GITHUB_APP_WEBHOOK_SECRET = originalSecret;
+  });
+
+  it('processes a delivery once and silently no-ops on the same delivery id replayed', async () => {
+    // The attacker (or a GitHub redelivery) captures a valid request and
+    // replays it byte-for-byte. The signature still verifies. Without dedup
+    // we'd double-dispatch onPush — creating duplicate comments, double
+    // auto-status transitions, etc. With dedup the second call is a 204
+    // no-op (so GitHub stops retrying) and the handler runs exactly once.
+    const { controller, mocks, redis } = build();
+    const body = {
+      installation: { id: 7 },
+      ref: 'refs/heads/main',
+      repository: { id: 1, full_name: 'a/b', name: 'b', owner: { login: 'a' } },
+      commits: [],
+    };
+    const raw = Buffer.from(JSON.stringify(body));
+    const headers = {
+      'x-github-event': 'push',
+      'x-hub-signature-256': sign(raw),
+      'x-github-delivery': 'dlv-replay-1',
+    };
+
+    await controller.receive({ rawBody: raw } as never, headers, body);
+    await controller.receive({ rawBody: raw } as never, headers, body);
+
+    expect(mocks.events.onPush).toHaveBeenCalledOnce();
+    // Two SETNX claims — first succeeds, second returns null.
+    expect(redis.set).toHaveBeenCalledTimes(2);
+  });
+
+  it('dispatches when the same body is delivered with a DIFFERENT delivery id', async () => {
+    // GitHub sometimes legitimately delivers the same payload twice with
+    // different ids (e.g., a check_run that fires on multiple installations).
+    // Our dedup must key on the delivery id, not the body — otherwise we'd
+    // drop legitimate parallel deliveries.
+    const { controller, mocks } = build();
+    const body = {
+      installation: { id: 7 },
+      ref: 'refs/heads/main',
+      repository: { id: 1, full_name: 'a/b', name: 'b', owner: { login: 'a' } },
+      commits: [],
+    };
+    const raw = Buffer.from(JSON.stringify(body));
+    const sig = sign(raw);
+
+    await controller.receive(
+      { rawBody: raw } as never,
+      { 'x-github-event': 'push', 'x-hub-signature-256': sig, 'x-github-delivery': 'dlv-A' },
+      body,
+    );
+    await controller.receive(
+      { rawBody: raw } as never,
+      { 'x-github-event': 'push', 'x-hub-signature-256': sig, 'x-github-delivery': 'dlv-B' },
+      body,
+    );
+
+    expect(mocks.events.onPush).toHaveBeenCalledTimes(2);
+  });
+
+  it('dispatches but logs a warning when X-GitHub-Delivery is missing', async () => {
+    // Real GitHub always sends a delivery id; missing-id requests come from
+    // test clients or misconfigured proxies. We accept them (signature is
+    // already verified) but skip dedup — flagged with a warn-level log so
+    // an oncall engineer can spot a misconfiguration.
+    const { controller, mocks, redis } = build();
+    const body = {
+      installation: { id: 7 },
+      ref: 'refs/heads/main',
+      repository: { id: 1, full_name: 'a/b', name: 'b', owner: { login: 'a' } },
+      commits: [],
+    };
+    const raw = Buffer.from(JSON.stringify(body));
+
+    await controller.receive(
+      { rawBody: raw } as never,
+      { 'x-github-event': 'push', 'x-hub-signature-256': sign(raw) },
+      body,
+    );
+
+    expect(mocks.events.onPush).toHaveBeenCalledOnce();
+    // No SETNX attempt when no id to dedupe on.
+    expect(redis.set).not.toHaveBeenCalled();
   });
 });

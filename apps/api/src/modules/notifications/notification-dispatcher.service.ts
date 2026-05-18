@@ -1,12 +1,13 @@
 import { Injectable, type OnModuleInit } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Queue } from 'bullmq';
-import { NotificationDigestService } from './digest.service';
-import { NotificationMutesService } from './mutes.service';
-import { NotificationSnoozeService } from './snooze.service';
-import { PreferencesService } from './preferences.service';
-import { RecipientResolverService } from './recipient-resolver.service';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
+import type { Queue } from 'bullmq';
+
+import type { NotificationDigestService } from './digest.service';
+import type { NotificationMutesService } from './mutes.service';
+import type { NotificationSnoozeService } from './snooze.service';
+import type { PreferencesService } from './preferences.service';
+import type { RecipientResolverService } from './recipient-resolver.service';
 
 export const NOTIFICATION_QUEUE = 'notifications';
 

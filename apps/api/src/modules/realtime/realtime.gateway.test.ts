@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { JwtService } from '@nestjs/jwt';
-import { RealtimeGateway, TYPING_MIN_INTERVAL_MS } from './realtime.gateway';
+import type { JwtService } from '@nestjs/jwt';
+
 import { makePrismaMock } from '../../test-utils/mocks';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { PermissionsService } from '../permissions/permissions.service';
 import type { SessionService } from '../auth/session.service';
 import type { AuthenticatedUser } from '../auth/types';
+
+import { RealtimeGateway, TYPING_MIN_INTERVAL_MS } from './realtime.gateway';
 
 // realtime.gateway — auth handshake, room-join permission gate, the 500ms
 // per-user typing throttle, and presence-on-disconnect. Built with a hand-

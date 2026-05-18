@@ -1,5 +1,4 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { AnimatePresence, motion } from 'framer-motion';
 import {
   Bookmark,
   CornerDownLeft,
@@ -9,7 +8,9 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+
 import { api } from '../lib/api';
+
 import { FacetChip } from './command-palette/FacetChip';
 import { FacetSidebar } from './command-palette/FacetSidebar';
 import { ResultsBody } from './command-palette/ResultsBody';
@@ -225,31 +226,20 @@ export function CommandPalette(): JSX.Element | null {
   // Reset active index whenever the result count changes
   useEffect(() => { setActiveIdx(0); }, [items.length, debouncedQuery]);
 
+  if (!open) return null;
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          key="cmdk-scrim"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.16 }}
-          className="glass-scrim fixed inset-0 z-[60] flex items-start justify-center pt-[12vh] px-4"
-          onClick={() => setOpen(false)}
-          role="presentation"
-        >
-          <motion.div
-            key="cmdk-panel"
-            initial={{ opacity: 0, scale: 0.97, y: -8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.98, y: -4 }}
-            transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
-            className="glass-strong w-full max-w-4xl rounded-2xl overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-label={'Type a command, jump to a task, or search…'}
-          >
+    <div
+      className="glass-scrim cmdk-scrim-fade fixed inset-0 z-[60] flex items-start justify-center pt-[12vh] px-4"
+      onClick={() => setOpen(false)}
+      role="presentation"
+    >
+      <div
+        className="glass-strong cmdk-panel-pop w-full max-w-4xl rounded-2xl overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={'Type a command, jump to a task, or search…'}
+      >
             {/* Search */}
             <div className="flex items-center gap-3 px-4 h-14 border-b border-border/60">
               <Search className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
@@ -374,9 +364,7 @@ export function CommandPalette(): JSX.Element | null {
                 toggle
               </span>
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+      </div>
+    </div>
   );
 }

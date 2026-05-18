@@ -1,10 +1,12 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { CustomReportsService } from './reports.service';
+
 import { makePrismaMock } from '../../test-utils/mocks';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { PermissionsService } from '../permissions/permissions.service';
 import type { AuthenticatedUser } from '../auth/types';
+
+import { CustomReportsService } from './reports.service';
 
 // =============================================================================
 // CustomReportsService — Pass I (Analytics 8 → 9).

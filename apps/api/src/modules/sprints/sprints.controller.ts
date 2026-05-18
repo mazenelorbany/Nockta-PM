@@ -1,14 +1,17 @@
 import { randomUUID } from 'node:crypto';
+
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   ArrayMinSize, IsArray, IsBoolean, IsDateString, IsEnum, IsIn, IsOptional, IsString, IsUUID, MaxLength, MinLength, ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { SprintRetroService } from './retro.service';
-import { SprintsService } from './sprints.service';
+
+import type { SprintRetroService } from './retro.service';
+import type { SprintsService } from './sprints.service';
 
 class CreateSprintDto {
   @IsString() @MinLength(1) @MaxLength(120) name!: string;

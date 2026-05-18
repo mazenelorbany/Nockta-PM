@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
 import { Cron } from '@nestjs/schedule';
-import { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
-import { PrismaService } from '../../prisma/prisma.service';
+
+import type { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
+import type { PrismaService } from '../../prisma/prisma.service';
 
 // =============================================================================
 // ProjectsPurgeProcessor — nightly sweep of archived projects.

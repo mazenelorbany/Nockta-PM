@@ -1,8 +1,10 @@
 import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { PrismaService } from '../../prisma/prisma.service';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
+
+import type { PrismaService } from '../../prisma/prisma.service';
+
 import { buildCardForNotification } from './card-builders';
-import { ChatService } from './chat.service';
+import type { ChatService } from './chat.service';
 
 /**
  * Consumes `chat.dispatch_required` events emitted by the notifications worker

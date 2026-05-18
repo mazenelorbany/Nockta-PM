@@ -1,10 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
 import { makePrismaMock } from '../../test-utils/mocks';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { AiSyncService } from '../ai/ai-sync.service';
 import type { CommentsService } from '../comments/comments.service';
 import type { PermissionsService } from '../permissions/permissions.service';
 import type { TasksService } from '../tasks/tasks.service';
+
 import { ChatEventsService, errorCard, type ChatReply } from './chat-events.service';
 import type { ChatService } from './chat.service';
 

@@ -1,10 +1,13 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsObject, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { SearchService } from '../search/search.service';
-import { SavedViewsService, type SavedViewInput } from './saved-views.service';
+import type { SearchService } from '../search/search.service';
+
+import type { SavedViewsService} from './saved-views.service';
+import { type SavedViewInput } from './saved-views.service';
 
 class CreateSavedViewDto {
   @IsString() @MinLength(1) @MaxLength(80) name!: string;

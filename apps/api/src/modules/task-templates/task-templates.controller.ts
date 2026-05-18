@@ -4,9 +4,12 @@ import { Priority, TaskType } from '@prisma/client';
 import {
   ArrayMaxSize, IsArray, IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min, MinLength,
 } from 'class-validator';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { TaskTemplatesService, type TaskTemplateInput } from './task-templates.service';
+
+import type { TaskTemplatesService} from './task-templates.service';
+import { type TaskTemplateInput } from './task-templates.service';
 
 class CreateTaskTemplateDto {
   @IsString() @MinLength(1) @MaxLength(80) name!: string;

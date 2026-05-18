@@ -1,9 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { cn } from '@nockta/ui';
+
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth-store';
 import { getSocket } from '../lib/socket';
+import { queryKeys } from '../lib/query-keys';
+
 import { AvatarCircle } from './task-bits';
 
 // =============================================================================
@@ -40,21 +43,30 @@ export function PresenceAvatars({
   // We need user names/avatars to render. Pull the user list (cached, used by
   // many other surfaces) and look up by id.
   const usersQuery = useQuery({
-    queryKey: ['users', 'list'],
+    queryKey: queryKeys.usersList(),
     queryFn: () => api.get<UserListResponse>('/users?limit=100'),
   });
   const usersById = new Map((usersQuery.data?.items ?? []).map((u) => [u.id, u]));
 
   useEffect(() => {
-    const socket = getSocket();
+    let cancelled = false;
+    let cleanup: (() => void) | null = null;
     const onPresence = (payload: { room: string; userIds: string[] }): void => {
       if (payload.room === room) {
         setUserIds(payload.userIds);
       }
     };
-    socket.on('presence', onPresence);
+    void (async () => {
+      const socket = await getSocket();
+      if (cancelled) return;
+      socket.on('presence', onPresence);
+      cleanup = () => {
+        socket.off('presence', onPresence);
+      };
+    })();
     return () => {
-      socket.off('presence', onPresence);
+      cancelled = true;
+      cleanup?.();
     };
   }, [room]);
 
