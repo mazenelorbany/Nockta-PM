@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Square } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ApiError } from '@nockta/sdk';
 import { cn } from '@nockta/ui';
@@ -48,7 +47,6 @@ interface PomodoroPreferences {
 }
 
 export function ActiveTimerChip(): JSX.Element | null {
-  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const activeQuery = useQuery({
     queryKey: ['worklog', 'me', 'active'],
@@ -85,13 +83,13 @@ export function ActiveTimerChip(): JSX.Element | null {
     onSuccess: (_, taskId) => {
       void queryClient.invalidateQueries({ queryKey: ['worklog', 'me', 'active'] });
       void queryClient.invalidateQueries({ queryKey: ['worklog', taskId] });
-      toast.success(t('timer.stopped', 'Timer stopped'));
+      toast.success('Timer stopped');
     },
     onError: (err) =>
       toast.error(
         err instanceof ApiError
           ? err.problem.title || err.message
-          : t('timer.could_not_stop', 'Could not stop timer'),
+          : 'Could not stop timer',
       ),
   });
 
@@ -178,8 +176,8 @@ export function ActiveTimerChip(): JSX.Element | null {
         showPomodoro
           ? `Pomodoro ${phaseLabel(pomodoro.state.phase)} — ${formatPomodoroTime(
               pomodoro.state.remainingSec,
-            )} ${t('timer.left_on', 'left. Timer running on')} ${active.task.key}: ${active.task.title}`
-          : `${t('timer.running_on', 'Timer running on')} ${active.task.key}: ${active.task.title}`
+            )} left. Timer running on ${active.task.key}: ${active.task.title}`
+          : `Timer running on ${active.task.key}: ${active.task.title}`
       }
     >
       <span className="h-1.5 w-1.5 rounded-full bg-status-done animate-pulse shrink-0" />
@@ -206,7 +204,7 @@ export function ActiveTimerChip(): JSX.Element | null {
         type="button"
         onClick={() => stopMut.mutate(active.taskId)}
         disabled={stopMut.isPending}
-        aria-label={t('timer.stop', 'Stop timer')}
+        aria-label={'Stop timer'}
         className="tap inline-flex items-center justify-center w-6 h-6 rounded-md bg-status-blocked/90 text-white hover:opacity-90 disabled:opacity-50 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         <Square className="h-2.5 w-2.5" aria-hidden="true" />

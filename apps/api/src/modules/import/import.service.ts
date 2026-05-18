@@ -211,6 +211,7 @@ export class ImportService {
           const v = (row[emailCol] ?? '').trim().toLowerCase();
           if (v) {
             const id = usersByEmail.get(v);
+            // internal: not reached from an HTTP request — caught by row-loop to populate errors[].
             if (!id) throw new Error(`Assignee email "${v}" not found in workspace`);
             plan.assigneeUserId = id;
           }
@@ -223,6 +224,7 @@ export class ImportService {
           const v = (row[fieldToCol.estimate] ?? '').trim();
           if (v) {
             const n = Number(v);
+            // internal: not reached from an HTTP request — caught by row-loop to populate errors[].
             if (!Number.isFinite(n) || n < 0) throw new Error(`Estimate "${v}" is not a positive number`);
             plan.estimate = n;
           }
@@ -672,6 +674,7 @@ const PRIORITY_ALIASES: Record<string, Priority> = {
 };
 function coercePriority(raw: string): Priority {
   const v = PRIORITY_ALIASES[raw.toLowerCase().trim()];
+  // internal: not reached from an HTTP request — pure helper; caught by row-loop to populate errors[].
   if (!v) throw new Error(`Unknown priority "${raw}"; expected Critical/High/Medium/Low`);
   return v;
 }
@@ -682,6 +685,7 @@ const TYPE_ALIASES: Record<string, TaskType> = {
 };
 function coerceType(raw: string): TaskType {
   const v = TYPE_ALIASES[raw.toLowerCase().trim()];
+  // internal: not reached from an HTTP request — pure helper; caught by row-loop to populate errors[].
   if (!v) throw new Error(`Unknown type "${raw}"; expected Task/Bug/Story/Epic/Subtask`);
   return v;
 }
@@ -689,6 +693,7 @@ function coerceType(raw: string): TaskType {
 function coerceDate(raw: string, field: string): Date {
   const d = new Date(raw);
   if (Number.isNaN(d.getTime())) {
+    // internal: not reached from an HTTP request — pure helper; caught by row-loop to populate errors[].
     throw new Error(`${field} "${raw}" is not a valid date (try ISO format: YYYY-MM-DD)`);
   }
   return d;

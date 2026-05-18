@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { cn } from '@nockta/ui';
 import { api } from '../../lib/api';
@@ -29,12 +28,11 @@ interface GithubInstallation {
 }
 
 export function IntegrationsTab(): JSX.Element {
-  const { t } = useTranslation();
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-3xl space-y-6">
       <SectionTitle
-        title={t('settings.integrations.title', 'Integrations')}
-        hint={t('settings.integrations.hint', 'Connect Nockta Flow to the rest of your stack.')}
+        title={'Integrations'}
+        hint={'Connect Nockta Flow to the rest of your stack.'}
       />
       <div className="grid grid-cols-1 gap-4">
         <GithubCard />

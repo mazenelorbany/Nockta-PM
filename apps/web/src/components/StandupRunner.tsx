@@ -10,7 +10,6 @@ import {
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { cn } from '@nockta/ui';
 import { api } from '../lib/api';
 import { AvatarCircle } from './task-bits';
@@ -67,7 +66,6 @@ export function StandupRunner({
    *  Parent can use it to filter the board to that person's tasks. */
   onSpeakerChange?: (userId: string | null) => void;
 }): JSX.Element {
-  const { t } = useTranslation();
   // ---- Scope selection (team filter) -----------------------------------
   // Teams come from the workspace-level /teams endpoint. Cheap query, cached
   // long enough that bouncing through the standup doesn't refetch it.
@@ -262,19 +260,17 @@ export function StandupRunner({
       {/* Header */}
       <header className="px-4 py-3 border-b border-border flex items-center justify-between">
         <div>
-          <p className="nockta-eyebrow text-brand">{t('standup.eyebrow', 'Standup')}</p>
+          <p className="nockta-eyebrow text-brand">{'Standup'}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {t('standup_runner.summary', '{{count}} people · 2 min each', {
-              count: participants.length,
-            })}
+            {`${participants.length} people · 2 min each`}
           </p>
         </div>
         <button
           type="button"
           onClick={onClose}
           className="tap inline-flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-          aria-label={t('standup_runner.end', 'End standup')}
-          title={t('standup_runner.end_title', 'End standup (Esc)')}
+          aria-label={'End standup'}
+          title={'End standup (Esc)'}
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -283,11 +279,11 @@ export function StandupRunner({
       {/* Scope picker */}
       <div className="px-4 py-3 border-b border-border space-y-2">
         <p className="nockta-eyebrow text-muted-foreground/70 text-[0.65rem]">
-          {t('standup_runner.scope', 'Scope')}
+          {'Scope'}
         </p>
         <div className="flex flex-wrap gap-1.5">
           <ScopeChip
-            label={t('common.all', 'All')}
+            label={'All'}
             active={scope === DEFAULT_SCOPE}
             onClick={() => setScope(DEFAULT_SCOPE)}
           />

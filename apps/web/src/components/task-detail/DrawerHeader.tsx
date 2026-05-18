@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { useTranslation } from 'react-i18next';
 import { cn } from '@nockta/ui';
 import { api } from '../../lib/api';
 import {
@@ -38,7 +37,6 @@ export function DrawerHeader({
   // We don't currently get back "is the current user watching" from the API,
   // so we offer both Watch / Unwatch and let the user pick. The endpoints
   // are idempotent.
-  const { t } = useTranslation();
   return (
     <header className="sticky top-0 z-10 bg-card/95 backdrop-blur border-b border-border px-6 py-3 flex items-center justify-between gap-3">
       <div className="flex flex-col gap-1 min-w-0">
@@ -90,13 +88,13 @@ export function DrawerHeader({
           className="tap rounded-md px-2.5 py-1.5 text-xs text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
         >
           {deleting
-            ? t('task_drawer.deleting', 'Deleting…')
-            : t('task_drawer.delete', 'Delete')}
+            ? 'Deleting…'
+            : 'Delete'}
         </button>
         <button
           type="button"
           onClick={onClose}
-          aria-label={t('task_drawer.close', 'Close')}
+          aria-label={'Close'}
           className="tap rounded-md w-8 h-8 flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           <span aria-hidden="true">✕</span>

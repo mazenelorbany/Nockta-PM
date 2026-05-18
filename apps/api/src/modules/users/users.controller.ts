@@ -137,7 +137,7 @@ export class UsersController {
   ) {
     const role = dto.role ?? dto.companyRole;
     if (!role) {
-      throw new Error('role (or companyRole) is required');
+      throw new BadRequestException('role (or companyRole) is required');
     }
     return this.users.changeRole(actor, id, role);
   }

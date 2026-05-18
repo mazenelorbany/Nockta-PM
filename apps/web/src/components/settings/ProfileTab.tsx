@@ -1,12 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useTranslation } from 'react-i18next';
 import { ApiError } from '@nockta/sdk';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth-store';
 import { AvatarCircle } from '../task-bits';
-import { InstallPwaCard } from './InstallPwaCard';
 import { Fieldset, SectionTitle } from './primitives';
 
 // =============================================================================
@@ -32,7 +30,6 @@ interface MyPreferences {
 
 export function ProfileTab(): JSX.Element {
   const { user } = useAuth();
-  const { t } = useTranslation();
   const meQuery = useQuery({
     queryKey: ['auth', 'me'],
     queryFn: () => api.get<MeResponse>('/auth/me'),
@@ -42,14 +39,11 @@ export function ProfileTab(): JSX.Element {
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-2xl space-y-6">
       <SectionTitle
-        title={t('settings.profile.title', 'Profile')}
-        hint={t(
-          'settings.profile.hint',
-          'Read-only for now — managed via your Google Workspace account.',
-        )}
+        title={'Profile'}
+        hint={'Read-only for now — managed via your Google Workspace account.'}
       />
 
-      <Fieldset legend={t('settings.profile.identity', 'Identity')}>
+      <Fieldset legend={'Identity'}>
         <div className="flex items-center gap-4 py-1">
           <AvatarCircle user={me ?? user ?? null} size={56} />
           <div className="flex-1">
@@ -62,32 +56,25 @@ export function ProfileTab(): JSX.Element {
         </div>
       </Fieldset>
 
-      <Fieldset legend={t('settings.profile.session', 'Session')}>
+      <Fieldset legend={'Session'}>
         <div className="text-sm text-muted-foreground space-y-2 py-1">
           <div>
-            {t('settings.profile.session_via', 'Signed in via')}{' '}
+            {'Signed in via'}{' '}
             <span className="text-foreground font-medium">
               {me?.companyRole
-                ? t('settings.profile.session_google', 'Google OAuth')
-                : t('settings.profile.session_magic', 'magic link')}
+                ? 'Google OAuth'
+                : 'magic link'}
             </span>
           </div>
           <div>
-            {t(
-              'settings.profile.session_rotation',
-              'Tokens are rotated every 15 minutes. Sign out from the sidebar to revoke immediately.',
-            )}
+            {'Tokens are rotated every 15 minutes. Sign out from the sidebar to revoke immediately.'}
           </div>
         </div>
       </Fieldset>
 
-      <Fieldset legend={t('settings.profile.time_tracking', 'Time tracking')}>
+      <Fieldset legend={'Time tracking'}>
         <WeeklyTargetField />
         <PomodoroToggleField />
-      </Fieldset>
-
-      <Fieldset legend="App" hint="Install Nockta as a desktop / home-screen app for offline support and push.">
-        <InstallPwaCard />
       </Fieldset>
     </div>
   );
@@ -98,7 +85,6 @@ export function ProfileTab(): JSX.Element {
  * on the dashboard hides itself when the target is unset.
  */
 function WeeklyTargetField(): JSX.Element {
-  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const prefsQuery = useQuery({
     queryKey: ['me', 'preferences'],
@@ -117,13 +103,13 @@ function WeeklyTargetField(): JSX.Element {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['me', 'preferences'] });
       void queryClient.invalidateQueries({ queryKey: ['analytics', 'me'] });
-      toast.success(t('settings.profile.saved', 'Saved'));
+      toast.success('Saved');
     },
     onError: (err) =>
       toast.error(
         err instanceof ApiError
           ? err.problem.title || err.message
-          : t('settings.profile.save_error', 'Could not save target'),
+          : 'Could not save target',
       ),
   });
 
@@ -137,10 +123,7 @@ function WeeklyTargetField(): JSX.Element {
     const n = Number(trimmed);
     if (!Number.isFinite(n) || n < 1 || n > 168) {
       toast.error(
-        t(
-          'settings.profile.bad_range',
-          'Enter a number between 1 and 168 (or leave blank to clear).',
-        ),
+        'Enter a number between 1 and 168 (or leave blank to clear).',
       );
       return;
     }
@@ -150,16 +133,13 @@ function WeeklyTargetField(): JSX.Element {
   return (
     <form onSubmit={submit} className="space-y-2 py-1">
       <label className="block text-sm font-medium">
-        {t('settings.profile.weekly_target_label', 'Weekly hours target')}
+        {'Weekly hours target'}
         <span className="ms-1 text-muted-foreground font-normal">
-          {t('settings.profile.weekly_target_optional', '(optional)')}
+          {'(optional)'}
         </span>
       </label>
       <p className="text-xs text-muted-foreground">
-        {t(
-          'settings.profile.weekly_target_hint',
-          'When set, your dashboard shows progress vs target and a consecutive-weeks streak. Leave blank to hide the streak widget.',
-        )}
+        {'When set, your dashboard shows progress vs target and a consecutive-weeks streak. Leave blank to hide the streak widget.'}
       </p>
       <div className="flex items-center gap-2">
         <input
@@ -169,11 +149,11 @@ function WeeklyTargetField(): JSX.Element {
           step={1}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder={t('settings.profile.placeholder_eg', 'e.g. 32')}
+          placeholder={'e.g. 32'}
           className="w-32 rounded-md border border-input bg-background px-3 py-1.5 text-sm"
         />
         <span className="text-sm text-muted-foreground">
-          {t('settings.profile.hours_per_week', 'hours / week')}
+          {'hours / week'}
         </span>
         <button
           type="submit"
@@ -181,8 +161,8 @@ function WeeklyTargetField(): JSX.Element {
           className="ms-auto tap rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
           {save.isPending
-            ? t('settings.profile.saving', 'Saving…')
-            : t('settings.profile.save', 'Save')}
+            ? 'Saving…'
+            : 'Save'}
         </button>
       </div>
     </form>
@@ -198,7 +178,6 @@ function WeeklyTargetField(): JSX.Element {
  * toggle just persists the opt-in so it survives a fresh login.
  */
 function PomodoroToggleField(): JSX.Element {
-  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const prefsQuery = useQuery({
     queryKey: ['me', 'preferences'],
@@ -211,13 +190,13 @@ function PomodoroToggleField(): JSX.Element {
       api.patch<MyPreferences>('/users/me/preferences', input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['me', 'preferences'] });
-      toast.success(t('settings.profile.saved', 'Saved'));
+      toast.success('Saved');
     },
     onError: (err) =>
       toast.error(
         err instanceof ApiError
           ? err.problem.title || err.message
-          : t('settings.profile.save_error', 'Could not save target'),
+          : 'Could not save target',
       ),
   });
 
@@ -226,13 +205,10 @@ function PomodoroToggleField(): JSX.Element {
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
           <label className="block text-sm font-medium" htmlFor="nockta-pomodoro-toggle">
-            {t('settings.profile.pomodoro_label', 'Pomodoro mode')}
+            {'Pomodoro mode'}
           </label>
           <p className="text-xs text-muted-foreground mt-1">
-            {t(
-              'settings.profile.pomodoro_hint',
-              'Overlays 25-min focus / 5-min break / 15-min long-break phases on your active timer. Auto-stops the worklog at the end of each focus block.',
-            )}
+            {'Overlays 25-min focus / 5-min break / 15-min long-break phases on your active timer. Auto-stops the worklog at the end of each focus block.'}
           </p>
         </div>
         <button

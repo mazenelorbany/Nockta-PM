@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
 import { Fieldset, HelpHint, SectionTitle, Toggle, apiErrorMessage } from './primitives';
 
@@ -36,7 +35,6 @@ const NOTIFICATION_EVENTS = [
 ];
 
 export function NotificationsTab(): JSX.Element {
-  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const prefsQuery = useQuery({
     queryKey: ['notification-prefs'],
@@ -52,7 +50,7 @@ export function NotificationsTab(): JSX.Element {
     }) => api.post('/notifications/preferences', body),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notification-prefs'] }),
     onError: (err) =>
-      toast.error(apiErrorMessage(err, t('settings.notifications.save_error', 'Could not save preference'))),
+      toast.error(apiErrorMessage(err, 'Could not save preference')),
   });
 
   function enabled(channel: 'in_app' | 'chat', eventType: string): boolean {
@@ -72,14 +70,12 @@ export function NotificationsTab(): JSX.Element {
       void queryClient.invalidateQueries({ queryKey: ['notification-prefs'] });
       toast.success(
         minutes === 0
-          ? t('settings.notifications.snooze_cleared', 'Snooze cleared')
-          : t('settings.notifications.snooze_set', 'Snoozed for {{label}}', {
-              label: formatSnooze(minutes),
-            }),
+          ? 'Snooze cleared'
+          : `Snoozed for ${formatSnooze(minutes)}`,
       );
     },
     onError: (err) =>
-      toast.error(apiErrorMessage(err, t('settings.notifications.snooze_error', 'Could not snooze'))),
+      toast.error(apiErrorMessage(err, 'Could not snooze')),
   });
   const snoozedUntil = useMemo<Date | null>(() => {
     const rows = prefsQuery.data ?? [];
@@ -97,22 +93,15 @@ export function NotificationsTab(): JSX.Element {
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-3xl space-y-6">
       <SectionTitle
-        title={t('settings.notifications.title', 'Notifications')}
-        hint={t(
-          'settings.notifications.hint',
-          'Per-event delivery channels. Defaults: in-app on, chat off until you bind Google Chat.',
-        )}
+        title={'Notifications'}
+        hint={'Per-event delivery channels. Defaults: in-app on, chat off until you bind Google Chat.'}
       />
 
       <Fieldset
-        legend={t('settings.notifications.delivery_legend', 'Delivery channels')}
-        hint={t(
-          'settings.notifications.delivery_hint',
-          'Configure browser pushes and workspace-wide snooze.',
-        )}
+        legend={'Delivery channels'}
+        hint={'Configure browser pushes and workspace-wide snooze.'}
       >
         <BrowserPushRow />
-        <WebPushRow />
         <SnoozeAllRow
           snoozedUntil={snoozedUntil}
           onSnooze={(m) => snoozeAll.mutate(m)}
@@ -125,28 +114,25 @@ export function NotificationsTab(): JSX.Element {
       <SmartDigestSection />
 
       <Fieldset
-        legend={t('settings.notifications.matrix_legend', 'Event matrix')}
-        hint={t(
-          'settings.notifications.matrix_hint',
-          'Per-event delivery. In-app pings the bell badge; Chat needs Google Chat bound under Integrations.',
-        )}
+        legend={'Event matrix'}
+        hint={'Per-event delivery. In-app pings the bell badge; Chat needs Google Chat bound under Integrations.'}
       >
         <div className="rounded-lg border border-border overflow-hidden -mx-1">
           <div className="grid grid-cols-[1fr_70px_70px] sm:grid-cols-[1fr_120px_120px] px-3 sm:px-4 py-2 bg-secondary/40 border-b border-border text-xs nockta-eyebrow text-muted-foreground">
             <span className="inline-flex items-center gap-1">
-              {t('settings.notifications.matrix_event', 'Event')}
-              <HelpHint hint={t('settings.notifications.matrix_event_hint', "Triggers fire whenever the matching change happens to a task you're watching, an @mention of you, or a project you've subscribed to.")} />
+              {'Event'}
+              <HelpHint hint={"Triggers fire whenever the matching change happens to a task you're watching, an @mention of you, or a project you've subscribed to."} />
             </span>
             <span className="text-center">
-              {t('settings.notifications.matrix_in_app', 'In-app')}
+              {'In-app'}
             </span>
-            <span className="text-center">{t('settings.notifications.matrix_chat', 'Chat')}</span>
+            <span className="text-center">{'Chat'}</span>
           </div>
           {NOTIFICATION_EVENTS.map((ev) => {
             // Translate event labels via the central event-name table so the
             // matrix labels match the rest of the app's terminology in each
             // locale. Falls back to the English literal baked into the const.
-            const eventLabel = t(`settings.notifications.event.${ev.type}`, ev.label);
+            const eventLabel = ev.label;
             return (
               <div
                 key={ev.type}
@@ -155,7 +141,7 @@ export function NotificationsTab(): JSX.Element {
                 <span>{eventLabel}</span>
                 <span className="flex justify-center">
                   <Toggle
-                    ariaLabel={`${t('settings.notifications.matrix_in_app', 'In-app')} — ${eventLabel}`}
+                    ariaLabel={`In-app — ${eventLabel}`}
                     checked={enabled('in_app', ev.type)}
                     onChange={(v) =>
                       upsert.mutate({ channel: 'in_app', eventType: ev.type, enabled: v })
@@ -164,7 +150,7 @@ export function NotificationsTab(): JSX.Element {
                 </span>
                 <span className="flex justify-center">
                   <Toggle
-                    ariaLabel={`${t('settings.notifications.matrix_chat', 'Chat')} — ${eventLabel}`}
+                    ariaLabel={`Chat — ${eventLabel}`}
                     checked={enabled('chat', ev.type)}
                     onChange={(v) =>
                       upsert.mutate({ channel: 'chat', eventType: ev.type, enabled: v })
@@ -176,155 +162,6 @@ export function NotificationsTab(): JSX.Element {
           })}
         </div>
       </Fieldset>
-    </div>
-  );
-}
-
-// =============================================================================
-// WebPushRow — true OS-level push via the service worker. Distinct from the
-// `BrowserPushRow` above, which uses the in-tab Notification API and only
-// fires while the tab is open. WebPush delivers even when the browser is
-// closed (subject to the OS/browser limitations).
-// =============================================================================
-
-type WebPushState = 'idle' | 'unsupported' | 'denied' | 'on' | 'off' | 'enabling' | 'disabling';
-
-function WebPushRow(): JSX.Element {
-  const [state, setState] = useState<WebPushState>('idle');
-  const [vapidConfigured, setVapidConfigured] = useState<boolean | null>(null);
-
-  // Probe state on mount: support, current permission, existing subscription,
-  // and whether the server is even configured for push.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const mod = await import('../../lib/web-push');
-      if (!mod.isSupported()) {
-        if (!cancelled) setState('unsupported');
-        return;
-      }
-      if (mod.getPermission() === 'denied') {
-        if (!cancelled) setState('denied');
-        return;
-      }
-      // Pre-fetch VAPID config so we can show a helpful disabled state.
-      try {
-        const vapid = await api.get<{ publicKey: string | null; configured: boolean }>(
-          '/notifications/web-push/vapid-public-key',
-        );
-        if (!cancelled) setVapidConfigured(vapid.configured);
-      } catch {
-        if (!cancelled) setVapidConfigured(false);
-      }
-      const existing = await mod.getSubscription();
-      if (!cancelled) setState(existing ? 'on' : 'off');
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  async function enable(): Promise<void> {
-    setState('enabling');
-    try {
-      const mod = await import('../../lib/web-push');
-      const perm = await mod.requestPermission();
-      if (perm === 'denied') {
-        setState('denied');
-        toast.error('Permission denied. Re-enable in your browser settings.');
-        return;
-      }
-      if (perm === 'unsupported') {
-        setState('unsupported');
-        return;
-      }
-      await mod.subscribe();
-      setState('on');
-      toast.success('Push notifications on');
-    } catch (err) {
-      setState('off');
-      toast.error(err instanceof Error ? err.message : 'Could not enable push');
-    }
-  }
-
-  async function disable(): Promise<void> {
-    setState('disabling');
-    try {
-      const mod = await import('../../lib/web-push');
-      await mod.unsubscribe();
-      setState('off');
-      toast.success('Push notifications off');
-    } catch {
-      setState('off');
-    }
-  }
-
-  return (
-    <div className="rounded-lg border border-border bg-background/40 p-4 flex items-start gap-3">
-      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-brand/10 text-brand shrink-0">
-        <svg
-          viewBox="0 0 24 24"
-          className="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          aria-hidden="true"
-        >
-          <path d="M4 12h.01" />
-          <path d="M9 19a8 8 0 0 1 0-14" />
-          <path d="M14 19a13 13 0 0 0 0-14" />
-          <path d="M22 12a18 18 0 0 0-22 0" />
-        </svg>
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium flex items-center gap-1">
-          Push notifications
-          <HelpHint hint="OS-level push that fires even when Nockta is closed. Backed by the service worker + your browser's push service." />
-        </div>
-        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-          Get @mentions, blockers, and assignments as native pushes — even when this tab is closed.
-          {vapidConfigured === false && (
-            <>
-              <br />
-              <span className="text-status-blocked">
-                Server is missing VAPID keys — ask an admin to configure VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY.
-              </span>
-            </>
-          )}
-        </p>
-      </div>
-      <div className="shrink-0">
-        {state === 'unsupported' && (
-          <span className="text-xs text-muted-foreground">Not supported in this browser.</span>
-        )}
-        {state === 'denied' && (
-          <span className="text-xs text-status-blocked">Blocked in browser settings.</span>
-        )}
-        {(state === 'off' || state === 'enabling') && vapidConfigured !== false && (
-          <button
-            type="button"
-            onClick={enable}
-            disabled={state === 'enabling'}
-            className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-          >
-            {state === 'enabling' ? 'Enabling…' : 'Enable'}
-          </button>
-        )}
-        {(state === 'on' || state === 'disabling') && (
-          <button
-            type="button"
-            onClick={disable}
-            disabled={state === 'disabling'}
-            className="rounded-md border border-brand/40 bg-brand/10 text-brand px-3 py-1.5 text-xs hover:bg-brand/20 disabled:opacity-50"
-          >
-            {state === 'disabling' ? 'Turning off…' : 'On — turn off'}
-          </button>
-        )}
-        {state === 'off' && vapidConfigured === false && (
-          <span className="text-xs text-muted-foreground">Disabled by server.</span>
-        )}
-      </div>
     </div>
   );
 }
@@ -439,12 +276,11 @@ function SnoozeAllRow({
   onSnooze: (minutes: number) => void;
   pending: boolean;
 }): JSX.Element {
-  const { t, i18n } = useTranslation();
   const presets: { label: string; minutes: number }[] = [
-    { label: t('settings.notifications.snooze_preset_1h', '1 hour'), minutes: 60 },
-    { label: t('settings.notifications.snooze_preset_4h', '4 hours'), minutes: 240 },
-    { label: t('settings.notifications.snooze_preset_tomorrow', 'Until tomorrow 9am'), minutes: minutesUntilTomorrow9am() },
-    { label: t('settings.notifications.snooze_preset_monday', 'Until Monday 9am'), minutes: minutesUntilMonday9am() },
+    { label: '1 hour', minutes: 60 },
+    { label: '4 hours', minutes: 240 },
+    { label: 'Until tomorrow 9am', minutes: minutesUntilTomorrow9am() },
+    { label: 'Until Monday 9am', minutes: minutesUntilMonday9am() },
   ];
   return (
     <div className="rounded-lg border border-border bg-background/40 p-4 flex items-start gap-3">
@@ -464,21 +300,16 @@ function SnoozeAllRow({
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium flex items-center gap-1">
-          {t('settings.notifications.snooze_title', 'Snooze everything')}
-          <HelpHint hint={t('settings.notifications.snooze_hint', 'Mutes Chat + desktop pings. The in-app bell badge still counts so you can find missed items when you return.')} />
+          {'Snooze everything'}
+          <HelpHint hint={'Mutes Chat + desktop pings. The in-app bell badge still counts so you can find missed items when you return.'} />
         </div>
         <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-          {t(
-            'settings.notifications.snooze_body',
-            'Mute Chat + desktop pings (in-app stays on so the bell badge still counts) for a focus block.',
-          )}
+          {'Mute Chat + desktop pings (in-app stays on so the bell badge still counts) for a focus block.'}
           {snoozedUntil && (
             <>
               <br />
               <span className="text-foreground font-medium">
-                {t('settings.notifications.snooze_currently_until', 'Currently snoozed until {{when}}', {
-                  when: snoozedUntil.toLocaleString(i18n.language),
-                })}
+                {`Currently snoozed until ${snoozedUntil.toLocaleString(undefined)}`}
               </span>
             </>
           )}
@@ -502,7 +333,7 @@ function SnoozeAllRow({
               onClick={() => onSnooze(0)}
               className="rounded-md border border-brand/40 bg-brand/10 text-brand px-2.5 py-1 text-xs hover:bg-brand/20 disabled:opacity-50"
             >
-              {t('settings.notifications.snooze_clear', 'Clear snooze')}
+              {'Clear snooze'}
             </button>
           )}
         </div>

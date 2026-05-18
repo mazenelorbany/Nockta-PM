@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import Anthropic from '@anthropic-ai/sdk';
 import { Env } from '../../config/env';
 import { WorkspaceAiSettingsService } from './workspace-ai-settings.service';
@@ -99,7 +99,7 @@ export class LlmService {
       body: JSON.stringify({ model: 'nomic-embed-text', prompt: trimmed }),
     });
     if (!res.ok) {
-      throw new Error(`Ollama embeddings failed: ${res.status} ${await res.text()}`);
+      throw new InternalServerErrorException(`Ollama embeddings failed: ${res.status} ${await res.text()}`);
     }
     const body = (await res.json()) as { embedding: number[] };
     return body.embedding;
@@ -121,7 +121,7 @@ export class LlmService {
       }),
     });
     if (!res.ok) {
-      throw new Error(`Ollama generate failed: ${res.status} ${await res.text()}`);
+      throw new InternalServerErrorException(`Ollama generate failed: ${res.status} ${await res.text()}`);
     }
     const body = (await res.json()) as { response: string };
     return body.response.trim();
@@ -136,7 +136,7 @@ export class LlmService {
     prompt: string,
     options: GenerateOptions,
   ): Promise<GenerateWithUsageResult> {
-    if (!Env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not set');
+    if (!Env.ANTHROPIC_API_KEY) throw new InternalServerErrorException('ANTHROPIC_API_KEY not set');
     this.anthropic ??= new Anthropic({ apiKey: Env.ANTHROPIC_API_KEY });
     const message = await this.anthropic.messages.create({
       model: Env.ANTHROPIC_MODEL,

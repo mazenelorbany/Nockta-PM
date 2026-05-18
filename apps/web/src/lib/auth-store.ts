@@ -16,10 +16,6 @@ interface AuthState {
     name?: string;
     companyRole: 'Admin' | 'Member' | null;
     kind: 'internal' | 'client';
-    /// Resolved server-side from the user's first WorkspaceMember row.
-    /// Always populated on tokens minted after Round 6 Pass A; the legacy
-    /// path falls back to the bootstrap 'default' workspace.
-    workspaceId?: string;
   } | null;
   setTokens: (t: Tokens) => void;
   setUser: (u: AuthState['user']) => void;

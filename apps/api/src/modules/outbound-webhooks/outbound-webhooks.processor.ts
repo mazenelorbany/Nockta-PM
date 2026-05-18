@@ -169,6 +169,7 @@ export class OutboundWebhookProcessor extends WorkerHost {
       { webhookId, deliveryId, attempt, responseCode, reason },
       'outbound webhook delivery failed; will retry',
     );
+    // internal: not reached from an HTTP request — signals BullMQ to retry the job.
     throw new Error(reason);
   }
 }

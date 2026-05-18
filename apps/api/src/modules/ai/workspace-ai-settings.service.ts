@@ -1,26 +1,21 @@
-import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import { ForbiddenException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { Prisma, type WorkspaceAiSettings } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { AuthenticatedUser } from '../auth/types';
-import { WorkspaceContextService } from '../workspace/workspace-context.service';
 
 // =============================================================================
-// Workspace-wide AI knobs. ONE row per workspace (uniqueness enforced by
-// migration 0009's UNIQUE INDEX on workspaceId). The legacy global singleton
-// shape (`singleton = 1` unique) has been promoted to per-workspace.
+// AI knobs. Singleton row (uniqueness enforced by `singleton` column).
 //
 // Public surface:
-//   - `get(actor)` — returns the actor's workspace row, creating it on first
-//     call.
+//   - `get(actor)` — returns the row, creating it on first call.
 //   - `update(actor, patch)` — Admin only; clamps numeric ranges before write.
-//   - `getDupThreshold(workspaceId)` — cached 30s helper used by the
-//     duplicate processor.
-//   - `getEffectiveProvider(workspaceId, env, anthropicConfigured)` —
-//     resolves `modelPreference` against env.
+//   - `getDupThreshold()` — cached 30s helper used by the duplicate processor.
+//   - `getEffectiveProvider(env, anthropicConfigured)` — resolves
+//     `modelPreference` against env.
 //
-// Cache keyed by workspaceId. A workspace's settings change rarely; 30s TTL
-// is long enough to absorb a request burst, short enough that a freshly-
-// applied admin patch shows up to the duplicate processor within a minute.
+// Cache TTL = 30s. Long enough to absorb a request burst, short enough that
+// a freshly-applied admin patch shows up to the duplicate processor within a
+// minute.
 // =============================================================================
 
 export interface PriorityWeights {
@@ -53,62 +48,45 @@ interface CacheEntry {
 @Injectable()
 export class WorkspaceAiSettingsService {
   private readonly logger = new Logger(WorkspaceAiSettingsService.name);
-  /** Per-workspace cache. Keyed by workspaceId so multi-tenant deployments
-   *  don't accidentally serve W1's threshold to W2's processor. */
-  private cache = new Map<string, CacheEntry>();
+  private cache: CacheEntry | null = null;
 
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly workspaceCtx?: WorkspaceContextService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Read the per-workspace row. Creates it on first call with the schema
+   * Read the singleton row. Creates it on first call with the schema
    * defaults. `updatedById` is set to the supplied actor when present;
-   * otherwise we fall back to any Admin user in the workspace.
-   *
-   * The `actorUserId` parameter, when supplied, also resolves the
-   * workspaceId via WorkspaceContextService. Callers that already know
-   * their workspace can pass it as a second arg to skip the lookup —
-   * useful for cron/processor paths that aren't user-initiated.
+   * otherwise we fall back to any Admin user.
    */
-  async get(
-    actorUserId?: string,
-    explicitWorkspaceId?: string,
-  ): Promise<WorkspaceAiSettings> {
-    const workspaceId = await this.resolveWorkspaceId(actorUserId, explicitWorkspaceId);
-    const cached = this.cache.get(workspaceId);
-    if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
-      return cached.value;
+  async get(actorUserId?: string): Promise<WorkspaceAiSettings> {
+    if (this.cache && Date.now() - this.cache.at < CACHE_TTL_MS) {
+      return this.cache.value;
     }
     let row = await this.prisma.workspaceAiSettings.findUnique({
-      where: { workspaceId },
+      where: { singleton: 1 },
     });
     if (!row) {
-      // First call ever for this workspace. Try to derive a sensible
-      // `updatedById`: caller > any Admin > error.
+      // First call ever. Try to derive a sensible `updatedById`:
+      // caller > any Admin > error.
       const fallbackUserId = actorUserId ?? (await this.firstAdminUserId());
       if (!fallbackUserId) {
-        throw new Error(
+        throw new InternalServerErrorException(
           'Cannot bootstrap WorkspaceAiSettings: no actor and no Admin user exists yet',
         );
       }
       row = await this.prisma.workspaceAiSettings.create({
         data: {
           singleton: 1,
-          workspaceId,
           updatedById: fallbackUserId,
         },
       });
     }
-    this.cache.set(workspaceId, { value: row, at: Date.now() });
+    this.cache = { value: row, at: Date.now() };
     return row;
   }
 
   /**
    * Admin-only patch. Validates ranges; throws on invalid input so the
-   * controller returns 400, not 500. Scoped to the actor's workspace —
-   * an Admin in W1 cannot patch W2.
+   * controller returns 400, not 500.
    */
   async update(
     actor: AuthenticatedUser,
@@ -118,7 +96,6 @@ export class WorkspaceAiSettingsService {
       throw new ForbiddenException('Admin only');
     }
 
-    const workspaceId = await this.resolveWorkspaceId(actor.id);
     const data: Prisma.WorkspaceAiSettingsUpdateInput = { updatedById: actor.id };
     if (patch.dupThreshold !== undefined) {
       data.dupThreshold = clamp(patch.dupThreshold, DUP_THRESHOLD_MIN, DUP_THRESHOLD_MAX);
@@ -137,74 +114,41 @@ export class WorkspaceAiSettingsService {
     // first-write also works as a bootstrap.
     await this.get(actor.id);
     const updated = await this.prisma.workspaceAiSettings.update({
-      where: { workspaceId },
+      where: { singleton: 1 },
       data,
     });
-    this.cache.set(workspaceId, { value: updated, at: Date.now() });
+    this.cache = { value: updated, at: Date.now() };
     return updated;
   }
 
-  /** Helper used by the duplicate processor. Cached, see CACHE_TTL_MS.
-   *  Accepts an explicit workspaceId so background processors (no actor
-   *  context) can resolve their workspace via the event payload or a
-   *  static default. */
-  async getDupThreshold(workspaceId?: string): Promise<number> {
-    const settings = await this.get(undefined, workspaceId);
+  /** Helper used by the duplicate processor. Cached, see CACHE_TTL_MS. */
+  async getDupThreshold(): Promise<number> {
+    const settings = await this.get();
     return settings.dupThreshold;
   }
 
   /**
    * Resolve the actually-used LLM provider. `auto` defers to env; concrete
    * providers override only when their credentials are present, otherwise
-   * we fall back to the env default (so a misconfigured workspace doesn't
-   * silently break every AI call).
+   * we fall back to the env default.
    */
   async getEffectiveProvider(
     envProvider: 'ollama' | 'anthropic',
     anthropicConfigured: boolean,
-    workspaceId?: string,
   ): Promise<'ollama' | 'anthropic'> {
-    const settings = await this.get(undefined, workspaceId);
+    const settings = await this.get();
     const pref = settings.modelPreference as ModelPreference;
     if (pref === 'anthropic' && anthropicConfigured) return 'anthropic';
     if (pref === 'ollama') return 'ollama';
     return envProvider;
   }
 
-  /** Test/dev hook: forget every cached row. */
+  /** Test/dev hook: forget the cached row. */
   invalidate(): void {
-    this.cache.clear();
+    this.cache = null;
   }
 
   // ---- internal --------------------------------------------------------
-
-  /**
-   * Determine the workspaceId for a get/update call.
-   *
-   * Order of precedence:
-   *   1. `explicitWorkspaceId` argument — used by background processors
-   *      that know their tenant from the event payload.
-   *   2. WorkspaceContextService.resolveForUser(actorUserId) — the
-   *      normal path for controllers calling on behalf of an authenticated
-   *      user.
-   *   3. WorkspaceContextService.getDefault() — fallback for legacy
-   *      bootstrap calls (e.g. AI-cron firing before any user exists).
-   *   4. The bare 'default' constant — final safety net for tests that
-   *      construct this service without a WorkspaceContextService.
-   */
-  private async resolveWorkspaceId(
-    actorUserId?: string,
-    explicitWorkspaceId?: string,
-  ): Promise<string> {
-    if (explicitWorkspaceId) return explicitWorkspaceId;
-    if (this.workspaceCtx && actorUserId) {
-      return this.workspaceCtx.resolveForUser(actorUserId);
-    }
-    if (this.workspaceCtx) {
-      return this.workspaceCtx.getDefault();
-    }
-    return 'default';
-  }
 
   private async firstAdminUserId(): Promise<string | null> {
     const admin = await this.prisma.user.findFirst({

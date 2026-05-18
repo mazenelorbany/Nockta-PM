@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { cn } from '@nockta/ui';
 
 // =============================================================================
@@ -42,7 +41,6 @@ function focusRow(direction: 1 | -1): void {
 }
 
 export function KeyboardShortcuts(): JSX.Element | null {
-  const { t } = useTranslation();
   const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
@@ -97,21 +95,21 @@ export function KeyboardShortcuts(): JSX.Element | null {
       >
         <header className="mb-4">
           <p className="nockta-eyebrow text-muted-foreground">
-            {t('shortcuts.eyebrow', 'Keyboard shortcuts')}
+            {'Keyboard shortcuts'}
           </p>
           <h2 className="mt-1 text-base font-semibold">
-            {t('shortcuts.title', 'Move faster')}
+            {'Move faster'}
           </h2>
         </header>
         <ul className="space-y-1.5 text-sm">
           {[
-            { keys: ['?'], label: t('shortcuts.toggle_dialog', 'Toggle this dialog') },
-            { keys: ['c'], label: t('shortcuts.new_task', 'New task') },
-            { keys: ['/'], label: t('shortcuts.search_everywhere', 'Search everywhere') },
-            { keys: ['j'], label: t('shortcuts.next_row', 'Next row') },
-            { keys: ['k'], label: t('shortcuts.prev_row', 'Previous row') },
-            { keys: ['Esc'], label: t('shortcuts.close', 'Close this dialog or any drawer') },
-            { keys: ['⌘', 'K'], label: t('shortcuts.command_palette', 'Command palette') },
+            { keys: ['?'], label: 'Toggle this dialog' },
+            { keys: ['c'], label: 'New task' },
+            { keys: ['/'], label: 'Search everywhere' },
+            { keys: ['j'], label: 'Next row' },
+            { keys: ['k'], label: 'Previous row' },
+            { keys: ['Esc'], label: 'Close this dialog or any drawer' },
+            { keys: ['⌘', 'K'], label: 'Command palette' },
           ].map((row) => (
             <li key={row.label} className="flex items-center justify-between gap-3">
               <span className="text-muted-foreground">{row.label}</span>
@@ -132,7 +130,7 @@ export function KeyboardShortcuts(): JSX.Element | null {
           ))}
         </ul>
         <p className="mt-4 text-[11px] text-muted-foreground">
-          {t('shortcuts.tip', "Tip: shortcuts are ignored while you're typing in a field.")}
+          {"Tip: shortcuts are ignored while you're typing in a field."}
         </p>
       </div>
     </div>

@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useTranslation } from 'react-i18next';
 import { cn } from '@nockta/ui';
 import { api } from '../../lib/api';
 import { Field, SectionTitle, ToggleRow, apiErrorMessage } from './primitives';
@@ -40,7 +39,6 @@ interface SampleTask {
 }
 
 export function AiSettingsTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
-  const { t } = useTranslation();
   const qc = useQueryClient();
   const settingsQuery = useQuery({
     queryKey: ['workspace-ai-settings'],
@@ -59,18 +57,18 @@ export function AiSettingsTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
       api.patch<AiSettings>('/workspace/ai-settings', patch),
     onSuccess: (next) => {
       qc.setQueryData(['workspace-ai-settings'], next);
-      toast.success(t('settings.profile.saved', 'Saved'));
+      toast.success('Saved');
     },
     onError: (err) =>
-      toast.error(apiErrorMessage(err, t('settings.ai.save_error', 'Could not save AI settings'))),
+      toast.error(apiErrorMessage(err, 'Could not save AI settings')),
   });
 
   if (settingsQuery.isLoading || !draft) {
     return (
       <div className="p-4 sm:p-6 md:p-8 max-w-3xl">
         <SectionTitle
-          title={t('settings.ai.title', 'AI')}
-          hint={t('settings.ai.loading_hint', 'Loading workspace AI knobs…')}
+          title={'AI'}
+          hint={'Loading workspace AI knobs…'}
         />
       </div>
     );
@@ -89,26 +87,19 @@ export function AiSettingsTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-3xl space-y-8">
       <SectionTitle
-        title={t('settings.ai.title', 'AI')}
-        hint={t(
-          'settings.ai.hint',
-          'Tune duplicate detection, auto-prioritization, and the LLM provider for the whole workspace.',
-        )}
+        title={'AI'}
+        hint={'Tune duplicate detection, auto-prioritization, and the LLM provider for the whole workspace.'}
       />
       {!isAdmin && (
         <div className="rounded-md border border-border bg-background/40 px-3 py-2 text-xs text-muted-foreground">
-          {t('settings.ai.read_only', 'Read-only — only workspace Admins can edit AI settings.')}
+          {'Read-only — only workspace Admins can edit AI settings.'}
         </div>
       )}
 
       <div className="space-y-6">
         <Field
-          label={t('settings.ai.dup_threshold', 'Duplicate threshold')}
-          hint={t(
-            'settings.ai.dup_threshold_hint',
-            'Tasks whose embedding similarity is ≥ {{value}} are flagged as duplicates by the AI comment bot.',
-            { value: draft.dupThreshold.toFixed(2) },
-          )}
+          label={'Duplicate threshold'}
+          hint={`Tasks whose embedding similarity is ≥ ${draft.dupThreshold.toFixed(2)} are flagged as duplicates by the AI comment bot.`}
         >
           <SliderRow
             min={0.7}
@@ -124,17 +115,14 @@ export function AiSettingsTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
         </Field>
 
         <Field
-          label={t('settings.ai.priority_weights', 'Priority weights')}
-          hint={t(
-            'settings.ai.priority_weights_hint',
-            'Used by the auto-prioritization processor when scoring deadline / blocker / customer-impact signals. 0 disables that factor.',
-          )}
+          label={'Priority weights'}
+          hint={'Used by the auto-prioritization processor when scoring deadline / blocker / customer-impact signals. 0 disables that factor.'}
         >
           <div className="space-y-3">
             {(['deadline', 'blocked', 'customerImpact'] as const).map((k) => (
               <SliderRow
                 key={k}
-                label={t(`settings.ai.${k === 'customerImpact' ? 'customer_impact' : k}`, LABELS[k])}
+                label={LABELS[k]}
                 min={0}
                 max={5}
                 step={0.1}
@@ -153,11 +141,8 @@ export function AiSettingsTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
         </Field>
 
         <Field
-          label={t('settings.ai.llm_provider', 'LLM provider')}
-          hint={t(
-            'settings.ai.llm_provider_hint',
-            "`auto` defers to the API's LLM_PROVIDER env. Forcing a provider here overrides it; misconfigured providers (e.g. Anthropic without API key) silently fall back.",
-          )}
+          label={'LLM provider'}
+          hint={"`auto` defers to the API's LLM_PROVIDER env. Forcing a provider here overrides it; misconfigured providers (e.g. Anthropic without API key) silently fall back."}
         >
           <div className="flex flex-wrap gap-2">
             {(['auto', 'ollama', 'anthropic'] as const).map((p) => (
@@ -187,11 +172,8 @@ export function AiSettingsTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
         </Field>
 
         <ToggleRow
-          label={t('settings.ai.auto_suggest_label', 'Enable AI auto-suggestions')}
-          hint={t(
-            'settings.ai.auto_suggest_hint',
-            'Master switch for AI affordances (priority suggestion, duplicate detection comments, standup cards). Disable to make the workspace AI-quiet.',
-          )}
+          label={'Enable AI auto-suggestions'}
+          hint={'Master switch for AI affordances (priority suggestion, duplicate detection comments, standup cards). Disable to make the workspace AI-quiet.'}
           checked={draft.autoSuggestEnabled}
           disabled={!isAdmin}
           onChange={(v) => commit({ autoSuggestEnabled: v })}
@@ -234,7 +216,6 @@ interface UsageSummary {
 }
 
 function UsageAndCostSection(): JSX.Element {
-  const { t } = useTranslation();
   const query = useQuery<UsageSummary>({
     queryKey: ['ai-usage-summary', 30],
     queryFn: () => api.get<UsageSummary>('/ai/usage/summary?days=30'),
@@ -247,24 +228,18 @@ function UsageAndCostSection(): JSX.Element {
   return (
     <div className="space-y-4 border-t border-border pt-8">
       <SectionTitle
-        title={t('settings.ai.usage_title', 'Usage & cost')}
-        hint={t(
-          'settings.ai.usage_hint',
-          "This month's AI spend across every feature, broken down by feature and model. Rates update when models change — see the static price table in `ai-cost-tracking.service.ts`.",
-        )}
+        title={'Usage & cost'}
+        hint={"This month's AI spend across every feature, broken down by feature and model. Rates update when models change — see the static price table in `ai-cost-tracking.service.ts`."}
       />
 
       {query.isLoading && (
         <div className="text-xs text-muted-foreground">
-          {t('settings.ai.usage_loading', 'Loading usage…')}
+          {'Loading usage…'}
         </div>
       )}
       {query.isError && (
         <div className="text-xs text-amber-500">
-          {t(
-            'settings.ai.usage_error',
-            'Could not load usage summary. The cost telemetry tables may not exist yet — run migrations.',
-          )}
+          {'Could not load usage summary. The cost telemetry tables may not exist yet — run migrations.'}
         </div>
       )}
 
@@ -275,7 +250,7 @@ function UsageAndCostSection(): JSX.Element {
               ${(summary.totalCostCents / 100).toFixed(2)}
             </div>
             <div className="text-xs text-muted-foreground">
-              {t('settings.ai.usage_last_30', 'last 30 days')}
+              {'last 30 days'}
             </div>
           </div>
 
@@ -283,11 +258,11 @@ function UsageAndCostSection(): JSX.Element {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <UsageBreakdown
-              title={t('settings.ai.by_feature', 'By feature')}
+              title={'By feature'}
               entries={byKind}
             />
             <UsageBreakdown
-              title={t('settings.ai.by_model', 'By model')}
+              title={'By model'}
               entries={byModel}
             />
           </div>

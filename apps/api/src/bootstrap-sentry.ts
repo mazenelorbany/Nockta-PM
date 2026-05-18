@@ -39,9 +39,11 @@ export async function maybeInitSentry(): Promise<void> {
         return event;
       },
     });
+    // intentional — boot log
     // eslint-disable-next-line no-console
     console.log('[sentry] initialized');
   } catch (err) {
+    // intentional — boot log
     // eslint-disable-next-line no-console
     console.warn(`[sentry] not initialized: ${err instanceof Error ? err.message : err}`);
   }

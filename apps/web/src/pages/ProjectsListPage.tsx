@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useTranslation } from 'react-i18next';
 import { ArrowUpRight, FolderPlus, Search } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ApiError } from '@nockta/sdk';
@@ -43,7 +42,6 @@ function suggestKey(name: string): string {
 }
 
 export function ProjectsListPage(): JSX.Element {
-  const { t } = useTranslation();
   const projectsQuery = useQuery({
     queryKey: ['projects'],
     queryFn: () => api.get<Project[]>('/projects'),
@@ -79,19 +77,16 @@ export function ProjectsListPage(): JSX.Element {
         <div className="relative px-8 pt-10 pb-10 flex items-end justify-between gap-6 flex-wrap">
           <div>
             <span className="nockta-eyebrow text-brand">
-              {t('nav.workspace', 'Workspace')}
+              {'Workspace'}
             </span>
             <h1
               className="display-heading mt-2 leading-[1.04]"
               style={{ fontSize: 'clamp(2rem, 4vw, 3.2rem)' }}
             >
-              {t('nav.projects', 'Projects')}
+              {'Projects'}
             </h1>
             <p className="mt-3 text-sm text-muted-foreground max-w-xl">
-              {t(
-                'projects_list.subtitle',
-                'Every project gets a board, sprints, docs, and an audit trail. Pick one to dive in or spin up a new one.',
-              )}
+              {'Every project gets a board, sprints, docs, and an audit trail. Pick one to dive in or spin up a new one.'}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -100,7 +95,7 @@ export function ProjectsListPage(): JSX.Element {
               <input
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
-                placeholder={t('projects_list.filter_placeholder', 'Filter projects')}
+                placeholder={'Filter projects'}
                 className="field text-sm py-2 ps-9 pe-3 w-64"
               />
             </div>
@@ -110,7 +105,7 @@ export function ProjectsListPage(): JSX.Element {
               className="tap inline-flex items-center gap-2 rounded-md bg-foreground text-background px-4 py-2 text-sm font-semibold hover:opacity-90 transition-opacity"
             >
               <FolderPlus className="h-4 w-4" />
-              {t('projects_list.new_project', 'New project')}
+              {'New project'}
             </button>
           </div>
         </div>

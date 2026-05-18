@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import {
   type PrismaClient,
   type Priority,
@@ -198,7 +198,7 @@ export class GithubIssuesImportService {
     options: GhRunOptions,
   ): Promise<void> {
     const octo = await this.githubApp.forInstallation(installationId);
-    if (!octo) throw new Error('GitHub App not configured');
+    if (!octo) throw new InternalServerErrorException('GitHub App not configured');
     const project = await prisma.project.findUniqueOrThrow({
       where: { id: options.projectId },
       select: { id: true, workflowPreset: true },

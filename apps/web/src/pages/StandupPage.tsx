@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { useTranslation } from 'react-i18next';
 import { NocktaMark, Spinner } from '@nockta/ui';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth-store';
@@ -56,7 +55,6 @@ interface SynthesisResponse {
 
 export function StandupPage(): JSX.Element {
   const { user } = useAuth();
-  const { t } = useTranslation();
   const [result, setResult] = useState<StandupResponse | null>(null);
   const [synthesis, setSynthesis] = useState<SynthesisResponse | null>(null);
   const [copied, setCopied] = useState(false);
@@ -80,14 +78,14 @@ export function StandupPage(): JSX.Element {
       setSynthesis(struct);
       setCopied(false);
     },
-    onError: () => toast.error(t('standup.generate_error', 'Could not generate standup')),
+    onError: () => toast.error('Could not generate standup'),
   });
 
   function copy(): void {
     if (!result?.markdown) return;
     void navigator.clipboard.writeText(result.markdown).then(() => {
       setCopied(true);
-      toast.success(t('standup.copy_success', 'Copied to clipboard'));
+      toast.success('Copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
     });
   }
@@ -95,7 +93,7 @@ export function StandupPage(): JSX.Element {
   if (!user?.id) {
     return (
       <div className="p-8 text-sm text-muted-foreground flex items-center gap-2">
-        <Spinner /> {t('common.loading', 'Loading…')}
+        <Spinner /> {'Loading…'}
       </div>
     );
   }
@@ -116,19 +114,16 @@ export function StandupPage(): JSX.Element {
           <div>
             <span className="nockta-eyebrow text-brand inline-flex items-center gap-1.5">
               <Sparkles className="h-3 w-3" />
-              {t('standup.eyebrow', 'Standup')}
+              {'Standup'}
             </span>
             <h1
               className="display-heading mt-2 leading-[1.04]"
               style={{ fontSize: 'clamp(1.8rem, 3.4vw, 2.6rem)' }}
             >
-              {t('standup.title', 'Daily check-in')}
+              {'Daily check-in'}
             </h1>
             <p className="mt-2 text-sm text-muted-foreground max-w-xl">
-              {t(
-                'standup.subtitle',
-                "An AI-built recap of yesterday, today, and anything blocking you — pulled from your tasks, comments, and PR activity. Generate it once each morning; copy it into Slack, Chat, or wherever your team meets.",
-              )}
+              {"An AI-built recap of yesterday, today, and anything blocking you — pulled from your tasks, comments, and PR activity. Generate it once each morning; copy it into Slack, Chat, or wherever your team meets."}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -137,17 +132,17 @@ export function StandupPage(): JSX.Element {
                 type="button"
                 onClick={copy}
                 className="tap inline-flex items-center gap-1.5 rounded-md border border-border bg-background/60 px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                aria-label={t('standup.copy_aria', 'Copy to clipboard')}
+                aria-label={'Copy to clipboard'}
               >
                 {copied ? (
                   <>
                     <ClipboardCheck className="h-3.5 w-3.5 text-status-done" />
-                    {t('standup.copied', 'Copied')}
+                    {'Copied'}
                   </>
                 ) : (
                   <>
                     <Clipboard className="h-3.5 w-3.5" />
-                    {t('standup.copy', 'Copy')}
+                    {'Copy'}
                   </>
                 )}
               </button>
@@ -161,17 +156,17 @@ export function StandupPage(): JSX.Element {
               {generate.isPending ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  {t('standup.thinking', 'Thinking…')}
+                  {'Thinking…'}
                 </>
               ) : result ? (
                 <>
                   <Sparkles className="h-3.5 w-3.5" />
-                  {t('standup.regenerate', 'Regenerate')}
+                  {'Regenerate'}
                 </>
               ) : (
                 <>
                   <Sparkles className="h-3.5 w-3.5" />
-                  {t('standup.generate', 'Generate')}
+                  {'Generate'}
                 </>
               )}
             </button>
@@ -185,21 +180,18 @@ export function StandupPage(): JSX.Element {
           <div className="rounded-xl border border-dashed border-border bg-card/30 px-6 py-12 text-center">
             <Sparkles className="h-6 w-6 text-primary mx-auto" />
             <p className="mt-3 text-sm font-medium">
-              {t('standup.empty_title', 'No standup generated yet today.')}
+              {'No standup generated yet today.'}
             </p>
             <p className="mt-1 text-xs text-muted-foreground max-w-md mx-auto">
               {/* Translators: the <strong> wraps the literal "Generate" button
                   label, which itself is translated separately. We hardcode the
                   English in the fallback rather than chaining keys to keep the
                   fallback rendering robust if the JSON is missing. */}
-              {t('standup.empty_body_prefix', 'Click ')}
+              {'Click '}
               <span className="text-foreground font-medium">
-                {t('standup.generate', 'Generate')}
+                {'Generate'}
               </span>
-              {t(
-                'standup.empty_body_suffix',
-                ' above to build it from your task activity in the last 24 hours.',
-              )}
+              {' above to build it from your task activity in the last 24 hours.'}
             </p>
           </div>
         )}
@@ -209,7 +201,7 @@ export function StandupPage(): JSX.Element {
           <div className="rounded-xl border border-border bg-card/40 p-6 flex items-center gap-3">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground">
-              {t('standup.loading', "Pulling yesterday's activity and today's open work…")}
+              {"Pulling yesterday's activity and today's open work…"}
             </p>
           </div>
         )}
@@ -220,7 +212,7 @@ export function StandupPage(): JSX.Element {
             <header className="flex items-center gap-2 mb-3">
               <Sparkles className="h-3.5 w-3.5 text-primary" />
               <h2 className="text-sm font-semibold tracking-tight">
-                {t('standup.todays_standup', "Today's standup")}
+                {"Today's standup"}
               </h2>
             </header>
             <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
@@ -241,7 +233,7 @@ export function StandupPage(): JSX.Element {
               <div className="flex items-center gap-2">
                 <Quote className="h-3.5 w-3.5 text-primary" />
                 <h2 className="text-sm font-semibold tracking-tight">
-                  {t('standup.synthesis_title', 'Synthesis')}
+                  {'Synthesis'}
                 </h2>
               </div>
               {synthesis.costUsdCents > 0 && (
@@ -254,29 +246,26 @@ export function StandupPage(): JSX.Element {
               )}
             </header>
             <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-              {t(
-                'standup.synthesis_subtitle',
-                'Bullets cite the comment or task they were drawn from. Click the quote chip to inspect the source.',
-              )}
+              {'Bullets cite the comment or task they were drawn from. Click the quote chip to inspect the source.'}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <SynthesisBucket
-                title={t('standup.wins', 'Wins')}
+                title={'Wins'}
                 items={synthesis.did}
                 tone="done"
               />
               <SynthesisBucket
-                title={t('standup.focus_today', 'Focus today')}
+                title={'Focus today'}
                 items={synthesis.doing}
                 tone="focus"
               />
               <SynthesisBucket
-                title={t('standup.blockers', 'Blockers')}
+                title={'Blockers'}
                 items={synthesis.blockers}
                 tone="block"
               />
               <SynthesisBucket
-                title={t('standup.risks', 'Risks')}
+                title={'Risks'}
                 // The current backend bundles risks under blockers; the bucket
                 // stays empty until the synthesis service splits them. Kept in
                 // the UI so the 4-bucket spec stays visible in markup.
@@ -293,21 +282,21 @@ export function StandupPage(): JSX.Element {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <SignalCard
               icon={<CheckCircle2 className="h-3.5 w-3.5 text-status-done" />}
-              title={t('standup.completed_yesterday', 'Completed yesterday')}
+              title={'Completed yesterday'}
               items={result.raw.completedYesterday}
-              emptyText={t('standup.completed_yesterday_empty', 'Nothing closed since yesterday.')}
+              emptyText={'Nothing closed since yesterday.'}
             />
             <SignalCard
               icon={<ListChecks className="h-3.5 w-3.5 text-primary" />}
-              title={t('standup.in_progress_today', 'In progress today')}
+              title={'In progress today'}
               items={result.raw.inProgressToday}
-              emptyText={t('standup.in_progress_today_empty', 'No open work in progress.')}
+              emptyText={'No open work in progress.'}
             />
             <SignalCard
               icon={<ShieldAlert className="h-3.5 w-3.5 text-status-blocked" />}
-              title={t('standup.blockers', 'Blockers')}
+              title={'Blockers'}
               items={result.raw.blockers}
-              emptyText={t('standup.blockers_empty', 'Nothing blocked. Nice.')}
+              emptyText={'Nothing blocked. Nice.'}
             />
           </div>
         )}

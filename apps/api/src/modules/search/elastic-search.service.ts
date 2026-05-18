@@ -1,4 +1,4 @@
-import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger, type OnModuleInit } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { Env } from '../../config/env';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -171,7 +171,7 @@ export class ElasticSearchService implements OnModuleInit {
     if (res.status === 404 && opts.allow404) return null as unknown as T;
     if (!res.ok) {
       const text = await res.text().catch(() => '');
-      throw new Error(`${method} ${path} → ${res.status}: ${text.slice(0, 300)}`);
+      throw new InternalServerErrorException(`${method} ${path} → ${res.status}: ${text.slice(0, 300)}`);
     }
     if (method === 'HEAD' || res.status === 204) return undefined as unknown as T;
     return (await res.json()) as T;

@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   Bar, BarChart, CartesianGrid, ComposedChart, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
@@ -68,7 +67,6 @@ interface VelocityData {
 
 export function AnalyticsPage(): JSX.Element {
   const { user } = useAuth();
-  const { t } = useTranslation();
   const isAdmin = user?.companyRole === 'Admin';
   const [tab, setTab] = useState<'personal' | 'org' | 'burndown' | 'velocity' | 'reports'>('personal');
 
@@ -82,15 +80,15 @@ export function AnalyticsPage(): JSX.Element {
           <NocktaMark className="h-[240px] w-[240px]" />
         </div>
         <div className="relative px-4 sm:px-6 md:px-8 pt-6 sm:pt-8 pb-6 sm:pb-8">
-          <span className="nockta-eyebrow text-brand">{t('analytics.eyebrow', 'Insights')}</span>
+          <span className="nockta-eyebrow text-brand">{'Insights'}</span>
           <h1
             className="display-heading mt-2 leading-[1.04]"
             style={{ fontSize: 'clamp(1.8rem, 3.4vw, 2.6rem)' }}
           >
-            {t('analytics.title', 'Analytics')}
+            {'Analytics'}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground max-w-xl">
-            {t('analytics.subtitle', 'Throughput, cycle time, and burndown across your work and the org.')}
+            {'Throughput, cycle time, and burndown across your work and the org.'}
           </p>
         </div>
       </header>
@@ -99,11 +97,11 @@ export function AnalyticsPage(): JSX.Element {
       <div className="px-4 sm:px-6 md:px-8 py-3 border-b border-border flex items-center gap-1 overflow-x-auto">
         {(
           [
-            { id: 'personal' as const, label: t('analytics.tab_personal', 'My work') },
-            ...(isAdmin ? [{ id: 'org' as const, label: t('analytics.tab_org', 'Organization') }] : []),
-            { id: 'burndown' as const, label: t('analytics.tab_burndown', 'Sprint burndown') },
-            { id: 'velocity' as const, label: t('analytics.tab_velocity', 'Velocity') },
-            { id: 'reports' as const, label: t('analytics.tab_reports', 'Reports') },
+            { id: 'personal' as const, label: 'My work' },
+            ...(isAdmin ? [{ id: 'org' as const, label: 'Organization' }] : []),
+            { id: 'burndown' as const, label: 'Sprint burndown' },
+            { id: 'velocity' as const, label: 'Velocity' },
+            { id: 'reports' as const, label: 'Reports' },
           ]
         ).map((tab2) => (
           <button

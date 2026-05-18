@@ -11,7 +11,6 @@ import {
 } from './exports.service';
 import { escapeField, renderCsv } from './serializers/csv';
 import { renderXlsx, XLSX_MISSING_MESSAGE } from './serializers/xlsx';
-import { WorkspaceContextService } from '../workspace/workspace-context.service';
 
 // =============================================================================
 // exports.service — behaviours that must not regress:
@@ -38,23 +37,17 @@ interface Built {
   service: ExportsService;
   prisma: PrismaService;
   queue: { add: ReturnType<typeof vi.fn> };
-  workspaceCtx: { resolveForUser: ReturnType<typeof vi.fn>; getDefault: () => string };
 }
 
 function build(): Built {
   const prisma = makePrismaMock();
   const queue = { add: vi.fn().mockResolvedValue({ id: 'job-1' }) };
-  const workspaceCtx = {
-    resolveForUser: vi.fn().mockResolvedValue('default'),
-    getDefault: () => 'default',
-  };
   const service = new ExportsService(
     prisma,
-    workspaceCtx as unknown as WorkspaceContextService,
     queue as unknown as Queue,
   );
   service.onModuleInit();
-  return { service, prisma, queue, workspaceCtx };
+  return { service, prisma, queue };
 }
 
 // =============================================================================

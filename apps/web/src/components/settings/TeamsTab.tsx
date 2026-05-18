@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useTranslation } from 'react-i18next';
 import { UserMinus } from 'lucide-react';
 import { SkeletonList, Spinner } from '@nockta/ui';
 import { api } from '../../lib/api';
@@ -43,7 +42,6 @@ interface PickerUser {
 }
 
 export function TeamsTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
-  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const teamsQuery = useQuery({
     queryKey: ['teams'],
@@ -71,13 +69,11 @@ export function TeamsTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
     <div className="p-4 sm:p-6 md:p-8 max-w-4xl space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <SectionTitle
-          title={t('settings.teams.title', 'Teams')}
+          title={'Teams'}
           hint={
             teams.length > 0
-              ? t('settings.teams.summary_count', '{{count}} teams · click a row to manage members.', {
-                  count: teams.length,
-                })
-              : t('settings.teams.summary_empty', 'Used for filtering, assignments, and access grants.')
+              ? `${teams.length} teams · click a row to manage members.`
+              : 'Used for filtering, assignments, and access grants.'
           }
         />
         <button

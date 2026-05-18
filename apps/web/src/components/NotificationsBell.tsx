@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, BellOff, Check, Filter, Inbox, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { cn } from '@nockta/ui';
 import { api } from '../lib/api';
@@ -57,7 +56,6 @@ const DEFAULT_FILTERS: BellFilters = {
 };
 
 export function NotificationsBell(): JSX.Element {
-  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [filters, setFilters] = useState<BellFilters>(DEFAULT_FILTERS);
   const ref = useRef<HTMLDivElement>(null);
@@ -178,7 +176,7 @@ export function NotificationsBell(): JSX.Element {
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="tap relative rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-[transform,background-color,color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        aria-label={t('notifications_bell.aria_label', 'Notifications')}
+        aria-label={'Notifications'}
         aria-haspopup="dialog"
         aria-expanded={open}
       >
@@ -195,7 +193,7 @@ export function NotificationsBell(): JSX.Element {
           style={{ transformOrigin: 'top right' }}
         >
           <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-            <span className="text-sm font-semibold">{t('notifications_bell.title', 'Notifications')}</span>
+            <span className="text-sm font-semibold">{'Notifications'}</span>
             <div className="flex items-center gap-2">
               {unread > 0 && (
                 <button
@@ -204,7 +202,7 @@ export function NotificationsBell(): JSX.Element {
                   className="tap text-xs text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
                 >
                   <Check className="h-3 w-3" />
-                  {t('notifications_bell.mark_all_read', 'Mark all read')}
+                  {'Mark all read'}
                 </button>
               )}
               <div className="relative">
@@ -214,8 +212,8 @@ export function NotificationsBell(): JSX.Element {
                   className="tap text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 rounded-md px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   aria-haspopup="menu"
                   aria-expanded={snoozeOpen}
-                  aria-label={t('a11y.snooze_notifications', 'Snooze notifications')}
-                  title={t('notifications_bell.snooze_aria', 'Snooze notifications')}
+                  aria-label={'Snooze notifications'}
+                  title={'Snooze notifications'}
                 >
                   <BellOff className="h-3 w-3" aria-hidden="true" />
                 </button>
@@ -225,10 +223,10 @@ export function NotificationsBell(): JSX.Element {
                     className="absolute end-0 top-full mt-1 w-48 rounded-md border border-border bg-popover shadow-xl z-40 py-1 text-xs"
                   >
                     {[
-                      { label: t('notifications_bell.snooze_1h', 'Snooze 1 hour'), minutes: 60 },
-                      { label: t('notifications_bell.snooze_4h', 'Snooze 4 hours'), minutes: 240 },
-                      { label: t('notifications_bell.snooze_tomorrow', 'Snooze until tomorrow'), minutes: minutesUntilTomorrow9am() },
-                      { label: t('notifications_bell.snooze_clear', 'Clear snooze'), minutes: 0 },
+                      { label: 'Snooze 1 hour', minutes: 60 },
+                      { label: 'Snooze 4 hours', minutes: 240 },
+                      { label: 'Snooze until tomorrow', minutes: minutesUntilTomorrow9am() },
+                      { label: 'Clear snooze', minutes: 0 },
                     ].map((p) => (
                       <button
                         key={p.label}
@@ -256,10 +254,10 @@ export function NotificationsBell(): JSX.Element {
           />
           <div className="max-h-[420px] overflow-y-auto">
             {listQuery.isLoading ? (
-              <div className="p-4 text-xs text-muted-foreground">{t('notifications_bell.loading', 'Loading…')}</div>
+              <div className="p-4 text-xs text-muted-foreground">{'Loading…'}</div>
             ) : items.length === 0 ? (
               <div className="p-6 text-center text-xs text-muted-foreground">
-                {t('notifications_bell.all_caught_up', "You're all caught up.")}
+                {"You're all caught up."}
               </div>
             ) : (
               <ul className="stagger-list">
@@ -283,7 +281,7 @@ export function NotificationsBell(): JSX.Element {
             className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border-t border-border px-3 py-2 transition-colors"
           >
             <Inbox className="h-3 w-3" />
-            {t('notifications_bell.open_inbox', 'Open inbox')}
+            {'Open inbox'}
           </Link>
         </div>
       )}
@@ -308,7 +306,6 @@ function FilterChips({
   projects: ProjectSummary[];
   activeCount: number;
 }): JSX.Element {
-  const { t } = useTranslation();
   function clear(): void {
     onChange(DEFAULT_FILTERS);
   }
@@ -317,14 +314,14 @@ function FilterChips({
   // the chip labels without remounting the component.
   const typeOptions = TYPE_OPTIONS.map((opt) => ({
     value: opt.value,
-    label: t(`notifications_bell.type.${opt.value}`, opt.label),
+    label: opt.label,
   }));
 
   return (
     <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border overflow-x-auto">
       <Filter className="h-3 w-3 text-muted-foreground shrink-0" />
       <Chip
-        label={t('notifications_bell.filter_type', 'Type')}
+        label={'Type'}
         count={filters.types.size}
         renderPopover={(close) => (
           <CheckboxList
@@ -336,7 +333,7 @@ function FilterChips({
         )}
       />
       <Chip
-        label={t('notifications_bell.filter_project', 'Project')}
+        label={'Project'}
         count={filters.projectIds.size}
         renderPopover={(close) => (
           <CheckboxList
@@ -350,18 +347,18 @@ function FilterChips({
       <Chip
         label={
           filters.read === 'all'
-            ? t('notifications_bell.filter_read_state', 'Read state')
+            ? 'Read state'
             : filters.read === 'unread'
-              ? t('notifications_bell.filter_unread', 'Unread')
-              : t('notifications_bell.filter_read', 'Read')
+              ? 'Unread'
+              : 'Read'
         }
         active={filters.read !== 'all'}
         renderPopover={(close) => (
           <RadioList
             options={[
-              { value: 'all', label: t('notifications_bell.filter_all', 'All') },
-              { value: 'unread', label: t('notifications_bell.filter_unread_only', 'Unread only') },
-              { value: 'read', label: t('notifications_bell.filter_read_only', 'Read only') },
+              { value: 'all', label: 'All' },
+              { value: 'unread', label: 'Unread only' },
+              { value: 'read', label: 'Read only' },
             ]}
             selected={filters.read}
             onChange={(v) => {
@@ -374,18 +371,18 @@ function FilterChips({
       <Chip
         label={
           filters.since === 'all'
-            ? t('notifications_bell.filter_time', 'Time')
+            ? 'Time'
             : filters.since === '24h'
-              ? t('notifications_bell.filter_last_24h', 'Last 24h')
-              : t('notifications_bell.filter_last_7d', 'Last 7d')
+              ? 'Last 24h'
+              : 'Last 7d'
         }
         active={filters.since !== 'all'}
         renderPopover={(close) => (
           <RadioList
             options={[
-              { value: 'all', label: t('notifications_bell.filter_anytime', 'Anytime') },
-              { value: '24h', label: t('notifications_bell.filter_24h_long', 'Last 24 hours') },
-              { value: '7d', label: t('notifications_bell.filter_7d_long', 'Last 7 days') },
+              { value: 'all', label: 'Anytime' },
+              { value: '24h', label: 'Last 24 hours' },
+              { value: '7d', label: 'Last 7 days' },
             ]}
             selected={filters.since}
             onChange={(v) => {
@@ -401,7 +398,7 @@ function FilterChips({
           onClick={clear}
           className="tap ms-auto rounded-md px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 shrink-0"
         >
-          <X className="h-2.5 w-2.5" /> {t('notifications_bell.clear', 'Clear')}
+          <X className="h-2.5 w-2.5" /> {'Clear'}
         </button>
       )}
     </div>

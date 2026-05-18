@@ -5,7 +5,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { ApiError } from '@nockta/sdk';
 import { cn, NocktaMark, QueryErrorState, Skeleton } from '@nockta/ui';
@@ -41,7 +40,6 @@ interface Project {
 }
 
 export function CalendarPage(): JSX.Element {
-  const { t, i18n } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const openTaskId = searchParams.get('task');
   const [cursor, setCursor] = useState<Date>(() => {
@@ -162,16 +160,16 @@ export function CalendarPage(): JSX.Element {
         <div className="relative px-4 sm:px-6 md:px-8 pt-6 sm:pt-8 pb-6 sm:pb-8 flex items-end justify-between gap-4 sm:gap-6 flex-wrap">
           <div>
             <span className="nockta-eyebrow text-brand">
-              {t('calendar.eyebrow', 'Schedule')}
+              {'Schedule'}
             </span>
             <h1
               className="display-heading mt-2 leading-[1.04]"
               style={{ fontSize: 'clamp(1.8rem, 3.4vw, 2.6rem)' }}
             >
-              {t('nav.calendar', 'Calendar')}
+              {'Calendar'}
             </h1>
             <p className="mt-2 text-sm text-muted-foreground max-w-xl">
-              {t('calendar.subtitle', 'Drop dates onto a month grid. Drag to reschedule.')}
+              {'Drop dates onto a month grid. Drag to reschedule.'}
             </p>
           </div>
           <select
@@ -179,7 +177,7 @@ export function CalendarPage(): JSX.Element {
             onChange={(e) => setProjectFilter(e.target.value)}
             className="field text-xs py-2 w-full sm:w-56"
           >
-            <option value="">{t('inbox.all_projects', 'All projects')}</option>
+            <option value="">{'All projects'}</option>
             {(projectsQuery.data ?? []).map((p) => (
               <option key={p.id} value={p.id}>
                 {p.key} · {p.name}
@@ -208,7 +206,7 @@ export function CalendarPage(): JSX.Element {
             }}
             className="rounded-md border border-border px-3 py-1 text-xs hover:bg-accent transition-colors"
           >
-            {t('calendar.today', 'Today')}
+            {'Today'}
           </button>
           <button
             type="button"

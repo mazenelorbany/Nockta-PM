@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import { SkeletonList } from '@nockta/ui';
 import { api } from '../../lib/api';
 import { AdminGate, SectionTitle } from './primitives';
@@ -22,7 +21,6 @@ interface AuditEvent {
 }
 
 export function AuditLogTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
-  const { t, i18n } = useTranslation();
   const auditQuery = useQuery({
     queryKey: ['audit-log'],
     queryFn: () =>
@@ -39,21 +37,21 @@ export function AuditLogTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-4xl space-y-4">
       <SectionTitle
-        title={t('settings.audit.title', 'Audit log')}
-        hint={t('settings.audit.hint', 'Every admin-visible event. Immutable.')}
+        title={'Audit log'}
+        hint={'Every admin-visible event. Immutable.'}
       />
       <div className="rounded-lg border border-border overflow-hidden">
         <div className="hidden md:grid grid-cols-[180px_180px_1fr_120px] px-4 py-2 bg-secondary/40 border-b border-border text-xs nockta-eyebrow text-muted-foreground">
-          <span>{t('settings.audit.when', 'When')}</span>
-          <span>{t('settings.audit.actor', 'Actor')}</span>
-          <span>{t('settings.audit.event', 'Event')}</span>
-          <span>{t('settings.audit.entity', 'Entity')}</span>
+          <span>{'When'}</span>
+          <span>{'Actor'}</span>
+          <span>{'Event'}</span>
+          <span>{'Entity'}</span>
         </div>
         {auditQuery.isLoading ? (
           <div className="p-3"><SkeletonList rows={8} rowClassName="h-7" /></div>
         ) : events.length === 0 ? (
           <div className="p-6 text-xs text-muted-foreground text-center">
-            {t('settings.audit.empty', 'No audit events.')}
+            {'No audit events.'}
           </div>
         ) : (
           <ul>
@@ -63,7 +61,7 @@ export function AuditLogTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
                 className="flex flex-col gap-1 md:grid md:grid-cols-[180px_180px_1fr_120px] md:items-baseline md:gap-3 px-4 py-2.5 border-b border-border last:border-b-0 text-xs"
               >
                 <span className="font-mono text-muted-foreground">
-                  {new Date(ev.createdAt).toLocaleString(i18n.language)}
+                  {new Date(ev.createdAt).toLocaleString(undefined)}
                 </span>
                 <span>{ev.actor?.name ?? 'System'}</span>
                 <span className="font-medium">{prettyType(ev.type)}</span>

@@ -14,7 +14,6 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { cn } from '@nockta/ui';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth-store';
@@ -47,25 +46,12 @@ interface AuditLogRow {
   createdAt: string;
 }
 
-interface MfaEnrollResult {
-  qrUrl: string;
-  secret: string;
-  backupCodes: string[];
-}
-
 export function SecurityTab(): JSX.Element {
   const { user, tokens, logout } = useAuth();
-  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
 
-  const meQuery = useQuery({
-    queryKey: ['me'],
-    queryFn: () => api.get<{ mfaEnabled?: boolean }>('/auth/me'),
-  });
-  const mfaEnabled = meQuery.data?.mfaEnabled ?? false;
-
   function signOut(): void {
-    if (window.confirm(t('settings.security.quick_signout_confirm', 'Sign out of this session?'))) {
+    if (window.confirm('Sign out of this session?')) {
       logout();
       window.location.href = '/login';
     }
@@ -73,10 +59,7 @@ export function SecurityTab(): JSX.Element {
   function signOutEverywhere(): void {
     if (
       window.confirm(
-        t(
-          'settings.security.quick_signout_all_confirm',
-          'Sign out of every browser and device? Other sessions will be revoked on next request.',
-        ),
+        'Sign out of every browser and device? Other sessions will be revoked on next request.',
       )
     ) {
       void api
@@ -99,70 +82,59 @@ export function SecurityTab(): JSX.Element {
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-3xl space-y-6 sm:space-y-8">
       <SectionTitle
-        title={t('settings.security.title', 'Security & Privacy')}
-        hint={t(
-          'settings.security.hint',
-          'Account access, two-factor auth, session control, and your data.',
-        )}
+        title={'Security & Privacy'}
+        hint={'Account access, two-factor auth, session control, and your data.'}
       />
 
-      <Fieldset legend={t('settings.security.account', 'Account')}>
+      <Fieldset legend={'Account'}>
         <div className="flex items-center gap-3 py-1">
           <div className="flex h-10 w-10 items-center justify-center rounded-md bg-brand/10 text-brand">
             <ShieldCheck className="h-4 w-4" />
           </div>
           <div className="flex-1">
-            <div className="text-sm font-semibold">{t('settings.security.account', 'Account')}</div>
+            <div className="text-sm font-semibold">{'Account'}</div>
             <div className="text-xs text-muted-foreground">
-              {t('settings.security.signed_in_google', 'Signed in via Google Workspace')}
+              {'Signed in via Google Workspace'}
             </div>
           </div>
         </div>
         <dl className="grid grid-cols-3 gap-y-3 text-xs pt-1">
           <dt className="text-muted-foreground inline-flex items-center gap-1">
-            {t('settings.security.email', 'Email')}
+            {'Email'}
           </dt>
           <dd className="col-span-2 font-medium">{user?.email ?? '—'}</dd>
-          <dt className="text-muted-foreground">{t('settings.security.role', 'Role')}</dt>
+          <dt className="text-muted-foreground">{'Role'}</dt>
           <dd className="col-span-2 font-medium">
-            {user?.companyRole ?? t('settings.security.role_member', 'Member')}
+            {user?.companyRole ?? 'Member'}
           </dd>
           <dt className="text-muted-foreground inline-flex items-center gap-1">
-            {t('settings.security.kind', 'Kind')}
-            <HelpHint hint={t('settings.security.kind_hint', "'internal' = signs in via Google OAuth. 'client' = magic-link guest using the client portal.")} />
+            {'Kind'}
+            <HelpHint hint={"'internal' = signs in via Google OAuth. 'client' = magic-link guest using the client portal."} />
           </dt>
           <dd className="col-span-2 font-medium capitalize">{user?.kind ?? 'internal'}</dd>
           {sessionStart && (
             <>
               <dt className="text-muted-foreground">
-                {t('settings.security.session_started', 'Session started')}
+                {'Session started'}
               </dt>
               <dd className="col-span-2 font-medium tabular-nums">
-                {sessionStart.toLocaleString(i18n.language)}
+                {sessionStart.toLocaleString(undefined)}
               </dd>
             </>
           )}
           {sessionExpires && (
             <>
               <dt className="text-muted-foreground inline-flex items-center gap-1">
-                {t('settings.security.expires', 'Expires')}
-                <HelpHint hint={t('settings.security.expires_hint', 'The access token expiry. The refresh token in your cookie stays valid longer; we rotate the access token silently every 15 minutes.')} />
+                {'Expires'}
+                <HelpHint hint={'The access token expiry. The refresh token in your cookie stays valid longer; we rotate the access token silently every 15 minutes.'} />
               </dt>
               <dd className="col-span-2 font-medium tabular-nums">
-                {sessionExpires.toLocaleString(i18n.language)}
+                {sessionExpires.toLocaleString(undefined)}
               </dd>
             </>
           )}
         </dl>
       </Fieldset>
-
-      <MfaSection
-        enabled={mfaEnabled}
-        onChanged={() => {
-          void queryClient.invalidateQueries({ queryKey: ['me'] });
-          void queryClient.invalidateQueries({ queryKey: ['auth', 'audit-log'] });
-        }}
-      />
 
       <SessionsSection
         currentRefreshToken={tokens?.refreshToken ?? null}
@@ -173,20 +145,20 @@ export function SecurityTab(): JSX.Element {
 
       <AuditLogSection />
 
-      <Fieldset legend={t('settings.security.quick_actions', 'Quick actions')}>
+      <Fieldset legend={'Quick actions'}>
         <div className="rounded-lg border border-border bg-background/40 divide-y divide-border">
           <SecurityAction
             icon={<LogOut className="h-4 w-4" />}
-            title={t('settings.security.quick_signout_title', 'Sign out of this session')}
-            body={t('settings.security.quick_signout_body', "Revokes the current browser's access and refresh tokens.")}
-            cta={t('settings.security.quick_signout_cta', 'Sign out')}
+            title={'Sign out of this session'}
+            body={"Revokes the current browser's access and refresh tokens."}
+            cta={'Sign out'}
             onClick={signOut}
           />
           <SecurityAction
             icon={<LogOut className="h-4 w-4 text-status-blocked" />}
-            title={t('settings.security.quick_signout_all_title', 'Sign out of every device')}
-            body={t('settings.security.quick_signout_all_body', 'Revokes all refresh tokens for your account, everywhere.')}
-            cta={t('settings.security.quick_signout_all_cta', 'Sign out everywhere')}
+            title={'Sign out of every device'}
+            body={'Revokes all refresh tokens for your account, everywhere.'}
+            cta={'Sign out everywhere'}
             tone="danger"
             onClick={signOutEverywhere}
           />
@@ -194,22 +166,22 @@ export function SecurityTab(): JSX.Element {
       </Fieldset>
 
       <Fieldset
-        legend={t('settings.security.your_data', 'Your data')}
-        hint={t('settings.security.your_data_hint', 'Export and deletion are routed to a workspace admin for now — self-serve is on the roadmap.')}
+        legend={'Your data'}
+        hint={'Export and deletion are routed to a workspace admin for now — self-serve is on the roadmap.'}
       >
         <div className="rounded-lg border border-border bg-background/40 divide-y divide-border">
           <SecurityAction
             icon={<Download className="h-4 w-4" />}
-            title={t('settings.security.export_title', 'Request data export')}
-            body={t('settings.security.export_body', "A copy of your tasks, comments, and worklog as JSON. We'll email you when it's ready.")}
-            cta={t('settings.security.email_admin', 'Email Admin')}
+            title={'Request data export'}
+            body={"A copy of your tasks, comments, and worklog as JSON. We'll email you when it's ready."}
+            cta={'Email Admin'}
             href="mailto:admin@nockta.com?subject=Data export request"
           />
           <SecurityAction
             icon={<AlertTriangle className="h-4 w-4 text-status-blocked" />}
-            title={t('settings.security.delete_title', 'Delete account')}
-            body={t('settings.security.delete_body', 'Permanently removes your account and authored content. Cannot be undone.')}
-            cta={t('settings.security.email_admin', 'Email Admin')}
+            title={'Delete account'}
+            body={'Permanently removes your account and authored content. Cannot be undone.'}
+            cta={'Email Admin'}
             tone="danger"
             href="mailto:admin@nockta.com?subject=Account deletion request"
           />
@@ -219,314 +191,7 @@ export function SecurityTab(): JSX.Element {
   );
 }
 
-// =============================================================================
-// MFA — enrollment + disable flow
-// =============================================================================
-
-function MfaSection({
-  enabled,
-  onChanged,
-}: {
-  enabled: boolean;
-  onChanged: () => void;
-}): JSX.Element {
-  const [enrollOpen, setEnrollOpen] = useState(false);
-  const [disableOpen, setDisableOpen] = useState(false);
-
-  return (
-    <Fieldset
-      legend="Two-factor authentication"
-      hint="Adds a 6-digit code from an authenticator app on top of your password / Google login."
-    >
-      <div className="rounded-lg border border-border bg-background/40 px-4 py-3 flex flex-wrap items-center gap-3">
-        <div
-          className={cn(
-            'flex h-10 w-10 items-center justify-center rounded-md',
-            enabled ? 'bg-status-done/15 text-status-done' : 'bg-muted/40 text-muted-foreground',
-          )}
-        >
-          {enabled ? <ShieldCheck className="h-4 w-4" /> : <ShieldOff className="h-4 w-4" />}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium">
-            {enabled ? 'Two-factor authentication is on' : 'Two-factor authentication is off'}
-          </div>
-          <div className="text-xs text-muted-foreground mt-0.5">
-            {enabled
-              ? 'You will be prompted for a code on each new sign-in.'
-              : 'Recommended for all internal accounts.'}
-          </div>
-        </div>
-        {enabled ? (
-          <button
-            type="button"
-            onClick={() => setDisableOpen(true)}
-            className="tap rounded-md border border-status-blocked/40 px-3 py-1.5 text-xs font-medium text-status-blocked hover:bg-status-blocked/10"
-          >
-            Disable
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setEnrollOpen(true)}
-            className="tap rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-brand-foreground hover:bg-brand/90"
-          >
-            Enable
-          </button>
-        )}
-      </div>
-
-      {enrollOpen && (
-        <MfaEnrollModal
-          onClose={() => setEnrollOpen(false)}
-          onSuccess={() => {
-            setEnrollOpen(false);
-            onChanged();
-          }}
-        />
-      )}
-      {disableOpen && (
-        <MfaDisableModal
-          onClose={() => setDisableOpen(false)}
-          onSuccess={() => {
-            setDisableOpen(false);
-            onChanged();
-          }}
-        />
-      )}
-    </Fieldset>
-  );
-}
-
-function MfaEnrollModal({
-  onClose,
-  onSuccess,
-}: {
-  onClose: () => void;
-  onSuccess: () => void;
-}): JSX.Element {
-  const [stage, setStage] = useState<'qr' | 'verify' | 'codes'>('qr');
-  const [code, setCode] = useState('');
-  const [enrollData, setEnrollData] = useState<MfaEnrollResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const startMutation = useMutation({
-    mutationFn: () => api.post<MfaEnrollResult>('/auth/mfa/enroll/start', {}),
-    onSuccess: (data) => {
-      setEnrollData(data);
-      setStage('qr');
-    },
-    onError: (err: Error) => setError(err.message),
-  });
-  const verifyMutation = useMutation({
-    mutationFn: (c: string) =>
-      api.post<{ enabled: true }>('/auth/mfa/enroll/verify', { code: c }),
-    onSuccess: () => setStage('codes'),
-    onError: (err: Error) => setError(err.message),
-  });
-
-  // Kick off enrollment as soon as the modal opens.
-  useEffect(() => {
-    startMutation.mutate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Render the QR as an SVG built from the otpauth URL — relies on the
-  // user pasting it into their authenticator if they don't have a camera.
-  const qrSvgUrl = useMemo(() => {
-    if (!enrollData) return null;
-    // Use a publicly-hostable QR endpoint as a thin proxy. Keeps this skill
-    // self-contained without pulling in a 100kB QR library on the frontend.
-    return `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(enrollData.qrUrl)}`;
-  }, [enrollData]);
-
-  return (
-    <ModalShell onClose={onClose} title="Enable two-factor authentication">
-      {stage === 'qr' && enrollData && (
-        <div className="space-y-4">
-          <p className="text-xs text-muted-foreground">
-            Scan the QR code with Google Authenticator, 1Password, Authy, or any other RFC 6238
-            TOTP app. Then enter the 6-digit code below.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 items-start">
-            <div className="rounded-md bg-white p-2 border border-border shrink-0">
-              {qrSvgUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={qrSvgUrl} alt="MFA QR code" width={180} height={180} loading="lazy" decoding="async" />
-              ) : (
-                <Loader2 className="h-10 w-10 animate-spin" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0 space-y-2">
-              <div className="text-xs text-muted-foreground">
-                Can't scan? Enter the secret manually:
-              </div>
-              <div className="font-mono text-xs break-all rounded-md bg-muted/40 px-2 py-1.5 border border-border">
-                {enrollData.secret}
-              </div>
-              <button
-                type="button"
-                onClick={() => setStage('verify')}
-                className="w-full tap rounded-md bg-brand px-3 py-2 text-xs font-medium text-brand-foreground hover:bg-brand/90"
-              >
-                Next: enter code
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {stage === 'verify' && (
-        <div className="space-y-4">
-          <p className="text-xs text-muted-foreground">
-            Enter the 6-digit code shown in your authenticator app to confirm setup.
-          </p>
-          <input
-            autoFocus
-            inputMode="numeric"
-            pattern="\d{6}"
-            maxLength={6}
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-            placeholder="123456"
-            className="w-full text-center text-xl tracking-widest font-mono rounded-md border border-border bg-background px-3 py-2"
-          />
-          {error && <div className="text-xs text-status-blocked">{error}</div>}
-          <div className="flex gap-2 justify-end">
-            <button
-              type="button"
-              onClick={() => setStage('qr')}
-              className="tap rounded-md border border-border px-3 py-1.5 text-xs"
-            >
-              Back
-            </button>
-            <button
-              type="button"
-              disabled={code.length !== 6 || verifyMutation.isPending}
-              onClick={() => {
-                setError(null);
-                verifyMutation.mutate(code);
-              }}
-              className="tap rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-brand-foreground hover:bg-brand/90 disabled:opacity-50"
-            >
-              {verifyMutation.isPending ? 'Verifying…' : 'Verify & enable'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {stage === 'codes' && enrollData && (
-        <div className="space-y-4">
-          <div className="rounded-md bg-status-done/10 border border-status-done/30 px-3 py-2 text-xs">
-            <strong>MFA enabled.</strong> Save these backup codes somewhere safe — each one is
-            single-use and lets you sign in if you lose your authenticator. They will not be
-            shown again.
-          </div>
-          <div className="grid grid-cols-2 gap-1.5 font-mono text-xs">
-            {enrollData.backupCodes.map((c) => (
-              <div
-                key={c}
-                className="rounded-md bg-muted/40 px-2 py-1.5 border border-border text-center"
-              >
-                {c}
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2 justify-end">
-            <button
-              type="button"
-              onClick={() => {
-                const blob = new Blob(
-                  [
-                    'Nockta — MFA backup codes\n',
-                    'Each code is single-use. Generated ',
-                    new Date().toISOString(),
-                    '\n\n',
-                    enrollData.backupCodes.join('\n'),
-                    '\n',
-                  ],
-                  { type: 'text/plain' },
-                );
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'nockta-mfa-backup-codes.txt';
-                a.click();
-                URL.revokeObjectURL(url);
-              }}
-              className="tap rounded-md border border-border px-3 py-1.5 text-xs inline-flex items-center gap-1.5"
-            >
-              <Download className="h-3 w-3" />
-              Download
-            </button>
-            <button
-              type="button"
-              onClick={onSuccess}
-              className="tap rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-brand-foreground hover:bg-brand/90"
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      )}
-    </ModalShell>
-  );
-}
-
-function MfaDisableModal({
-  onClose,
-  onSuccess,
-}: {
-  onClose: () => void;
-  onSuccess: () => void;
-}): JSX.Element {
-  const [code, setCode] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const disableMutation = useMutation({
-    mutationFn: (c: string) =>
-      api.post<{ enabled: false }>('/auth/mfa/disable', { code: c }),
-    onSuccess,
-    onError: (err: Error) => setError(err.message),
-  });
-
-  return (
-    <ModalShell onClose={onClose} title="Disable two-factor authentication">
-      <div className="space-y-3">
-        <p className="text-xs text-muted-foreground">
-          Enter a 6-digit code or a backup code to confirm.
-        </p>
-        <input
-          autoFocus
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          placeholder="123456 or xxxxx-xxxxx"
-          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-        />
-        {error && <div className="text-xs text-status-blocked">{error}</div>}
-        <div className="flex gap-2 justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="tap rounded-md border border-border px-3 py-1.5 text-xs"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={!code || disableMutation.isPending}
-            onClick={() => {
-              setError(null);
-              disableMutation.mutate(code);
-            }}
-            className="tap rounded-md bg-status-blocked px-3 py-1.5 text-xs font-medium text-white hover:bg-status-blocked/90 disabled:opacity-50"
-          >
-            Disable MFA
-          </button>
-        </div>
-      </div>
-    </ModalShell>
-  );
-}
+// MFA enrollment + disable flow was removed (GRILL-SUMMARY.md §23).
 
 // =============================================================================
 // Sessions — list active refresh tokens + revoke

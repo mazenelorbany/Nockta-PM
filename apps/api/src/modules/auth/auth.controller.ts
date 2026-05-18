@@ -20,37 +20,20 @@ import {
   IsIn,
   IsOptional,
   IsString,
-  MinLength,
 } from 'class-validator';
 import type { Request, Response } from 'express';
 import { Env } from '../../config/env';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogService } from './audit-log.service';
-import { AuthService, isMfaChallenge } from './auth.service';
+import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
 import { MagicLinkRequestDto } from './dto/magic-link-request.dto';
 import { MagicLinkVerifyDto } from './dto/magic-link-verify.dto';
 import { RefreshDto } from './dto/refresh.dto';
-import { MfaService } from './mfa.service';
 import { SessionsService } from './sessions.service';
 import type { GoogleProfile } from './strategies/google.strategy';
 import type { AuthenticatedUser, TokenPair } from './types';
-
-class MfaCodeDto {
-  @IsString()
-  @MinLength(4)
-  code!: string;
-}
-
-class MfaVerifyDto {
-  @IsString()
-  mfaPendingToken!: string;
-
-  @IsString()
-  @MinLength(4)
-  code!: string;
-}
 
 class RevokeOthersDto {
   @IsOptional()
@@ -89,7 +72,6 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly prisma: PrismaService,
-    private readonly mfa: MfaService,
     private readonly sessions: SessionsService,
     private readonly audit: AuditLogService,
   ) {}
@@ -136,22 +118,12 @@ export class AuthController {
     const outcome = await this.auth.loginWithGoogle(profile, ip);
     // Use URL fragment so tokens don't end up in server logs / referer headers.
     const url = new URL('/auth/callback', Env.APP_URL_INTERNAL);
-    if (isMfaChallenge(outcome)) {
-      // MFA gate — punt the user to the TOTP step. The frontend reads the
-      // fragment and shows the 6-digit input, POSTing /auth/mfa/verify with
-      // the pending token + code to get real tokens.
-      url.hash = new URLSearchParams({
-        mfa_required: '1',
-        mfa_pending_token: outcome.mfaPendingToken,
-      }).toString();
-    } else {
-      url.hash = new URLSearchParams({
-        access_token: outcome.accessToken,
-        refresh_token: outcome.refreshToken,
-        access_expires_at: outcome.accessTokenExpiresAt,
-        refresh_expires_at: outcome.refreshTokenExpiresAt,
-      }).toString();
-    }
+    url.hash = new URLSearchParams({
+      access_token: outcome.accessToken,
+      refresh_token: outcome.refreshToken,
+      access_expires_at: outcome.accessTokenExpiresAt,
+      refresh_expires_at: outcome.refreshTokenExpiresAt,
+    }).toString();
     res.redirect(url.toString());
   }
 
@@ -208,7 +180,6 @@ export class AuthController {
       select: {
         name: true,
         avatarUrl: true,
-        mfaEnabled: true,
       },
     });
     return {
@@ -218,60 +189,7 @@ export class AuthController {
       companyRole: user.companyRole,
       name: profile.name,
       avatarUrl: profile.avatarUrl,
-      mfaEnabled: profile.mfaEnabled,
-      // Round 6 Pass A — surface the workspaceId so the frontend can
-      // include it in queries and gate Workspace-tab affordances.
-      workspaceId: user.workspaceId,
     };
-  }
-
-  // ---------- MFA / TOTP ----------
-
-  @Post('mfa/enroll/start')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Begin TOTP enrollment. Returns QR + raw backup codes (shown once).' })
-  async mfaEnrollStart(@CurrentUser() user: AuthenticatedUser) {
-    return this.mfa.startEnrollment(user.id);
-  }
-
-  @Post('mfa/enroll/verify')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Verify the first TOTP code and enable MFA.' })
-  async mfaEnrollVerify(
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: MfaCodeDto,
-    @Req() req: Request,
-  ) {
-    return this.mfa.verifyEnrollment(user.id, dto.code, {
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
-    });
-  }
-
-  @Public()
-  @Throttle({ auth: { ttl: 60_000, limit: 10 } })
-  @Post('mfa/verify')
-  @ApiOperation({ summary: 'Verify a pending MFA challenge and exchange for real tokens.' })
-  async mfaVerify(@Body() dto: MfaVerifyDto, @Req() req: Request): Promise<TokenPair> {
-    const { userId } = await this.mfa.verifyMfaChallenge(dto.mfaPendingToken, dto.code, {
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
-    });
-    return this.auth.issueTokensForUser(userId, req.ip, req.headers['user-agent']);
-  }
-
-  @Post('mfa/disable')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Disable MFA. Requires a valid TOTP or backup code.' })
-  async mfaDisable(
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: MfaCodeDto,
-    @Req() req: Request,
-  ) {
-    return this.mfa.disable(user.id, dto.code, {
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
-    });
   }
 
   // ---------- Sessions ----------

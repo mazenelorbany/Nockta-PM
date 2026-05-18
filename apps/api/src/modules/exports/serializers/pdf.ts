@@ -15,6 +15,8 @@
 // To enable: `pnpm add pdfkit --filter @nockta/api`.
 // =============================================================================
 
+import { InternalServerErrorException } from '@nestjs/common';
+
 export const PDF_MISSING_MESSAGE =
   "PDF export requires the 'pdfkit' package. Run pnpm add pdfkit to enable.";
 
@@ -32,7 +34,7 @@ export async function renderPdf(
     // @ts-expect-error — dependency is optional; type may not resolve.
     PdfModule = await import('pdfkit');
   } catch {
-    throw new Error(PDF_MISSING_MESSAGE);
+    throw new InternalServerErrorException(PDF_MISSING_MESSAGE);
   }
   const PDFDocument = (PdfModule as { default?: unknown }).default ?? PdfModule;
   // The pdfkit type signature is a constructor — cast through unknown to

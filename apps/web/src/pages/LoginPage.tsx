@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '@nockta/sdk';
 import { NocktaLogo } from '@nockta/ui';
@@ -32,7 +31,6 @@ const MANTRAS = [
 
 export function LoginPage(): JSX.Element {
   const navigate = useNavigate();
-  const { t } = useTranslation();
   const { setTokens, setUser } = useAuth();
   const [loadingPersona, setLoadingPersona] = useState<Persona | null>(null);
 
@@ -72,7 +70,7 @@ export function LoginPage(): JSX.Element {
       const detail =
         err instanceof ApiError
           ? err.problem.title || err.message
-          : t('login.signin_failed', 'Sign-in failed');
+          : 'Sign-in failed';
       toast.error(detail);
     } finally {
       setLoadingPersona(null);
@@ -118,20 +116,20 @@ export function LoginPage(): JSX.Element {
             <NocktaLogo height={32} />
             <span className="nockta-eyebrow text-muted-foreground inline-flex items-center gap-2">
               <span className="inline-block w-2 h-2 rounded-full bg-status-done animate-pulse" />
-              {t('login.build_connect_scale', 'Build · Connect · Scale')}
+              {'Build · Connect · Scale'}
             </span>
           </div>
 
           {/* Headline block — H1 stays 3 lines max, inline image pill in line 2 */}
           <div className="relative z-10 space-y-6 max-w-3xl">
             <span className="nockta-eyebrow text-brand">
-              {t('login.ops_eyebrow', 'Internal Engineering Operations')}
+              {'Internal Engineering Operations'}
             </span>
             <h1
               className="display-heading text-foreground leading-[1.02]"
               style={{ fontSize: 'clamp(3rem, 5.4vw, 5.25rem)' }}
             >
-              {t('login.hero_lead', 'Bringing the')}
+              {'Bringing the'}
               <span
                 className="inline-block align-middle mx-3 lg:mx-4 h-[0.72em] w-[1.5em] rounded-full bg-cover bg-center ring-1 ring-border"
                 style={{
@@ -141,14 +139,11 @@ export function LoginPage(): JSX.Element {
                 }}
                 aria-hidden="true"
               />
-              {t('login.hero_tail', 'pieces')}{' '}
-              <span className="text-brand">{t('login.hero_punc', 'together.')}</span>
+              {'pieces'}{' '}
+              <span className="text-brand">{'together.'}</span>
             </h1>
             <p className="text-base text-muted-foreground max-w-md leading-relaxed">
-              {t(
-                'login.hero_body',
-                'Tasks, sprints, code, deployments, and clients — engineered into one opinionated workspace. Three sides of the same cube.',
-              )}
+              {'Tasks, sprints, code, deployments, and clients — engineered into one opinionated workspace. Three sides of the same cube.'}
             </p>
           </div>
 
@@ -156,15 +151,12 @@ export function LoginPage(): JSX.Element {
           <div className="relative z-10 grid grid-cols-3 grid-rows-2 gap-2.5 max-w-xl auto-rows-fr grid-flow-dense">
             <FeatureTile
               className="col-span-2 row-span-2"
-              kicker={t('login.feature_replaces_kicker', 'What it replaces')}
-              title={t(
-                'login.feature_replaces_title',
-                'Linear, Notion, Slack, GSheets — all routed through one model.',
-              )}
+              kicker={'What it replaces'}
+              title={'Linear, Notion, Slack, GSheets — all routed through one model.'}
               imageSeed="nockta-stack"
             />
-            <StatTile label={t('login.stat_disciplines', 'Disciplines')} value="5" />
-            <StatTile label={t('login.stat_presets', 'Workflow presets')} value="3" />
+            <StatTile label={'Disciplines'} value="5" />
+            <StatTile label={'Workflow presets'} value="3" />
           </div>
         </div>
 
@@ -178,16 +170,13 @@ export function LoginPage(): JSX.Element {
           <div className="w-full max-w-sm space-y-7">
             <div className="space-y-2">
               <span className="nockta-eyebrow text-muted-foreground">
-                {t('login.welcome_back', 'Welcome back')}
+                {'Welcome back'}
               </span>
               <h2 className="text-3xl font-bold tracking-tight">
-                {t('login.title', 'Sign in to Flow')}
+                {'Sign in to Flow'}
               </h2>
               <p className="text-sm text-muted-foreground">
-                {t(
-                  'login.subtitle',
-                  'Internal users sign in with Google. External collaborators use a one-time email link.',
-                )}
+                {'Internal users sign in with Google. External collaborators use a one-time email link.'}
               </p>
             </div>
 
@@ -196,7 +185,7 @@ export function LoginPage(): JSX.Element {
               className="tap flex items-center justify-center gap-2 w-full rounded-md bg-white py-2.5 text-sm font-semibold text-black hover:opacity-90 transition-[opacity,transform] duration-150"
             >
               <GoogleGlyph />
-              {t('login.continue_with_google', 'Continue with Google')}
+              {'Continue with Google'}
             </a>
 
             <MagicLinkForm />
@@ -204,60 +193,60 @@ export function LoginPage(): JSX.Element {
 
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <div className="flex-1 h-px bg-border" />
-              <span className="uppercase tracking-wider">{t('login.or', 'or')}</span>
+              <span className="uppercase tracking-wider">{'or'}</span>
               <div className="flex-1 h-px bg-border" />
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="nockta-eyebrow text-muted-foreground/70">
-                  {t('login.quick_login', 'Quick login · dev only')}
+                  {'Quick login · dev only'}
                 </span>
                 {loadingPersona && (
                   <span className="text-[10px] text-muted-foreground animate-pulse">
-                    {t('login.signing_in', 'signing in…')}
+                    {'signing in…'}
                   </span>
                 )}
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <PersonaButton
-                  label={t('login.persona_admin', 'Admin')}
-                  sub={t('login.persona_admin_sub', 'Full access')}
+                  label={'Admin'}
+                  sub={'Full access'}
                   disabled={loadingPersona !== null}
                   active={loadingPersona === 'admin'}
                   onClick={() => void devLogin('admin')}
                 />
                 <PersonaButton
-                  label={t('login.persona_engineering', 'Engineering')}
-                  sub={t('login.persona_engineering_sub', 'Member · Eng team')}
+                  label={'Engineering'}
+                  sub={'Member · Eng team'}
                   disabled={loadingPersona !== null}
                   active={loadingPersona === 'engineering'}
                   onClick={() => void devLogin('engineering')}
                 />
                 <PersonaButton
-                  label={t('login.persona_design', 'Design')}
-                  sub={t('login.persona_design_sub', 'Member · Design team')}
+                  label={'Design'}
+                  sub={'Member · Design team'}
                   disabled={loadingPersona !== null}
                   active={loadingPersona === 'design'}
                   onClick={() => void devLogin('design')}
                 />
                 <PersonaButton
-                  label={t('login.persona_guest_contributor', 'Guest · Contributor')}
-                  sub={t('login.persona_guest_contributor_sub', 'External · can edit')}
+                  label={'Guest · Contributor'}
+                  sub={'External · can edit'}
                   disabled={loadingPersona !== null}
                   active={loadingPersona === 'guest-contributor'}
                   onClick={() => void devLogin('guest-contributor')}
                 />
                 <PersonaButton
-                  label={t('login.persona_guest_viewer', 'Guest · Viewer')}
-                  sub={t('login.persona_guest_viewer_sub', 'External · read-only')}
+                  label={'Guest · Viewer'}
+                  sub={'External · read-only'}
                   disabled={loadingPersona !== null}
                   active={loadingPersona === 'guest-viewer'}
                   onClick={() => void devLogin('guest-viewer')}
                 />
                 <PersonaButton
-                  label={t('login.persona_guest_client', 'Guest · Client')}
-                  sub={t('login.persona_guest_client_sub', 'Bug reports only')}
+                  label={'Guest · Client'}
+                  sub={'Bug reports only'}
                   disabled={loadingPersona !== null}
                   active={loadingPersona === 'guest-client'}
                   onClick={() => void devLogin('guest-client')}
@@ -266,7 +255,7 @@ export function LoginPage(): JSX.Element {
             </div>
 
             <p className="nockta-eyebrow text-muted-foreground/60 text-center pt-4">
-              {t('login.version_footer', 'v0.1 · Internal Engineering Operations')}
+              {'v0.1 · Internal Engineering Operations'}
             </p>
           </div>
         </div>
@@ -375,7 +364,6 @@ function FeatureTile({
 // users. POSTs /auth/magic-link/request and shows a "check your email"
 // confirmation. The email lands on /auth/magic via MagicLinkCallbackPage.
 function MagicLinkForm(): JSX.Element {
-  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -401,10 +389,10 @@ function MagicLinkForm(): JSX.Element {
     return (
       <div className="rounded-md border border-border bg-secondary/40 p-3 space-y-1">
         <p className="text-sm text-foreground">
-          {t('login.magic_link_sent', 'Check your email')}
+          {'Check your email'}
         </p>
         <p className="text-xs text-muted-foreground">
-          {t('login.magic_link_sent_sub', "We sent a one-time sign-in link to {{email}}. It expires in 15 minutes.", { email })}
+          {`We sent a one-time sign-in link to ${email}. It expires in 15 minutes.`}
         </p>
         <button
           type="button"
@@ -414,7 +402,7 @@ function MagicLinkForm(): JSX.Element {
           }}
           className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline mt-1"
         >
-          {t('login.magic_link_send_again', 'Use a different email')}
+          {'Use a different email'}
         </button>
       </div>
     );
@@ -423,7 +411,7 @@ function MagicLinkForm(): JSX.Element {
   return (
     <form onSubmit={(e) => void onSubmit(e)} className="space-y-2">
       <label className="nockta-eyebrow text-muted-foreground/70 block">
-        {t('login.magic_link_label', 'Email me a sign-in link')}
+        {'Email me a sign-in link'}
       </label>
       <div className="flex gap-2">
         <input
@@ -441,8 +429,8 @@ function MagicLinkForm(): JSX.Element {
           className="tap rounded-md bg-secondary px-3 py-2 text-xs font-medium text-foreground hover:bg-secondary/80 disabled:opacity-50 transition-colors"
         >
           {sending
-            ? t('login.magic_link_sending', 'Sending…')
-            : t('login.magic_link_send', 'Send link')}
+            ? 'Sending…'
+            : 'Send link'}
         </button>
       </div>
     </form>

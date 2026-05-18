@@ -4,7 +4,6 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ApiError } from '@nockta/sdk';
 import { cn, EmptyState, QueryErrorState, SkeletonList } from '@nockta/ui';
@@ -43,7 +42,6 @@ interface ProjectSummary {
 }
 
 export function InboxPage(): JSX.Element {
-  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>('unread');
   const [projectId, setProjectId] = useState<string>('');
@@ -147,13 +145,13 @@ export function InboxPage(): JSX.Element {
         <div className="flex items-end justify-between gap-4 flex-wrap">
           <div>
             <span className="nockta-eyebrow text-muted-foreground inline-flex items-center gap-1.5">
-              <Inbox className="h-3 w-3" /> {t('inbox.eyebrow', 'Inbox')}
+              <Inbox className="h-3 w-3" /> {'Inbox'}
             </span>
             <h1 className="text-xl font-semibold tracking-tight mt-1">
-              {t('inbox.title', 'Notifications')}
+              {'Notifications'}
             </h1>
             <p className="text-xs text-muted-foreground mt-1">
-              {t('inbox.subtitle', 'Everything addressed to you across every project.')}
+              {'Everything addressed to you across every project.'}
             </p>
           </div>
           <button
@@ -163,20 +161,20 @@ export function InboxPage(): JSX.Element {
             className="tap inline-flex items-center gap-2 rounded-md border border-border bg-background/60 px-3 py-1.5 text-xs hover:bg-accent transition-colors disabled:opacity-50"
           >
             <CheckCheck className="h-3.5 w-3.5" />
-            {t('notifications_bell.mark_all_read', 'Mark all read')}
+            {'Mark all read'}
           </button>
         </div>
 
         {/* Tabs */}
         <div className="mt-5 flex items-center gap-1 flex-wrap">
           <TabButton active={tab === 'all'} onClick={() => setTab('all')} icon={<Bell className="h-3.5 w-3.5" />}>
-            {t('inbox.tab_all', 'All')}
+            {'All'}
           </TabButton>
           <TabButton active={tab === 'unread'} onClick={() => setTab('unread')} icon={<Bell className="h-3.5 w-3.5" />}>
-            {t('inbox.tab_unread', 'Unread')}
+            {'Unread'}
           </TabButton>
           <TabButton active={tab === 'mentions'} onClick={() => setTab('mentions')} icon={<AtSign className="h-3.5 w-3.5" />}>
-            {t('inbox.tab_mentions', 'Mentions')}
+            {'Mentions'}
           </TabButton>
 
           <div className="h-4 w-px bg-border mx-2" />
@@ -186,7 +184,7 @@ export function InboxPage(): JSX.Element {
             onChange={(e) => setProjectId(e.target.value)}
             className="field text-xs py-1.5"
           >
-            <option value="">{t('inbox.all_projects', 'All projects')}</option>
+            <option value="">{'All projects'}</option>
             {(projectsQuery.data ?? []).map((p) => (
               <option key={p.id} value={p.id}>{p.key} · {p.name}</option>
             ))}

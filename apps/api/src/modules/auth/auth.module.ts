@@ -10,12 +10,10 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { MailService } from './mail.service';
-import { MfaService } from './mfa.service';
 import { SessionService } from './session.service';
 import { SessionsService } from './sessions.service';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { TotpService } from './totp.service';
 
 @Module({
   imports: [
@@ -32,8 +30,6 @@ import { TotpService } from './totp.service';
     MailService,
     SessionService,
     SessionsService,
-    TotpService,
-    MfaService,
     AuditLogService,
     GoogleStrategy,
     JwtStrategy,
@@ -48,8 +44,6 @@ import { TotpService } from './totp.service';
     RolesGuard,
     MailService,
     AuditLogService,
-    MfaService,
-    TotpService,
     SessionsService,
   ],
 })

@@ -60,7 +60,6 @@ export interface RecordUsageInput {
   /** 'ok' (default), 'budget_exceeded', or 'error'. */
   status?: 'ok' | 'budget_exceeded' | 'error';
   userId?: string | null;
-  workspaceId?: string;
 }
 
 export interface DailySummaryPoint {
@@ -104,9 +103,6 @@ export class AiCostTrackingService {
     try {
       await this.prisma.aiUsageEvent.create({
         data: {
-          // TODO(R6-multi-tenant): inject WorkspaceContextService and use the
-          // active workspace id instead of the literal default.
-          workspaceId: input.workspaceId ?? 'default',
           kind: input.kind,
           modelName: input.modelName,
           inputTokens: Math.max(0, Math.trunc(input.inputTokens)),
@@ -156,13 +152,12 @@ export class AiCostTrackingService {
    * second grouping query — small index hit, far less data than streaming
    * every row to the API.
    */
-  async summary(opts: { since: Date; until: Date; workspaceId?: string }): Promise<{
+  async summary(opts: { since: Date; until: Date }): Promise<{
     days: DailySummaryPoint[];
     totalCostCents: number;
   }> {
     const since = opts.since;
     const until = opts.until;
-    const workspaceId = opts.workspaceId ?? 'default';
 
     const rows = await this.prisma.$queryRaw<
       { day: Date; kind: string; modelName: string; cost: bigint }[]
@@ -172,8 +167,7 @@ export class AiCostTrackingService {
              "modelName",
              SUM("costUsdCents")::bigint AS cost
       FROM "AiUsageEvent"
-      WHERE "workspaceId" = ${workspaceId}
-        AND "createdAt" >= ${since}
+      WHERE "createdAt" >= ${since}
         AND "createdAt" < ${until}
         AND status = 'ok'
       GROUP BY 1, 2, 3

@@ -213,76 +213,11 @@ enum CustomFieldKind {
 }
 
 // -----------------------------------------------------------------------------
-// Workspace — multi-tenant boundary
-//
-// One row per tenant. Every per-tenant resource (Project, User,
-// OutboundWebhook, WorkspaceAiSettings, AuditLogEntry, TaskTemplate)
-// carries a `workspaceId` FK back here. Single-tenant deployments boot
-// with a single row id='default' seeded by migration 0009 and every
-// existing row attached to it.
-//
-// `settings` is a free-form JSON blob — feature flags, branding, default
-// timezone, etc. Strongly-typed knobs (AI thresholds, etc.) live on
-// their own per-workspace tables (WorkspaceAiSettings).
-// -----------------------------------------------------------------------------
-
-model Workspace {
-  id        String   @id
-  name      String
-  slug      String   @unique
-  settings  Json     @default("{}")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  users             User[]
-  projects          Project[]
-  outboundWebhooks  OutboundWebhook[]
-  webhookDeliveries WebhookDelivery[]
-  aiSettings        WorkspaceAiSettings?
-  auditLogEntries   AuditLogEntry[]
-  taskTemplates     TaskTemplate[]
-  members           WorkspaceMember[]
-}
-
-/// Per-user membership in a workspace. A User can belong to multiple
-/// workspaces, each with a `Owner | Admin | Member` role. The bootstrap
-/// migration (0013_workspace_members) backfills one row per existing User
-/// into the 'default' workspace so the single-tenant path stays unchanged.
-///
-/// Why a separate join table instead of widening User.companyRole:
-///   - `companyRole` is a coarse company-wide tier (Admin vs Member of
-///     the Nockta org). `WorkspaceMember.role` is fine-grained: a user
-///     can be Admin in workspace A and a Member in workspace B without
-///     polluting their company-level role.
-///   - The same User row needs to participate in multiple workspaces in
-///     the multi-tenant future; a foreign key on User can only point at
-///     one workspace. The join table breaks that 1:1.
-///
-/// `role` is a string (not an enum) so adding a new tier (e.g. Viewer)
-/// doesn't require a Postgres enum migration.
-model WorkspaceMember {
-  workspaceId String
-  userId      String   @db.Uuid
-  /// One of 'Owner' | 'Admin' | 'Member'. Validated at the service layer
-  /// (WorkspaceService.assertMember).
-  role        String
-  createdAt   DateTime @default(now())
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user      User      @relation("WorkspaceMemberUser", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@id([workspaceId, userId])
-  @@index([userId])
-  @@index([workspaceId, role])
-}
-
-// -----------------------------------------------------------------------------
 // Identity & auth
 // -----------------------------------------------------------------------------
 
 model User {
   id          String   @id @default(uuid()) @db.Uuid
-  workspaceId String
   email       String   @unique @db.Citext
   kind        UserKind
   companyRole CompanyRole? // null for clients
@@ -292,15 +227,6 @@ model User {
   archivedAt  DateTime?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
-
-  // ---- MFA / two-factor auth ----
-  /// Base32-encoded TOTP secret, encrypted at rest via AES-GCM
-  /// (TotpService.encryptSecret). Null = no MFA enrolled.
-  totpSecret    String?
-  mfaEnabled    Boolean   @default(false)
-  /// SHA-256-hashed one-time backup codes. Consumed on use (the matching hash
-  /// is removed from the array). Generated 10-at-a-time on enrollment.
-  mfaBackupCodes String[]  @default([])
 
   // ---- Time-tracking preferences ----
   /// Optional weekly worklog target in hours. When set, the personal dashboard
@@ -369,10 +295,8 @@ model User {
   notificationMutes     NotificationMute[]
   notificationSnoozeRules NotificationSnoozeRule[]
   outboundWebhooksCreated OutboundWebhook[]      @relation("OutboundWebhookCreator")
-  pushSubscriptions     PushSubscription[]
   aiUsageEvents         AiUsageEvent[]            @relation("AiUsageEventUser")
   exportSchedulesCreated ExportSchedule[]         @relation("ExportScheduleCreator")
-  workspaceMemberships  WorkspaceMember[]         @relation("WorkspaceMemberUser")
   // Pass I (Notifications 8→9) — batched digest queue, one row per user/channel.
   notificationDigests   NotificationDigest[]
   // Pass I (Sprints 8→9) — retro authorship + goal-hit evaluation.
@@ -383,57 +307,25 @@ model User {
   // Pass I (Analytics 8→9) — author of a saved custom report definition.
   customReportsCreated  CustomReport[]            @relation("CustomReportCreator")
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-
   @@index([kind])
   @@index([googleId])
-  @@index([workspaceId])
 }
 
-/// Browser Web Push subscriptions for a user. One row per (user, endpoint) —
-/// the endpoint is the URL the push service (FCM/Apple/Mozilla) uses to
-/// deliver pushes. A user can have multiple rows (one per device/browser).
-///
-/// Pruned automatically when the push service returns 410 Gone for an
-/// endpoint — see WebPushService.dispatch.
-model PushSubscription {
-  id         String   @id @default(uuid()) @db.Uuid
-  userId     String   @db.Uuid
-  endpoint   String   @unique
-  /// Base64url-encoded P-256 public key portion of the subscription. Passed
-  /// verbatim to the `web-push` library at dispatch time.
-  p256dh     String
-  /// Base64url-encoded auth secret. Same — pass-through to `web-push`.
-  auth       String
-  /// Optional free-form label so users can identify devices in a future
-  /// Settings → Devices UI. Null = unlabeled.
-  label      String?
-  createdAt  DateTime @default(now())
-  lastSeenAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-/// Append-only log of user-facing security events: logins, MFA enrollment/use,
-/// session revocations. Surfaced in Settings → Security → Recent activity.
+/// Append-only log of user-facing security events: logins, session revocations.
+/// Surfaced in Settings → Security → Recent activity.
 model AuditLogEntry {
   id          String   @id @default(uuid()) @db.Uuid
-  workspaceId String
   userId      String?  @db.Uuid
-  action      String   // 'login.password', 'login.google', 'mfa.enrolled', 'mfa.verified', 'mfa.failed', 'logout', 'session.revoked', etc.
+  action      String   // 'login.password', 'login.google', 'logout', 'session.revoked', etc.
   ip          String?
   userAgent   String?
   metadata    Json?
   createdAt   DateTime @default(now())
 
   user      User?     @relation("AuditLogUser", fields: [userId], references: [id], onDelete: SetNull)
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@index([userId, createdAt])
   @@index([action])
-  @@index([workspaceId])
 }
 
 model RefreshToken {
@@ -517,7 +409,6 @@ model TeamMember {
 
 model Project {
   id              String            @id @default(uuid()) @db.Uuid
-  workspaceId     String
   key             String            @unique // immutable, 2-10 uppercase
   name            String
   description     String?
@@ -563,10 +454,8 @@ model Project {
   commentTemplates    CommentTemplate[]
   // Pass I (Analytics 8→9) — saved reports may be project-scoped.
   customReports       CustomReport[]
-  workspace           Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@index([archivedAt])
-  @@index([workspaceId])
 }
 
 model ProjectAccess {
@@ -1500,7 +1389,6 @@ model CustomFieldValue {
 
 model TaskTemplate {
   id            String    @id @default(uuid()) @db.Uuid
-  workspaceId   String
   projectId     String    @db.Uuid
   name          String
   /// Defaults to ProjectAccess filter when creating, free-form for the user.
@@ -1529,12 +1417,10 @@ model TaskTemplate {
 
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdBy User    @relation("TaskTemplateCreator", fields: [createdById], references: [id])
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@unique([projectId, name])
   @@index([projectId])
   @@index([tags])
-  @@index([workspaceId])
 }
 
 // -----------------------------------------------------------------------------
@@ -1732,9 +1618,8 @@ model IdempotencyKey {
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
-// Workspace-wide AI knobs. Singleton row — Workspace isn't modeled as an
-// entity (Nockta Flow is single-workspace per database), so we enforce
-// uniqueness via a constant `singleton: 1` int with @unique.
+// AI knobs. Singleton row enforced via the constant `singleton: 1` int with
+// @unique.
 //
 // `dupThreshold` is read by the duplicate-detection processor at runtime
 // (replacing the previous Env.AI_DUP_THRESHOLD constant); `modelPreference`
@@ -1745,13 +1630,9 @@ model IdempotencyKey {
 
 model WorkspaceAiSettings {
   id                    String   @id @default(uuid()) @db.Uuid
-  /// Per-workspace singleton — at most one row per workspaceId. Migration
-  /// 0009 promoted the legacy global singleton (singleton=1 unique) into a
-  /// workspace-scoped unique on workspaceId. The `singleton` column stays
-  /// for back-compat with seed/test code that writes `{ singleton: 1, ... }`,
-  /// but the meaningful uniqueness is now on `workspaceId`.
-  singleton             Int      @default(1)
-  workspaceId           String   @unique
+  /// Singleton row — at most one. The `singleton` column carries a unique
+  /// constraint and seed/test code writes `{ singleton: 1, ... }`.
+  singleton             Int      @default(1) @unique
   /// Cosine similarity threshold for the duplicate-detection processor.
   /// 0.7..0.99 in the UI; the service clamps writes into that range.
   dupThreshold          Float    @default(0.85)
@@ -1787,10 +1668,6 @@ model WorkspaceAiSettings {
   settings              Json     @default("{\"features\":{\"duplicateDetection\":true,\"prioritySuggestion\":true,\"standupSynthesis\":true,\"sprintPlanning\":true},\"monthlyBudgetUsdCents\":{}}")
   updatedAt             DateTime @updatedAt
   updatedById           String   @db.Uuid
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-
-  @@index([workspaceId])
 }
 
 // -----------------------------------------------------------------------------
@@ -1799,14 +1676,10 @@ model WorkspaceAiSettings {
 //   - /ai/usage/summary cost dashboard (daily aggregates, byKind, byModel).
 //   - Per-kind monthly budget gates in the processors (sum costUsdCents for
 //     the current calendar month and short-circuit when over budget).
-// `workspaceId` is currently the constant `'default'` (single-workspace
-// database) but kept as a column so the multi-tenant pass (R6) can wire
-// WorkspaceContextService through without a migration.
 // -----------------------------------------------------------------------------
 
 model AiUsageEvent {
   id            String   @id @default(uuid()) @db.Uuid
-  workspaceId   String   @default("default")
   /// 'duplicate' | 'prioritize' | 'summarize' | 'standup' | 'sprint_planning'
   /// — matches the AI feature toggles. `budget_exceeded` is recorded with
   /// costUsdCents=0 when a feature is short-circuited so the dashboard can
@@ -1827,7 +1700,7 @@ model AiUsageEvent {
 
   user User? @relation("AiUsageEventUser", fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([workspaceId, createdAt])
+  @@index([createdAt])
   @@index([kind, createdAt])
 }
 
@@ -1884,22 +1757,21 @@ model ImportRun {
 }
 
 // -----------------------------------------------------------------------------
-// JiraStatusMap — workspace-scoped overrides for the Jira-CSV importer.
+// JiraStatusMap — global overrides for the Jira-CSV importer.
 //
 // The Jira-CSV adapter ships an in-code preset table (JIRA_STATUS_PRESETS)
-// keyed by `workflowPreset`. This model lets a workspace admin pin per-name
-// overrides on top of that table so the mapper UI starts from a sensible
-// default without re-entering the same `Awaiting Triage → Todo` row on
-// every import. Per-run overrides supplied via the mapper still beat these
-// rows; this is the *default* layer.
+// keyed by `workflowPreset`. This model lets an admin pin per-name overrides
+// on top of that table so the mapper UI starts from a sensible default
+// without re-entering the same `Awaiting Triage → Todo` row on every import.
+// Per-run overrides supplied via the mapper still beat these rows; this is
+// the *default* layer.
 // -----------------------------------------------------------------------------
 
 model JiraStatusMap {
   id           String   @id @default(uuid()) @db.Uuid
-  workspaceId  String
   /// Original Jira status name as it appears in the CSV. Stored lowercased
   /// for case-insensitive lookups.
-  jiraStatus   String
+  jiraStatus   String   @unique
   /// Nockta status string the destination project's workflow accepts.
   nocktaStatus String
   createdAt    DateTime @default(now())
@@ -1907,17 +1779,14 @@ model JiraStatusMap {
   createdById  String   @db.Uuid
 
   createdBy User @relation("JiraStatusMapCreator", fields: [createdById], references: [id])
-
-  @@unique([workspaceId, jiraStatus])
-  @@index([workspaceId])
 }
 
 // -----------------------------------------------------------------------------
-// Outbound webhooks (workspace-level fan-out)
+// Outbound webhooks (global fan-out)
 //
 // Distinct from automation-rule `send_webhook` (which fires a one-shot HTTP
 // POST when an automation matches a project-scoped trigger). OutboundWebhook
-// targets the broader "wire workspace events to my external system" use case:
+// targets the broader "wire events to my external system" use case:
 //   - Subscribers register a URL + a list of event types they want.
 //   - The dispatcher catches the existing EventEmitter2 stream (task.created,
 //     comment.added, sprint.started, deploy.succeeded, automation.fired, ...)
@@ -1925,15 +1794,10 @@ model JiraStatusMap {
 //   - The processor retries with 1s/5s/30s/5m/30m backoff (5 attempts) and
 //     auto-disables a webhook after 5 consecutive terminal failures so a
 //     dead receiver doesn't pile retries forever.
-//
-// `workspaceId` is a free-form String today (Nockta Flow is single-workspace
-// per DB; callers pass a constant like 'default'). The column is here so the
-// model is forward-compatible with a multi-tenant split.
 // -----------------------------------------------------------------------------
 
 model OutboundWebhook {
   id              String    @id @default(uuid()) @db.Uuid
-  workspaceId     String
   name            String
   /// Receiver URL — must be http(s); validated at the app layer.
   url             String
@@ -1956,22 +1820,14 @@ model OutboundWebhook {
   createdById     String    @db.Uuid
 
   createdBy  User              @relation("OutboundWebhookCreator", fields: [createdById], references: [id])
-  workspace  Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   deliveries WebhookDelivery[]
 
-  @@index([workspaceId, enabled])
-  @@index([workspaceId])
+  @@index([enabled])
 }
 
 model WebhookDelivery {
   id              String    @id @default(uuid()) @db.Uuid
   webhookId       String    @db.Uuid
-  /// Mirror of OutboundWebhook.workspaceId — denormalised onto the delivery
-  /// row so the per-workspace deliveries dashboard (and any future
-  /// cross-tenant audit) can filter without a join. Backfilled from
-  /// OutboundWebhook.workspaceId by migration 0013. Defaults to the
-  /// bootstrap workspace so legacy rows remain valid.
-  workspaceId     String    @default("default")
   /// Event type that triggered the delivery (e.g. 'task.created').
   eventType       String
   /// Snapshot of the JSON body that was/will be POSTed. Stored so the user
@@ -1992,10 +1848,8 @@ model WebhookDelivery {
   createdAt       DateTime  @default(now())
 
   webhook   OutboundWebhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
-  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@index([webhookId, createdAt(sort: Desc)])
-  @@index([workspaceId, createdAt(sort: Desc)])
 }
 
 // -----------------------------------------------------------------------------
@@ -2011,13 +1865,10 @@ model WebhookDelivery {
 //     `expiresAt` (default = createdAt + 24h); a stale row keeps the storage
 //     key so the maintenance cron can purge the underlying object on retention.
 //
-// Both rows are workspace-scoped via a free-form string column (same pattern
-// as OutboundWebhook) so multi-tenant lands without a migration.
 // -----------------------------------------------------------------------------
 
 model ExportSchedule {
   id            String   @id @default(uuid()) @db.Uuid
-  workspaceId   String   @default("default")
   /// Human label shown in the UI list.
   name          String
   /// 'csv' | 'xlsx' | 'pdf' — the file format the run will produce.
@@ -2060,8 +1911,8 @@ model ExportSchedule {
   createdBy User        @relation("ExportScheduleCreator", fields: [createdById], references: [id])
   runs      ExportRun[]
 
-  @@index([workspaceId, enabled])
-  @@index([workspaceId, sourceKind])
+  @@index([enabled])
+  @@index([sourceKind])
   @@index([createdById])
 }
 
@@ -2183,14 +2034,13 @@ model SprintGoalEvaluation {
 // =============================================================================
 
 /// Reusable comment snippets. Two scopes:
-///   - projectId = null  → workspace-wide template (every project sees it)
+///   - projectId = null  → global template (every project sees it)
 ///   - projectId set     → only that project's task comment composer sees it
 /// The Activity composer fetches both and merges; project templates shadow
-/// workspace templates of the same name visually but are not enforced unique.
+/// global templates of the same name visually but are not enforced unique.
 model CommentTemplate {
   id              String   @id @default(uuid()) @db.Uuid
-  workspaceId     String   @default("default")
-  /// Nullable for workspace-wide templates. When set, the template only shows
+  /// Nullable for global templates. When set, the template only shows
   /// up in that project's tasks.
   projectId       String?  @db.Uuid
   name            String
@@ -2202,7 +2052,6 @@ model CommentTemplate {
   project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdBy User?    @relation("CommentTemplateCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
-  @@index([workspaceId, projectId])
   @@index([projectId])
 }
 
@@ -2228,7 +2077,6 @@ model CommentTemplate {
 ///     dueBefore?: ISOString }
 model CustomReport {
   id              String   @id @default(uuid()) @db.Uuid
-  workspaceId     String   @default("default")
   name            String
   /// String array — allowlisted at the service layer. Stored verbatim so future
   /// dimensions can ship without a column migration.
@@ -2245,7 +2093,6 @@ model CustomReport {
   project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdBy User?    @relation("CustomReportCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
-  @@index([workspaceId])
   @@index([projectId])
   @@index([createdByUserId])
 }

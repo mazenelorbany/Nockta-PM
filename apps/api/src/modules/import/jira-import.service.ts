@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import {
   type PrismaClient,
   type Priority,
@@ -250,7 +250,6 @@ export class JiraImportService {
           workflowPreset: preset,
           sprintsEnabled: false,
           createdById: admin.id,
-          workspaceId: 'default',
         },
         select: { id: true, key: true },
       });
@@ -305,7 +304,6 @@ export class JiraImportService {
           name: merged.displayName ?? email,
           kind: 'internal',
           companyRole: 'Member',
-          workspaceId: 'default',
         },
         select: { id: true },
       });
@@ -316,6 +314,7 @@ export class JiraImportService {
     const labelCache = new Map<string, string>();
     const ensureLabel = async (name: string, color: string): Promise<string> => {
       const trimmed = name.trim();
+      // internal: not reached from an HTTP request — background executeRun; caught + logged in importRuns.
       if (!trimmed) throw new Error('empty label');
       const cached = labelCache.get(trimmed.toLowerCase());
       if (cached) return cached;
@@ -535,7 +534,7 @@ async function jira<T>(
   const res = await fetch(url, { headers: { Authorization: auth, Accept: 'application/json' } });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    throw new Error(`Jira ${path} → ${res.status} ${res.statusText}\n${body.slice(0, 500)}`);
+    throw new InternalServerErrorException(`Jira ${path} → ${res.status} ${res.statusText}\n${body.slice(0, 500)}`);
   }
   return res.json() as Promise<T>;
 }
@@ -722,6 +721,7 @@ async function pickUniqueKey(
     n++;
     const suffix = String(n);
     candidate = base.slice(0, Math.max(2, 10 - suffix.length)) + suffix;
+    // internal: not reached from an HTTP request — pure helper called from background executeRun; caught + logged.
     if (n > 99) throw new Error(`Could not derive a unique key from ${jiraKey}`);
   }
   return candidate;

@@ -31,8 +31,6 @@ function defaultsRow(updatedById = 'u-admin') {
   return {
     id: 'cfg-1',
     singleton: 1,
-    // workspaceId is now the meaningful uniqueness key (migration 0009).
-    workspaceId: 'default',
     dupThreshold: 0.85,
     priorityWeights: { deadline: 1, blocked: 2, customerImpact: 1.5 },
     autoSuggestEnabled: true,
@@ -58,7 +56,7 @@ describe('WorkspaceAiSettingsService.get — singleton bootstrap', () => {
     const row = await svc.get('u-admin');
 
     expect(prisma.workspaceAiSettings.create).toHaveBeenCalledWith({
-      data: { singleton: 1, workspaceId: 'default', updatedById: 'u-admin' },
+      data: { singleton: 1, updatedById: 'u-admin' },
     });
     expect(row.dupThreshold).toBe(0.85);
     expect(row.modelPreference).toBe('auto');
@@ -80,7 +78,7 @@ describe('WorkspaceAiSettingsService.get — singleton bootstrap', () => {
 
     const row = await svc.get();
     expect(prisma.workspaceAiSettings.create).toHaveBeenCalledWith({
-      data: { singleton: 1, workspaceId: 'default', updatedById: 'u-admin-fallback' },
+      data: { singleton: 1, updatedById: 'u-admin-fallback' },
     });
     expect(row.updatedById).toBe('u-admin-fallback');
   });

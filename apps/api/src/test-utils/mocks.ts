@@ -214,28 +214,6 @@ export function makePrismaMock(): PrismaService {
       'update',
       'upsert',
     ]),
-    // Workspace + WorkspaceMember — Round 6 Pass A. Multi-tenant boundary.
-    workspace: model([
-      'findUnique',
-      'findUniqueOrThrow',
-      'findFirst',
-      'findMany',
-      'create',
-      'update',
-      'delete',
-    ]),
-    workspaceMember: model([
-      'findUnique',
-      'findFirst',
-      'findMany',
-      'count',
-      'create',
-      'createMany',
-      'upsert',
-      'update',
-      'delete',
-      'deleteMany',
-    ]),
     // Templates carry the cross-project gallery + tag list endpoints. Tests
     // hitting the listGallery / listGalleryTags paths read findMany; the
     // create/update paths are already covered by the basic CRUD list.

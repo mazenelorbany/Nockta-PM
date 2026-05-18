@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import {
   type PrismaClient,
   type Priority,
@@ -250,7 +250,6 @@ export class LinearImportService {
           visibility: 'teams',
           workflowPreset: preset,
           createdById: admin.id,
-          workspaceId: 'default',
         },
         select: { id: true, key: true, workflowPreset: true },
       });
@@ -285,7 +284,7 @@ export class LinearImportService {
       const u = await prisma.user.upsert({
         where: { email },
         update: {},
-        create: { email, name, kind: 'internal', companyRole: 'Member', workspaceId: 'default' },
+        create: { email, name, kind: 'internal', companyRole: 'Member' },
         select: { id: true },
       });
       userCache.set(linearId, u.id);
@@ -418,13 +417,13 @@ async function gql<T>(
     body: JSON.stringify({ query, variables }),
   });
   if (!res.ok) {
-    throw new Error(`Linear API ${res.status}: ${await res.text()}`);
+    throw new InternalServerErrorException(`Linear API ${res.status}: ${await res.text()}`);
   }
   const body = (await res.json()) as GraphQLResponse<T>;
   if (body.errors && body.errors.length > 0) {
-    throw new Error(`Linear GraphQL errors: ${body.errors.map((e) => e.message).join('; ')}`);
+    throw new InternalServerErrorException(`Linear GraphQL errors: ${body.errors.map((e) => e.message).join('; ')}`);
   }
-  if (!body.data) throw new Error('Linear API returned no data');
+  if (!body.data) throw new InternalServerErrorException('Linear API returned no data');
   return body.data;
 }
 

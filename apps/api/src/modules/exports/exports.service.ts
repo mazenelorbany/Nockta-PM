@@ -1,11 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
-  Inject,
   Injectable,
   Logger,
   NotFoundException,
-  Optional,
   type OnModuleInit,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
@@ -13,7 +11,6 @@ import { Prisma } from '@prisma/client';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { AuthenticatedUser } from '../auth/types';
-import { WorkspaceContextService } from '../workspace/workspace-context.service';
 
 // =============================================================================
 // ExportsService — workspace-scoped scheduled/on-demand data exports.
@@ -95,9 +92,6 @@ export class ExportsService implements OnModuleInit {
 
   constructor(
     private readonly prisma: PrismaService,
-    @Optional()
-    @Inject(WorkspaceContextService)
-    private readonly workspaceCtx: WorkspaceContextService | null,
     @InjectQueue(EXPORTS_QUEUE) private readonly queue: Queue<ExportJobPayload>,
   ) {}
 
@@ -121,7 +115,6 @@ export class ExportsService implements OnModuleInit {
     }
     if (input.scheduleCron) this.validateCron(input.scheduleCron);
 
-    const workspaceId = await this.resolveWorkspace(actor);
     // Mirror to legacy `query` blob so a pre-0015 reader can still parse it.
     const legacyQuery: Prisma.InputJsonValue = {
       source: this.toLegacySource(input.sourceKind),
@@ -135,7 +128,6 @@ export class ExportsService implements OnModuleInit {
 
     const created = await this.prisma.exportSchedule.create({
       data: {
-        workspaceId,
         name: input.name.trim(),
         kind: input.kind,
         sourceKind: input.sourceKind,
@@ -155,10 +147,8 @@ export class ExportsService implements OnModuleInit {
     return this.shapeSchedule(created);
   }
 
-  async listSchedules(actor: AuthenticatedUser) {
-    const workspaceId = await this.resolveWorkspace(actor);
+  async listSchedules(_actor: AuthenticatedUser) {
     const rows = await this.prisma.exportSchedule.findMany({
-      where: { workspaceId },
       orderBy: { createdAt: 'desc' },
     });
     return rows.map((r) => this.shapeSchedule(r));
@@ -262,10 +252,6 @@ export class ExportsService implements OnModuleInit {
   }
 
   async listRecentRuns(actor: AuthenticatedUser, opts: { scheduleId?: string; take?: number } = {}) {
-    const workspaceId = await this.resolveWorkspace(actor);
-    // Filter via the schedule's workspace when a scheduleId is supplied; for
-    // workspace-wide history we still walk through the schedule join so a
-    // user can't see a run that belongs to another workspace's schedule.
     const take = Math.min(200, Math.max(1, opts.take ?? 50));
     if (opts.scheduleId) {
       await this.requireSchedule(actor, opts.scheduleId);
@@ -276,23 +262,7 @@ export class ExportsService implements OnModuleInit {
       });
       return runs.map((r) => this.shapeRun(r));
     }
-    const scheduleIds = (
-      await this.prisma.exportSchedule.findMany({
-        where: { workspaceId },
-        select: { id: true },
-      })
-    ).map((s) => s.id);
     const runs = await this.prisma.exportRun.findMany({
-      where: {
-        OR: [
-          { scheduleId: { in: scheduleIds.length > 0 ? scheduleIds : ['__none__'] } },
-          // One-off inline runs have no scheduleId — surface them too. They
-          // aren't workspace-scoped in the schema, but the API only emits
-          // them in the authenticated user's workspace, so a slight blur
-          // here is acceptable.
-          { scheduleId: null },
-        ],
-      },
       orderBy: { createdAt: 'desc' },
       take,
     });
@@ -385,28 +355,16 @@ export class ExportsService implements OnModuleInit {
   // Internals
   // ===========================================================================
 
-  private async resolveWorkspace(actor: AuthenticatedUser): Promise<string> {
-    if (this.workspaceCtx) return this.workspaceCtx.resolveForUser(actor.id);
-    return 'default';
-  }
-
-  private async requireSchedule(actor: AuthenticatedUser, id: string) {
+  private async requireSchedule(_actor: AuthenticatedUser, id: string) {
     const row = await this.prisma.exportSchedule.findUnique({ where: { id } });
     if (!row) throw new NotFoundException('Export schedule not found');
-    const workspaceId = await this.resolveWorkspace(actor);
-    if (row.workspaceId !== workspaceId) {
-      // Don't leak existence across workspaces — return the same 404 as if
-      // the row didn't exist at all.
-      throw new NotFoundException('Export schedule not found');
-    }
     return row;
   }
 
   private async assertRunOwnership(actor: AuthenticatedUser, run: { scheduleId: string | null }): Promise<void> {
     if (!run.scheduleId) {
-      // Inline runs have no schedule. We can't reliably scope by workspace
-      // here — accept the read iff the caller is an internal user. Clients
-      // should never see these.
+      // Inline runs have no schedule — accept the read iff the caller is an
+      // internal user. Clients should never see these.
       if (actor.kind !== 'internal') {
         throw new NotFoundException('Export run not found');
       }
@@ -414,10 +372,6 @@ export class ExportsService implements OnModuleInit {
     }
     const schedule = await this.prisma.exportSchedule.findUnique({ where: { id: run.scheduleId } });
     if (!schedule) throw new NotFoundException('Export run not found');
-    const workspaceId = await this.resolveWorkspace(actor);
-    if (schedule.workspaceId !== workspaceId) {
-      throw new NotFoundException('Export run not found');
-    }
   }
 
   private async createRun(args: {
@@ -496,7 +450,6 @@ export class ExportsService implements OnModuleInit {
    *  so the frontend only sees the canonical 0015 fields. */
   shapeSchedule(row: {
     id: string;
-    workspaceId: string;
     name: string;
     kind: string;
     sourceKind: string;
@@ -511,7 +464,6 @@ export class ExportsService implements OnModuleInit {
   }) {
     return {
       id: row.id,
-      workspaceId: row.workspaceId,
       name: row.name,
       kind: row.kind as ExportKind,
       sourceKind: row.sourceKind as ExportSourceKind,
@@ -586,6 +538,7 @@ const CRON_RANGES: Array<[number, number]> = [
 export function parseCron(expr: string): ParsedCron {
   const parts = expr.trim().split(/\s+/);
   if (parts.length !== 5) {
+    // internal: not reached from an HTTP request — pure helper; validateCron() wraps for HTTP.
     throw new Error('cron must have 5 space-separated fields');
   }
   const [m, h, dom, mo, dow] = parts.map((part, i) => expandField(part, CRON_RANGES[i]![0], CRON_RANGES[i]![1]));
@@ -602,6 +555,7 @@ function expandField(field: string, lo: number, hi: number): number[] {
       range = r ?? '*';
       step = Number(s);
       if (!Number.isInteger(step) || step < 1) {
+        // internal: not reached from an HTTP request — pure helper; validateCron() wraps for HTTP.
         throw new Error(`invalid step "${s}"`);
       }
     }
@@ -619,9 +573,11 @@ function expandField(field: string, lo: number, hi: number): number[] {
       end = start;
     }
     if (!Number.isInteger(start) || !Number.isInteger(end)) {
+      // internal: not reached from an HTTP request — pure helper; validateCron() wraps for HTTP.
       throw new Error(`invalid range "${segment}"`);
     }
     if (start < lo || end > hi || start > end) {
+      // internal: not reached from an HTTP request — pure helper; validateCron() wraps for HTTP.
       throw new Error(`range "${segment}" out of bounds [${lo}, ${hi}]`);
     }
     for (let v = start; v <= end; v += step) out.add(v);

@@ -73,16 +73,6 @@ const EnvSchema = z.object({
   JWT_ACCESS_TTL_SECONDS: z.coerce.number().default(900),
   JWT_REFRESH_TTL_SECONDS: z.coerce.number().default(2_592_000),
 
-  /// AES-GCM key used to encrypt TOTP secrets at rest. Must be exactly 32
-  /// bytes when base64-decoded (256-bit key). Generate via
-  /// `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`.
-  /// Falls back to JWT_ACCESS_SECRET-derived key only when unset in dev — the
-  /// boot guard refuses to start in production without it.
-  MFA_ENCRYPTION_KEY: optionalNonEmpty,
-  /// TTL for the short-lived mfaPendingToken JWT issued between password
-  /// validation and TOTP verification. Default 5 minutes (300s).
-  MFA_PENDING_TTL_SECONDS: z.coerce.number().default(300),
-
   GOOGLE_OAUTH_CLIENT_ID: z.string().min(1),
   GOOGLE_OAUTH_CLIENT_SECRET: z.string().min(1),
   GOOGLE_OAUTH_REDIRECT_URI: z.string().url(),
@@ -142,16 +132,6 @@ const EnvSchema = z.object({
   // that flips NODE_ENV to 'development' in production can't mint Admin
   // tokens — both must hold. Set to 'true' only in dev/staging.
   DEV_AUTH_ENABLED: bool(false),
-
-  // Web Push (VAPID) — used by WebPushService to sign push messages. Both
-  // keys are base64url. Generate via `npx web-push generate-vapid-keys`.
-  // When BOTH are unset the WebPushModule logs a warning at boot and silently
-  // no-ops on dispatch so dev workflows that don't care about push aren't
-  // blocked. The vapid-public-key endpoint returns null in that case so the
-  // client UI shows "push not configured" rather than crashing.
-  VAPID_PUBLIC_KEY: optionalNonEmpty,
-  VAPID_PRIVATE_KEY: optionalNonEmpty,
-  VAPID_CONTACT_EMAIL: z.string().default('mailto:dev@nockta.local'),
 });
 
 export type EnvType = z.infer<typeof EnvSchema>;
@@ -182,6 +162,7 @@ const PLACEHOLDER_VALUES: Record<string, string[]> = {
 };
 
 function bootGuard(env: EnvType): void {
+  // intentional — boot log
   /* eslint-disable no-console */
   if (env.NODE_ENV !== 'production') return;
 
@@ -223,12 +204,14 @@ function bootGuard(env: EnvType): void {
   console.error('     pnpm gen:secrets >> apps/api/.env    # appends new JWT secrets');
   console.error('   Then edit apps/api/.env to remove the old placeholder lines.');
   /* eslint-enable no-console */
+  // internal: not reached from an HTTP request — boot guard, process exits.
   throw new Error('Refusing to boot with placeholder secrets in production');
 }
 
 function parseEnv(): EnvType {
   const result = EnvSchema.safeParse(process.env);
   if (!result.success) {
+    // intentional — boot log
     /* eslint-disable no-console */
     console.error('❌ Environment validation failed:');
     for (const issue of result.error.issues) {
@@ -237,6 +220,7 @@ function parseEnv(): EnvType {
       console.error(`  - ${path}: ${issue.message}${hint ? ` — ${hint}` : ''}`);
     }
     /* eslint-enable no-console */
+    // internal: not reached from an HTTP request — boot guard, process exits.
     throw new Error('Environment validation failed — see logs above');
   }
   bootGuard(result.data);

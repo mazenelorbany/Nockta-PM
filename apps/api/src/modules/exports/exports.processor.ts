@@ -166,8 +166,10 @@ export class ExportsProcessor extends WorkerHost {
     sourceId: string | null,
   ): Promise<{ columns: string[]; rows: Array<Record<string, string | number | null>> }> {
     if (sourceKind === 'saved_view') {
+      // internal: not reached from an HTTP request — BullMQ processor; failure marks the job failed.
       if (!sourceId) throw new Error('saved_view source requires sourceId');
       const view = await this.prisma.savedSearch.findUnique({ where: { id: sourceId } });
+      // internal: not reached from an HTTP request — BullMQ processor; failure marks the job failed.
       if (!view) throw new Error(`Saved view ${sourceId} no longer exists`);
       // Saved views own free-form query JSON the FE understands. For the
       // export we don't try to replay the FE's filter — we read the
@@ -186,8 +188,10 @@ export class ExportsProcessor extends WorkerHost {
       return { columns: defaultTaskColumns(), rows: tasks.map(taskToRow) };
     }
     if (sourceKind === 'project') {
+      // internal: not reached from an HTTP request — BullMQ processor; failure marks the job failed.
       if (!sourceId) throw new Error('project source requires sourceId');
       const project = await this.prisma.project.findUnique({ where: { id: sourceId } });
+      // internal: not reached from an HTTP request — BullMQ processor; failure marks the job failed.
       if (!project) throw new Error(`Project ${sourceId} not found`);
       const tasks = await this.prisma.task.findMany({
         where: { projectId: sourceId },
@@ -220,6 +224,7 @@ export class ExportsProcessor extends WorkerHost {
     if (kind === 'csv') return renderCsv(args.columns, args.rows);
     if (kind === 'xlsx') return renderXlsx(args.name, args.columns, args.rows);
     if (kind === 'pdf') return renderPdf(args.name, args.columns, args.rows, args.generatedAt);
+    // internal: not reached from an HTTP request — BullMQ processor; failure marks the job failed.
     throw new Error(`Unknown export kind: ${kind}`);
   }
 

@@ -82,10 +82,6 @@ export class UsersService {
         name,
         kind: 'client',
         companyRole: null,
-        // Single-tenant deployments live on the seeded 'default' workspace
-        // (migration 0009). Multi-tenant onboarding will pick the actor's
-        // active workspace from a future WorkspaceContextService.
-        workspaceId: 'default',
       },
     });
 

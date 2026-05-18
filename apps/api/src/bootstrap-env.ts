@@ -70,6 +70,7 @@ if (process.env.NODE_ENV === 'production') {
     tooShort.push('JWT_ACCESS_SECRET and JWT_REFRESH_SECRET are identical');
   }
   if (missing.length > 0 || placeholders.length > 0 || tooShort.length > 0) {
+    // intentional — boot log
     // eslint-disable-next-line no-console
     console.error(
       `[bootstrap-env] Refusing to boot in production:` +

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import {
   CopyObjectCommand,
   DeleteObjectCommand,
@@ -54,7 +54,7 @@ export class StorageService {
   async getBuffer(key: string): Promise<Buffer> {
     const result = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
     const body = result.Body as NodeJS.ReadableStream | undefined;
-    if (!body) throw new Error(`No body for object ${key}`);
+    if (!body) throw new InternalServerErrorException(`No body for object ${key}`);
     const chunks: Buffer[] = [];
     for await (const chunk of body) {
       chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as unknown as Uint8Array));

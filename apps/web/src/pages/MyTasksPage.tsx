@@ -2,7 +2,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, LayoutGrid, List as ListIcon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { ApiError } from '@nockta/sdk';
 import { cn, EmptyState, NocktaMark, QueryErrorState, SkeletonList } from '@nockta/ui';
@@ -65,7 +64,6 @@ interface Label {
 
 export function MyTasksPage(): JSX.Element {
   const { user } = useAuth();
-  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const openTaskId = searchParams.get('task');
   const [view, setView] = useState<View>('board');
@@ -125,15 +123,15 @@ export function MyTasksPage(): JSX.Element {
           <NocktaMark className="h-[240px] w-[240px]" />
         </div>
         <div className="relative px-4 sm:px-6 md:px-8 pt-6 sm:pt-8 pb-6 sm:pb-8">
-          <span className="nockta-eyebrow text-brand">{t('nav.personal', 'Personal')}</span>
+          <span className="nockta-eyebrow text-brand">{'Personal'}</span>
           <h1
             className="display-heading mt-2 leading-[1.04]"
             style={{ fontSize: 'clamp(1.8rem, 3.4vw, 2.6rem)' }}
           >
-            {t('nav.my_tasks', 'My tasks')}
+            {'My tasks'}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground max-w-xl">
-            {t('my_tasks.subtitle', "Everything you own across every project, grouped by when it's due.")}
+            {"Everything you own across every project, grouped by when it's due."}
           </p>
         </div>
       </header>
@@ -143,8 +141,8 @@ export function MyTasksPage(): JSX.Element {
         <div className="flex items-center gap-1 rounded-md bg-secondary/60 p-1">
           {(
             [
-              { id: 'board' as const, label: t('my_tasks.view_board', 'Board'), icon: LayoutGrid },
-              { id: 'list'  as const, label: t('my_tasks.view_list', 'List'),  icon: ListIcon },
+              { id: 'board' as const, label: 'Board', icon: LayoutGrid },
+              { id: 'list'  as const, label: 'List',  icon: ListIcon },
             ]
           ).map((tab) => {
             const Icon = tab.icon;
@@ -172,20 +170,20 @@ export function MyTasksPage(): JSX.Element {
           <ToggleChip
             active={scope === 'assigned'}
             onClick={() => setScope('assigned')}
-            label={t('my_tasks.scope_assigned', 'Assigned to me')}
+            label={'Assigned to me'}
           />
           <ToggleChip
             active={scope === 'watching'}
             onClick={() => setScope('watching')}
-            label={t('my_tasks.scope_watching', 'Watching')}
+            label={'Watching'}
           />
 
           <Select
             value={projectId}
             onChange={setProjectId}
-            label={t('notifications_bell.filter_project', 'Project')}
+            label={'Project'}
           >
-            <option value="">{t('inbox.all_projects', 'All projects')}</option>
+            <option value="">{'All projects'}</option>
             {(projectsQuery.data ?? []).map((p) => (
               <option key={p.id} value={p.id}>{p.key} · {p.name}</option>
             ))}

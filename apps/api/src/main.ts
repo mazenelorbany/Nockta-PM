@@ -70,6 +70,7 @@ async function bootstrap(): Promise<void> {
 
   app.enableShutdownHooks();
   await app.listen(Env.PORT);
+  // intentional — boot log
   // eslint-disable-next-line no-console
   console.log(`API listening on :${Env.PORT}`);
 
@@ -78,6 +79,7 @@ async function bootstrap(): Promise<void> {
   // an attacker does. The startup also won't enable dev-auth at all in
   // production (env.ts gate); this banner is for staging / preview envs.
   if (Env.DEV_AUTH_ENABLED && Env.NODE_ENV !== 'production') {
+    // intentional — boot log
     // eslint-disable-next-line no-console
     console.warn(
       '⚠️  DEV_AUTH_ENABLED=true — dev login endpoints (POST /auth/dev/*) are ' +
@@ -108,6 +110,7 @@ function logIntegrationStatus(): void {
     `  Metrics          : ${on(Env.PROMETHEUS_METRICS_ENABLED)}`,
     `  CORS origins     : ${Env.CORS_ORIGINS.join(', ')}`,
   ];
+  // intentional — boot log
   // eslint-disable-next-line no-console
   console.log(`\n[boot] integration status (NODE_ENV=${Env.NODE_ENV}):\n${lines.join('\n')}\n`);
 }

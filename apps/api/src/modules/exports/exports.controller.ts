@@ -41,9 +41,7 @@ import { LOCAL_EXPORT_DIR } from './exports.processor';
 // /exports
 //
 // CRUD over ExportSchedule + on-demand runs + signed-URL retrieval + the dev
-// local-disk download route. Every route is workspace-scoped via the service
-// (which threads through WorkspaceContextService), so a client can't address
-// another workspace's schedules by guessing the id.
+// local-disk download route.
 // =============================================================================
 
 class CreateScheduleDto {

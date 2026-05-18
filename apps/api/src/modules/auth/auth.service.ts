@@ -10,27 +10,11 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ulid } from 'ulid';
 import { Env } from '../../config/env';
 import { PrismaService } from '../../prisma/prisma.service';
-import { DEFAULT_WORKSPACE_ID } from '../workspace/workspace-context.service';
 import { AuditLogService } from './audit-log.service';
 import { MailService } from './mail.service';
-import { MfaService } from './mfa.service';
 import { SessionService } from './session.service';
 import type { GoogleProfile } from './strategies/google.strategy';
 import type { JwtPayload, TokenPair } from './types';
-
-/// Returned by login paths when the user has MFA enabled. The frontend uses
-/// `mfaPendingToken` as a short-lived ticket to POST /auth/mfa/verify and
-/// exchange for a real TokenPair.
-export interface MfaChallenge {
-  mfaRequired: true;
-  mfaPendingToken: string;
-}
-
-export type LoginOutcome = TokenPair | MfaChallenge;
-
-export function isMfaChallenge(outcome: LoginOutcome): outcome is MfaChallenge {
-  return (outcome as MfaChallenge).mfaRequired === true;
-}
 
 @Injectable()
 export class AuthService {
@@ -42,13 +26,11 @@ export class AuthService {
     private readonly mail: MailService,
     private readonly sessions: SessionService,
     private readonly events: EventEmitter2,
-    private readonly mfa: MfaService,
     private readonly audit: AuditLogService,
   ) {}
 
-  /// Public re-entry point for /auth/mfa/verify — once an MFA challenge has
-  /// been successfully completed, the user id is exchanged for a real token
-  /// pair. Same code path as the regular login routes use internally.
+  /// Issue tokens for a user by id. Used by token-rotation callers and any
+  /// future re-entry path that's already established the user identity.
   async issueTokensForUser(
     userId: string,
     ip?: string,
@@ -71,7 +53,7 @@ export class AuthService {
 
   // ---------- Internal users — Google OAuth ----------
 
-  async loginWithGoogle(profile: GoogleProfile, ip?: string): Promise<LoginOutcome> {
+  async loginWithGoogle(profile: GoogleProfile, ip?: string): Promise<TokenPair> {
     const user = await this.prisma.user.upsert({
       where: { email: profile.email },
       update: {
@@ -85,29 +67,11 @@ export class AuthService {
         kind: 'internal',
         companyRole: 'Member',     // first user is upgraded to Admin via seed/migration
         googleId: profile.id,
-        // Single-tenant: every new user lands in the seeded 'default'
-        // workspace. Multi-tenant onboarding will pick the right workspace
-        // via a future WorkspaceContextService.
-        workspaceId: 'default',
         ...(profile.avatarUrl ? { avatarUrl: profile.avatarUrl } : {}),
       },
     });
     if (user.archivedAt) {
       throw new UnauthorizedException('User is archived');
-    }
-
-    // MFA gate — when enabled we issue a short-lived pending-token instead
-    // of full credentials. The frontend funnels the user through the TOTP
-    // prompt before /auth/mfa/verify exchanges it for a real TokenPair.
-    if (user.mfaEnabled) {
-      const mfaPendingToken = await this.mfa.issuePendingToken(user.id);
-      await this.audit.record({
-        userId: user.id,
-        action: 'login.google',
-        ip: ip ?? null,
-        metadata: { stage: 'mfa_pending' },
-      });
-      return { mfaRequired: true, mfaPendingToken };
     }
 
     this.events.emit('user.login', { userId: user.id, ip, method: 'google' });
@@ -189,7 +153,6 @@ export class AuthService {
         name: email.split('@')[0] ?? 'Client',
         kind: 'client',
         companyRole: null,
-        workspaceId: 'default',
       },
     });
     if (user.archivedAt) throw new UnauthorizedException('User is archived');
@@ -343,7 +306,6 @@ export class AuthService {
         name: normalized.split('@')[0] ?? 'Admin',
         kind: 'internal',
         companyRole: 'Admin',
-        workspaceId: 'default',
       },
     });
     if (user.archivedAt) throw new UnauthorizedException('User is archived');
@@ -452,7 +414,6 @@ export class AuthService {
         name: spec.name,
         kind: spec.kind,
         companyRole: spec.companyRole,
-        workspaceId: 'default',
       },
     });
     if (user.archivedAt) throw new UnauthorizedException('User is archived');
@@ -525,40 +486,6 @@ export class AuthService {
 
   // ---------- Token issuance ----------
 
-  /**
-   * Resolve the workspaceId to embed in the JWT.
-   *
-   * Pass A (multi-tenant boundary lift): a User can belong to multiple
-   * workspaces via WorkspaceMember rows. The first membership (ordered
-   * by createdAt) wins; absent any membership we fall back to the column
-   * default on User.workspaceId; absent that, the bootstrap 'default'
-   * workspace. This keeps existing single-tenant tokens valid and gives
-   * every new login a stable workspaceId claim.
-   */
-  private async resolveWorkspaceIdForUser(userId: string): Promise<string> {
-    try {
-      const membership = await this.prisma.workspaceMember.findFirst({
-        where: { userId },
-        orderBy: [{ createdAt: 'asc' }, { workspaceId: 'asc' }],
-        select: { workspaceId: true },
-      });
-      if (membership?.workspaceId) return membership.workspaceId;
-    } catch {
-      // Pre-migration databases won't have the table yet — fall through
-      // to the legacy lookup so the auth flow doesn't 500 mid-rollout.
-    }
-    try {
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-        select: { workspaceId: true },
-      });
-      if (user?.workspaceId) return user.workspaceId;
-    } catch {
-      // Same defensive swallow — never let workspace resolution fail a login.
-    }
-    return DEFAULT_WORKSPACE_ID;
-  }
-
   private async issueTokens(input: {
     sub: string;
     email: string;
@@ -568,14 +495,12 @@ export class AuthService {
     userAgent?: string;
   }): Promise<TokenPair> {
     const jti = ulid();
-    const workspaceId = await this.resolveWorkspaceIdForUser(input.sub);
     const payload: JwtPayload = {
       sub: input.sub,
       email: input.email,
       kind: input.kind,
       role: input.role,
       jti,
-      workspaceId,
     };
     const accessToken = await this.jwt.signAsync(payload, {
       secret: Env.JWT_ACCESS_SECRET,

@@ -1,6 +1,6 @@
-import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { lazy, Suspense, useEffect } from 'react';
-import toast, { Toaster } from 'react-hot-toast';
+import { Toaster } from 'react-hot-toast';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CommandPalette } from './components/CommandPalette';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -8,7 +8,6 @@ import { KeyboardShortcuts } from './components/KeyboardShortcuts';
 import { Layout } from './components/Layout';
 import { api } from './lib/api';
 import { useAuth } from './lib/auth-store';
-import { installAutoDrain, type QueuedMutation } from './lib/offline-mutation-queue';
 import { defaultViewToPath, getDefaultProjectView } from './lib/default-project-view';
 // Eager: anonymous routes (we can't lazy them without flashing the spinner on
 // every login → home redirect). Everything authenticated is lazy-loaded so the
@@ -109,7 +108,6 @@ function ProtectedShell(): JSX.Element {
   const { tokens, user, setUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!tokens) {
@@ -123,9 +121,6 @@ function ProtectedShell(): JSX.Element {
           email: string;
           companyRole: 'Admin' | 'Member' | null;
           kind: 'internal' | 'client';
-          // Round 6 Pass A — workspaceId is now part of the /auth/me payload.
-          // Optional so legacy backends (mid-deploy) still parse.
-          workspaceId?: string;
         }>('/auth/me')
         .then((u) => setUser(u))
         .catch(() => navigate('/login', { replace: true }));
@@ -135,43 +130,6 @@ function ProtectedShell(): JSX.Element {
   // (R6 follow-up) Removed the auto-redirect into /onboarding. The role
   // picker lives at /onboarding for users who want it, but it no longer
   // gates the dashboard on first login.
-
-  // Drain the offline mutation queue whenever connectivity returns. The
-  // executor reaches for the live access token at call time (so a token
-  // rotated mid-queue still works) and routes through plain `fetch` because
-  // the queued URLs are already absolute + the SDK client doesn't expose a
-  // verbatim "send this exact URL" affordance.
-  useEffect(() => {
-    if (!tokens) return;
-    const teardown = installAutoDrain(
-      async (m: QueuedMutation) => {
-        const accessToken = useAuth.getState().tokens?.accessToken;
-        const headers: Record<string, string> = { 'content-type': 'application/json' };
-        if (accessToken) headers.authorization = `Bearer ${accessToken}`;
-        // Build init conditionally so we don't pass `body: undefined` under
-        // exactOptionalPropertyTypes.
-        const init: RequestInit = { method: m.method, headers };
-        if (m.body !== undefined) init.body = JSON.stringify(m.body);
-        return fetch(m.url, init);
-      },
-      (result) => {
-        if (result.drained.length > 0) {
-          toast.success(`Synced ${result.drained.length} offline change${result.drained.length === 1 ? '' : 's'}`);
-          // Best-effort cache wipe — the synced mutations touched task state
-          // somewhere, and we don't know exactly where, so blow the lot away
-          // and let TanStack refetch lazily.
-          void queryClient.invalidateQueries();
-        }
-        if (result.conflicts.length > 0) {
-          toast.error(
-            `${result.conflicts.length} offline change${result.conflicts.length === 1 ? '' : 's'} conflicted with remote updates. Refresh to see remote changes.`,
-            { duration: 6000 },
-          );
-        }
-      },
-    );
-    return teardown;
-  }, [tokens, queryClient]);
 
   if (!tokens) return <></>;
   return (

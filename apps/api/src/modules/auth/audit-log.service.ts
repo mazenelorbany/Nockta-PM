@@ -16,11 +16,6 @@ export type AuditAction =
   | 'login.password'
   | 'login.magic_link'
   | 'login.dev'
-  | 'mfa.enrolled'
-  | 'mfa.verified'
-  | 'mfa.failed'
-  | 'mfa.disabled'
-  | 'mfa.backup_code_used'
   | 'logout'
   | 'session.revoked'
   | 'session.revoked_others'
@@ -42,19 +37,8 @@ export class AuditLogService {
 
   async record(ctx: AuditLogContext): Promise<void> {
     try {
-      // Single-tenant: resolve the workspaceId off the user when we have one,
-      // else fall back to the 'default' workspace seeded by migration 0009.
-      let workspaceId = 'default';
-      if (ctx.userId) {
-        const u = await this.prisma.user.findUnique({
-          where: { id: ctx.userId },
-          select: { workspaceId: true },
-        });
-        if (u?.workspaceId) workspaceId = u.workspaceId;
-      }
       await this.prisma.auditLogEntry.create({
         data: {
-          workspaceId,
           userId: ctx.userId ?? null,
           action: ctx.action,
           ip: ctx.ip ?? null,

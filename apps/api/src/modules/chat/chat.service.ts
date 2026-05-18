@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { google, type chat_v1 } from 'googleapis';
 import type { JWT } from 'google-auth-library';
 import { Env } from '../../config/env';
@@ -18,7 +18,7 @@ export class ChatService {
 
   private getChatClient(): chat_v1.Chat {
     if (this.chatClient) return this.chatClient;
-    if (!this.configured) throw new Error('GOOGLE_CHAT_SERVICE_ACCOUNT_JSON not set');
+    if (!this.configured) throw new InternalServerErrorException('GOOGLE_CHAT_SERVICE_ACCOUNT_JSON not set');
     const sa = JSON.parse(Env.GOOGLE_CHAT_SERVICE_ACCOUNT_JSON!) as {
       client_email: string;
       private_key: string;

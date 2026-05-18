@@ -58,10 +58,6 @@ export class ProjectsService {
           workflowPreset: input.workflowPreset,
           sprintsEnabled: input.sprintsEnabled ?? false,
           createdById: actor.id,
-          // Single-tenant deployments live on the seeded 'default' workspace.
-          // When multi-tenant lands, pull the workspaceId off the actor's
-          // active workspace via WorkspaceContextService instead.
-          workspaceId: 'default',
         },
       });
       this.events.emit('project.created', { projectId: project.id, actorUserId: actor.id });
@@ -210,12 +206,8 @@ export class ProjectsService {
    * List projects currently in the 7-day grace window (`archivedAt != null`).
    * Surfaced by `/settings/archived-projects` so an Admin can pull the trigger
    * sooner (manual purge) or undo (restore) before the cron runs.
-   *
-   * Workspace scope is single-tenant for now (this codebase is one workspace
-   * per deployment) but the param is plumbed through for the eventual
-   * multi-tenant split.
    */
-  async listArchived(actor: AuthenticatedUser, _workspaceId?: string) {
+  async listArchived(actor: AuthenticatedUser) {
     assertAdmin(actor);
     return this.prisma.project.findMany({
       where: { archivedAt: { not: null } },
@@ -338,7 +330,6 @@ export class ProjectsService {
           workflowPreset: tpl.workflowPreset,
           sprintsEnabled: tpl.sprintsEnabled,
           createdById: actor.id,
-          workspaceId: 'default',
         },
       });
 

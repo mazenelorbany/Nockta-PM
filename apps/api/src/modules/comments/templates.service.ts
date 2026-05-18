@@ -59,7 +59,6 @@ export class CommentTemplatesService {
     }
     const rows = await this.prisma.commentTemplate.findMany({
       where: {
-        workspaceId: 'default',
         OR: [
           { projectId: null },
           ...(projectId ? [{ projectId }] : []),
@@ -72,7 +71,7 @@ export class CommentTemplatesService {
     });
     return rows.map((r) => ({
       ...r,
-      scope: r.projectId === null ? ('workspace' as const) : ('project' as const),
+      scope: r.projectId === null ? ('global' as const) : ('project' as const),
     }));
   }
 
@@ -88,12 +87,12 @@ export class CommentTemplatesService {
       throw new BadRequestException(`Template body exceeds ${MAX_BODY_LEN} characters`);
     }
 
-    // Workspace-wide create: Admin only. Project-scoped: Manager+ on that
-    // project. We deliberately don't allow a Manager to create workspace-wide
-    // templates — that's an admin lever.
+    // Global create: Admin only. Project-scoped: Manager+ on that project. We
+    // deliberately don't allow a Manager to create global templates — that's
+    // an admin lever.
     if (!input.projectId) {
       if (actor.kind !== 'internal' || actor.companyRole !== 'Admin') {
-        throw new ForbiddenException('Workspace templates require an Admin');
+        throw new ForbiddenException('Global templates require an Admin');
       }
     } else {
       await this.permissions.assertAtLeast(actor, input.projectId, 'Manager');
@@ -101,7 +100,6 @@ export class CommentTemplatesService {
 
     return this.prisma.commentTemplate.create({
       data: {
-        workspaceId: 'default',
         projectId: input.projectId ?? null,
         name,
         body,

@@ -1,5 +1,4 @@
 import { useEffect, useId, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { HelpCircle, ShieldCheck } from 'lucide-react';
 import { ApiError } from '@nockta/sdk';
 import { cn } from '@nockta/ui';
@@ -329,14 +328,13 @@ export function Fieldset({
  * plain Member. Lives here so the message is consistent across tabs.
  */
 export function AdminGate(): JSX.Element {
-  const { t } = useTranslation();
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-md">
       <div className="rounded-lg border border-border bg-card/40 p-6 text-center">
         <ShieldCheck className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
-        <div className="text-sm font-semibold">{t('settings.admin_only', 'Admin only')}</div>
+        <div className="text-sm font-semibold">{'Admin only'}</div>
         <div className="text-xs text-muted-foreground mt-1">
-          {t('settings.admin_only_body', 'Ask a workspace admin to grant you access.')}
+          {'Ask a workspace admin to grant you access.'}
         </div>
       </div>
     </div>

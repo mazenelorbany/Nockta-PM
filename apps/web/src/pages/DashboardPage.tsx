@@ -1,7 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Ban, CalendarClock, CalendarDays, Flame, Timer } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { cn, QueryErrorState, SkeletonList } from '@nockta/ui';
 import { api } from '../lib/api';
@@ -65,7 +64,6 @@ interface TimelineEvent {
 
 export function DashboardPage(): JSX.Element {
   const { user } = useAuth();
-  const { t, i18n } = useTranslation();
 
   const statsQuery = useQuery({
     queryKey: ['analytics', 'me'],
@@ -137,7 +135,7 @@ export function DashboardPage(): JSX.Element {
         />
         <div className="relative px-4 sm:px-6 md:px-8 pt-6 pb-8 sm:pt-10 sm:pb-12 flex items-end justify-between gap-4 sm:gap-6 flex-wrap">
           <div className="min-w-0">
-            <span className="nockta-eyebrow text-brand">{greeting(t)}</span>
+            <span className="nockta-eyebrow text-brand">{greeting()}</span>
             <h1
               className="display-heading mt-3 leading-[1.04]"
               style={{ fontSize: 'clamp(2rem, 4vw, 3.4rem)' }}
@@ -146,11 +144,11 @@ export function DashboardPage(): JSX.Element {
               <span className="text-brand">.</span>
             </h1>
             <p className="text-sm md:text-base text-muted-foreground mt-3 max-w-xl">
-              {t('dashboard.subtitle', "Here's what's on your plate today. Sharpest items first.")}
+              {"Here's what's on your plate today. Sharpest items first."}
             </p>
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="nockta-eyebrow">{todayLabel(i18n.language)}</span>
+            <span className="nockta-eyebrow">{todayLabel(undefined)}</span>
             {/* Quick-add anchor — opens the command palette in "new task"
                 mode. Also serves as the InteractiveTour target so we can
                 point at a stable real DOM element on the dashboard. */}
@@ -161,10 +159,10 @@ export function DashboardPage(): JSX.Element {
                 window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
               }}
               className="hidden sm:inline-flex items-center gap-1.5 rounded-md border border-border bg-background/40 px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-background transition-colors"
-              aria-label={t('dashboard.quick_new_task', 'Create a task')}
+              aria-label={'Create a task'}
             >
               <span aria-hidden="true">+</span>
-              {t('dashboard.new_task', 'New task')}
+              {'New task'}
             </button>
           </div>
         </div>
@@ -176,22 +174,13 @@ export function DashboardPage(): JSX.Element {
          * without the other. Retry attempts both for simplicity. */}
         {(statsQuery.isError || myTasksQuery.isError) && (
           <QueryErrorState
-            title={t('dashboard.out_of_date_title', 'Your dashboard is out of date')}
+            title={'Your dashboard is out of date'}
             description={
               statsQuery.isError && myTasksQuery.isError
-                ? t(
-                    'dashboard.out_of_date_both',
-                    "We couldn't reach the analytics or task service. Counts below may be empty.",
-                  )
+                ? "We couldn't reach the analytics or task service. Counts below may be empty."
                 : statsQuery.isError
-                ? t(
-                    'dashboard.out_of_date_stats',
-                    "Couldn't load your weekly stats. Task lists below are still fresh.",
-                  )
-                : t(
-                    'dashboard.out_of_date_tasks',
-                    "Couldn't load your task list. Top-level counts are still fresh.",
-                  )
+                ? "Couldn't load your weekly stats. Task lists below are still fresh."
+                : "Couldn't load your task list. Top-level counts are still fresh."
             }
             error={statsQuery.error ?? myTasksQuery.error}
             onRetry={() => {
@@ -226,8 +215,8 @@ export function DashboardPage(): JSX.Element {
           <div className="lg:col-span-2 space-y-6">
             {overdueMine.length > 0 && (
               <Card
-                title={t('dashboard.overdue', 'Overdue')}
-                eyebrow={t('dashboard.items_count', '{{count}} items', { count: overdueMine.length })}
+                title={'Overdue'}
+                eyebrow={`${overdueMine.length} items`}
                 tone="destructive"
               >
                 <TaskList tasks={overdueMine} />
@@ -236,7 +225,7 @@ export function DashboardPage(): JSX.Element {
 
             {dueTodayMine.length > 0 && (
               <Card
-                title={t('dashboard.due_today', 'Due today')}
+                title={'Due today'}
                 eyebrow={`${dueTodayMine.length}`}
                 icon={<CalendarClock className="h-4 w-4 text-brand" />}
               >
@@ -245,15 +234,12 @@ export function DashboardPage(): JSX.Element {
             )}
 
             <Card
-              title={t('dashboard.upcoming', 'Upcoming')}
-              eyebrow={t('dashboard.of_total', '{{shown}} of {{total}}', {
-                shown: upcomingMine.length,
-                total: allMine.length,
-              })}
+              title={'Upcoming'}
+              eyebrow={`${upcomingMine.length} of ${allMine.length}`}
               icon={<CalendarDays className="h-4 w-4 text-muted-foreground" />}
             >
               {upcomingMine.length === 0 ? (
-                <InlineEmpty text={t('dashboard.no_upcoming', 'No upcoming deadlines. Nice.')} />
+                <InlineEmpty text={'No upcoming deadlines. Nice.'} />
               ) : (
                 <TaskList tasks={upcomingMine} />
               )}
@@ -261,7 +247,7 @@ export function DashboardPage(): JSX.Element {
 
             {blockedMine.length > 0 && (
               <Card
-                title={t('dashboard.blocked', 'Blocked')}
+                title={'Blocked'}
                 eyebrow={`${blockedMine.length}`}
                 tone="warning"
               >
@@ -270,7 +256,7 @@ export function DashboardPage(): JSX.Element {
             )}
 
             {stats && (
-              <Card title={t('dashboard.my_open_by_priority', 'My open work by priority')}>
+              <Card title={'My open work by priority'}>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {(['Critical', 'High', 'Medium', 'Low'] as Priority[]).map((p) => {
                     const row = stats.openByPriority.find((x) => x.priority === p);
@@ -298,7 +284,7 @@ export function DashboardPage(): JSX.Element {
           {/* Right column: activity feed */}
           <div className="space-y-6" data-tour="dashboard-stream">
             <Card
-              title={t('dashboard.recent_activity', 'Recent activity')}
+              title={'Recent activity'}
               eyebrow={
                 activityQuery.data?.items.length
                   ? `${activityQuery.data.items.length}`
@@ -309,13 +295,13 @@ export function DashboardPage(): JSX.Element {
                 <SkeletonList rows={6} rowClassName="h-8" />
               ) : activityQuery.isError ? (
                 <QueryErrorState
-                  title={t('dashboard.couldnt_load_activity', "Couldn't load activity")}
+                  title={"Couldn't load activity"}
                   error={activityQuery.error}
                   onRetry={() => void activityQuery.refetch()}
                   className="py-6"
                 />
               ) : (activityQuery.data?.items ?? []).length === 0 ? (
-                <InlineEmpty text={t('dashboard.no_recent_activity', 'No recent activity yet.')} />
+                <InlineEmpty text={'No recent activity yet.'} />
               ) : (
                 <ul className="space-y-3.5 stagger-list">
                   {(activityQuery.data?.items ?? []).map((ev) => (
@@ -327,7 +313,7 @@ export function DashboardPage(): JSX.Element {
                       />
                       <div className="flex-1 min-w-0 text-xs">
                         <span className="text-foreground font-medium">
-                          {ev.actor?.name ?? t('dashboard.system_actor', 'System')}
+                          {ev.actor?.name ?? 'System'}
                         </span>{' '}
                         <span className="text-muted-foreground">
                           {prettyEvent(ev.type)}
@@ -542,30 +528,29 @@ function StatStrip({
   blocked: number;
   inProgress: number;
 }): JSX.Element {
-  const { t } = useTranslation();
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       <StatTile
         icon={<CalendarClock className="h-4 w-4" />}
-        label={t('dashboard.due_today', 'Due today')}
+        label={'Due today'}
         value={dueToday}
         tone={dueToday > 0 ? 'urgent' : undefined}
       />
       <StatTile
         icon={<Flame className="h-4 w-4" />}
-        label={t('dashboard.overdue', 'Overdue')}
+        label={'Overdue'}
         value={overdue}
         tone={overdue > 0 ? 'destructive' : undefined}
       />
       <StatTile
         icon={<Ban className="h-4 w-4" />}
-        label={t('dashboard.blocked', 'Blocked')}
+        label={'Blocked'}
         value={blocked}
         tone={blocked > 0 ? 'warning' : undefined}
       />
       <StatTile
         icon={<Timer className="h-4 w-4" />}
-        label={t('dashboard.in_progress', 'In progress')}
+        label={'In progress'}
         value={inProgress}
       />
     </div>
@@ -686,12 +671,12 @@ function byPriorityThenDue(a: MyTask, b: MyTask): number {
   return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
 }
 
-function greeting(t: (k: string, d: string) => string): string {
+function greeting(): string {
   const h = new Date().getHours();
-  if (h < 5) return t('dashboard.greeting_late', 'Working late');
-  if (h < 12) return t('dashboard.greeting_morning', 'Good morning');
-  if (h < 18) return t('dashboard.greeting_afternoon', 'Good afternoon');
-  return t('dashboard.greeting_evening', 'Good evening');
+  if (h < 5) return 'Working late';
+  if (h < 12) return 'Good morning';
+  if (h < 18) return 'Good afternoon';
+  return 'Good evening';
 }
 
 function todayLabel(locale?: string): string {
@@ -718,7 +703,7 @@ function formatRelative(iso: string): string {
   if (diff < 7 * d) return `${Math.floor(diff / d)}d ago`;
   // Fallback to the user's active locale (rather than browser-default) so a
   // user who switched to ES sees a Spanish date here.
-  // We can't use the hook outside of a component; reading i18n.language at
+  // We can't use the hook outside of a component; reading undefined at
   // call time keeps this pure-ish and dependency-free.
   return new Date(iso).toLocaleDateString(
     (typeof document !== 'undefined' && document.documentElement.lang) || undefined,

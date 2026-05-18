@@ -278,13 +278,12 @@ export class JiraCsvImporter {
 
     const project = await this.prisma.project.findUniqueOrThrow({
       where: { id: projectId },
-      select: { id: true, workspaceId: true, workflowPreset: true },
+      select: { id: true, workflowPreset: true },
     });
     const preset = mapping.preset ?? project.workflowPreset;
-    // Workspace-level JiraStatusMap rows go on top of the preset table but
-    // lose to per-run statusOverrides. Order: preset → workspace → per-run.
+    // Global JiraStatusMap rows go on top of the preset table but
+    // lose to per-run statusOverrides. Order: preset → admin overrides → per-run.
     const wsOverrides = await this.prisma.jiraStatusMap.findMany({
-      where: { workspaceId: project.workspaceId },
       select: { jiraStatus: true, nocktaStatus: true },
     });
     const statusTable: Record<string, string> = { ...JIRA_STATUS_PRESETS[preset] };
@@ -455,11 +454,10 @@ export class JiraCsvImporter {
 
     const project = await this.prisma.project.findUniqueOrThrow({
       where: { id: options.projectId },
-      select: { id: true, key: true, workspaceId: true, workflowPreset: true },
+      select: { id: true, key: true, workflowPreset: true },
     });
     const preset = mapping.preset ?? project.workflowPreset;
     const wsOverrides = await this.prisma.jiraStatusMap.findMany({
-      where: { workspaceId: project.workspaceId },
       select: { jiraStatus: true, nocktaStatus: true },
     });
     const statusTable: Record<string, string> = { ...JIRA_STATUS_PRESETS[preset] };

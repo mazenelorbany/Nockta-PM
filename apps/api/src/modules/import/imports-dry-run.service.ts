@@ -361,16 +361,15 @@ export class ImportsDryRunService {
 
     const project = await this.prisma.project.findUniqueOrThrow({
       where: { id: payload.projectId },
-      select: { id: true, workspaceId: true, workflowPreset: true },
+      select: { id: true, workflowPreset: true },
     });
 
     const presetKey = payload.mapping.preset ?? project.workflowPreset;
     const presetTable = JIRA_STATUS_PRESETS[presetKey] ?? JIRA_STATUS_PRESETS.generic;
 
-    // Workspace-level JiraStatusMap rows take precedence over the preset
+    // Global JiraStatusMap rows take precedence over the preset
     // table but lose to the per-run statusOverrides supplied by the user.
     const wsOverrides = await this.prisma.jiraStatusMap.findMany({
-      where: { workspaceId: project.workspaceId },
       select: { jiraStatus: true, nocktaStatus: true },
     });
     const statusTable: Record<string, string> = { ...presetTable };

@@ -341,6 +341,7 @@ export class AutomationsService {
     const taskId = payload.taskId as string | undefined;
     if (!taskId) {
       // Nothing to act on if there's no task in scope.
+      // internal: not reached from an HTTP request — invoked by event listeners; caught + recorded in AutomationRun.
       throw new Error('No taskId in trigger payload');
     }
 

@@ -91,7 +91,6 @@ export class CustomReportsService {
     }
     return this.prisma.customReport.findMany({
       where: {
-        workspaceId: 'default',
         OR: [
           { projectId: null },
           ...(projectId ? [{ projectId }] : []),
@@ -129,7 +128,6 @@ export class CustomReportsService {
 
     return this.prisma.customReport.create({
       data: {
-        workspaceId: 'default',
         name,
         dimensions,
         metric,

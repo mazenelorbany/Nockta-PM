@@ -1,8 +1,14 @@
 import { createHash } from 'node:crypto';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AuthService, isMfaChallenge } from './auth.service';
+import { AuthService } from './auth.service';
 import type { TokenPair } from './types';
+
+// MFA was removed; outcomes are always TokenPair. Helper retained so the
+// older tests keep compiling without churn.
+function isMfaChallenge(_outcome: TokenPair): _outcome is never {
+  return false;
+}
 import { makeEventsMock, makePrismaMock } from '../../test-utils/mocks';
 import type { PrismaService } from '../../prisma/prisma.service';
 
@@ -55,7 +61,6 @@ function buildService(overrides: Partial<Mocks> = {}): {
     mail as never,
     sessions as never,
     events.instance,
-    mfa as never,
     audit as never,
   );
   return { service, mocks: { prisma, jwt, mail, sessions, events, mfa, audit } };
@@ -96,34 +101,8 @@ describe('AuthService.loginWithGoogle', () => {
     });
   });
 
-  it('returns an mfaPendingToken when the user has MFA enabled', async () => {
-    // When mfaEnabled=true the login MUST stop short of issuing real tokens.
-    // The frontend uses `mfaPendingToken` to POST /auth/mfa/verify and only
-    // then exchanges it for a TokenPair.
-    const { service, mocks } = buildService();
-    vi.mocked(mocks.prisma.user.upsert).mockResolvedValueOnce({
-      id: 'u-mfa',
-      email: 'alice@nockta.com',
-      kind: 'internal',
-      companyRole: 'Member',
-      archivedAt: null,
-      mfaEnabled: true,
-    } as never);
-
-    const outcome = await service.loginWithGoogle({
-      id: 'google-123',
-      email: 'alice@nockta.com',
-      name: 'Alice',
-    });
-
-    expect(isMfaChallenge(outcome)).toBe(true);
-    if (isMfaChallenge(outcome)) {
-      expect(outcome.mfaPendingToken).toBe('mfa.pending.token');
-    }
-    expect(mocks.mfa.issuePendingToken).toHaveBeenCalledWith('u-mfa');
-    // No refresh token row written until the MFA challenge succeeds.
-    expect(mocks.prisma.refreshToken.create).not.toHaveBeenCalled();
-  });
+  // (MFA flow removed — see GRILL-SUMMARY.md §23. The TOTP challenge branch
+  //  is no longer reachable; loginWithGoogle always issues tokens.)
 
   it('rejects archived users', async () => {
     const { service, mocks } = buildService();

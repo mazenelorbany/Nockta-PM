@@ -13,7 +13,6 @@ import { Prisma } from '@prisma/client';
 import { Queue, type JobsOptions } from 'bullmq';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { AuthenticatedUser } from '../auth/types';
-import { WorkspaceContextService } from '../workspace/workspace-context.service';
 
 // =============================================================================
 // OutboundWebhooksService
@@ -35,12 +34,6 @@ import { WorkspaceContextService } from '../workspace/workspace-context.service'
 // =============================================================================
 
 export const OUTBOUND_WEBHOOKS_QUEUE = 'outbound-webhooks';
-
-/** Bootstrap workspace id. Equal to WorkspaceContextService.DEFAULT_WORKSPACE_ID
- *  — re-exported here so existing tests that imported this name keep working
- *  after migration 0009 split workspaces into their own table. New callers
- *  should pull this from WorkspaceContextService. */
-export const DEFAULT_WORKSPACE_ID = 'default';
 
 /** Auto-disable threshold — five terminal failures in a row and we flip
  *  the webhook off. Picked to absorb a flaky receiver but not so high that
@@ -98,7 +91,6 @@ export class OutboundWebhooksService implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly emitter: EventEmitter2,
     @InjectQueue(OUTBOUND_WEBHOOKS_QUEUE) private readonly queue: Queue,
-    private readonly workspaceCtx?: WorkspaceContextService,
   ) {}
 
   onModuleInit(): void {
@@ -125,52 +117,6 @@ export class OutboundWebhooksService implements OnModuleInit {
 
   // ---------------------------------------------------------------- Listener
 
-  /** Resolve the workspaceId for an event payload.
-   *
-   * Multi-tenant resolution order:
-   *   1. Payload-supplied `workspaceId` — the emitter wins when it sets it.
-   *   2. `projectId` -> Project.workspaceId — one cheap select; covers the
-   *      vast majority of domain events (task.*, comment.*, sprint.*,
-   *      project.*, automation.*).
-   *   3. `taskId` -> Task.project.workspaceId — fallback for events that
-   *      only carry the task id.
-   *   4. DEFAULT_WORKSPACE_ID — last resort so a legacy event still routes
-   *      to the bootstrap workspace rather than dropping silently.
-   *
-   * The lookup hits Prisma each call. We accept that cost (a single
-   * indexed read per delivery) rather than caching here because:
-   *   - Project rows change workspace rarely; the in-process cache window
-   *     would have to be invalidated cross-process anyway.
-   *   - WorkspaceContextService is for user-scoped resolution, not
-   *     project-scoped — keeping the two separate avoids overloading
-   *     either with the other's semantics. */
-  private async resolveWorkspaceIdForEvent(
-    payload: Record<string, unknown>,
-  ): Promise<string> {
-    const direct = payload['workspaceId'];
-    if (typeof direct === 'string' && direct.length > 0) return direct;
-
-    const projectId = payload['projectId'];
-    if (typeof projectId === 'string' && projectId.length > 0) {
-      const proj = await this.prisma.project.findUnique({
-        where: { id: projectId },
-        select: { workspaceId: true },
-      });
-      if (proj?.workspaceId) return proj.workspaceId;
-    }
-
-    const taskId = payload['taskId'];
-    if (typeof taskId === 'string' && taskId.length > 0) {
-      const task = await this.prisma.task.findUnique({
-        where: { id: taskId },
-        select: { project: { select: { workspaceId: true } } },
-      });
-      if (task?.project?.workspaceId) return task.project.workspaceId;
-    }
-
-    return this.workspaceCtx?.getDefault() ?? DEFAULT_WORKSPACE_ID;
-  }
-
   /**
    * Catch an event and enqueue a delivery job for every enabled webhook
    * subscribed to that event type. Public so tests + an external dispatcher
@@ -181,10 +127,8 @@ export class OutboundWebhooksService implements OnModuleInit {
    * domain event (e.g. via a retry) won't duplicate deliveries.
    */
   async enqueueForEvent(eventType: string, payload: Record<string, unknown>): Promise<void> {
-    const workspaceId = await this.resolveWorkspaceIdForEvent(payload);
     const webhooks = await this.prisma.outboundWebhook.findMany({
       where: {
-        workspaceId,
         enabled: true,
         eventTypes: { has: eventType },
       },
@@ -212,13 +156,10 @@ export class OutboundWebhooksService implements OnModuleInit {
     for (const w of webhooks) {
       // Pre-create the delivery row so we have a stable id to thread through
       // the queue (BullMQ jobId is for dedup; deliveryId carries through
-      // headers and is what the UI re-delivers). workspaceId is denormalised
-      // onto the row (Round 6 Pass A — migration 0013) so the per-workspace
-      // deliveries dashboard can filter without joining OutboundWebhook.
+      // headers and is what the UI re-delivers).
       const delivery = await this.prisma.webhookDelivery.create({
         data: {
           webhookId: w.id,
-          workspaceId,
           eventType,
           payload: payload as Prisma.InputJsonValue,
           status: 'pending',
@@ -271,10 +212,9 @@ export class OutboundWebhooksService implements OnModuleInit {
 
   // ---------------------------------------------------------------- CRUD
 
-  async list(actor: AuthenticatedUser, workspaceId: string) {
-    this.assertWorkspaceAccess(actor, workspaceId, 'read');
+  async list(actor: AuthenticatedUser) {
+    this.assertAccess(actor, 'read');
     return this.prisma.outboundWebhook.findMany({
-      where: { workspaceId },
       orderBy: [{ enabled: 'desc' }, { createdAt: 'desc' }],
       // Don't leak secret in list responses — only the create endpoint
       // returns it.
@@ -282,24 +222,23 @@ export class OutboundWebhooksService implements OnModuleInit {
     });
   }
 
-  async get(actor: AuthenticatedUser, workspaceId: string, id: string) {
-    this.assertWorkspaceAccess(actor, workspaceId, 'read');
+  async get(actor: AuthenticatedUser, id: string) {
+    this.assertAccess(actor, 'read');
     const hook = await this.prisma.outboundWebhook.findUnique({
       where: { id },
       select: this.publicProjection(),
     });
-    if (!hook || hook.workspaceId !== workspaceId) {
+    if (!hook) {
       throw new NotFoundException('Webhook not found');
     }
     return hook;
   }
 
-  async create(actor: AuthenticatedUser, workspaceId: string, input: WebhookInput) {
-    this.assertWorkspaceAccess(actor, workspaceId, 'write');
+  async create(actor: AuthenticatedUser, input: WebhookInput) {
+    this.assertAccess(actor, 'write');
     this.validate(input);
     const created = await this.prisma.outboundWebhook.create({
       data: {
-        workspaceId,
         name: input.name.trim(),
         url: input.url.trim(),
         secret: input.secret,
@@ -315,13 +254,12 @@ export class OutboundWebhooksService implements OnModuleInit {
 
   async update(
     actor: AuthenticatedUser,
-    workspaceId: string,
     id: string,
     patch: Partial<WebhookInput>,
   ) {
-    this.assertWorkspaceAccess(actor, workspaceId, 'write');
+    this.assertAccess(actor, 'write');
     const existing = await this.prisma.outboundWebhook.findUnique({ where: { id } });
-    if (!existing || existing.workspaceId !== workspaceId) {
+    if (!existing) {
       throw new NotFoundException('Webhook not found');
     }
     const merged: WebhookInput = {
@@ -349,20 +287,20 @@ export class OutboundWebhooksService implements OnModuleInit {
     });
   }
 
-  async remove(actor: AuthenticatedUser, workspaceId: string, id: string) {
-    this.assertWorkspaceAccess(actor, workspaceId, 'write');
+  async remove(actor: AuthenticatedUser, id: string) {
+    this.assertAccess(actor, 'write');
     const existing = await this.prisma.outboundWebhook.findUnique({ where: { id } });
-    if (!existing || existing.workspaceId !== workspaceId) {
+    if (!existing) {
       throw new NotFoundException('Webhook not found');
     }
     await this.prisma.outboundWebhook.delete({ where: { id } });
     return { ok: true };
   }
 
-  async listDeliveries(actor: AuthenticatedUser, workspaceId: string, id: string) {
-    this.assertWorkspaceAccess(actor, workspaceId, 'read');
+  async listDeliveries(actor: AuthenticatedUser, id: string) {
+    this.assertAccess(actor, 'read');
     const existing = await this.prisma.outboundWebhook.findUnique({ where: { id } });
-    if (!existing || existing.workspaceId !== workspaceId) {
+    if (!existing) {
       throw new NotFoundException('Webhook not found');
     }
     return this.prisma.webhookDelivery.findMany({
@@ -375,10 +313,10 @@ export class OutboundWebhooksService implements OnModuleInit {
   /** Test-fire a synthetic payload so the user can validate their receiver
    *  end-to-end before relying on a real event. Returns the delivery row;
    *  the processor will update it asynchronously. */
-  async testFire(actor: AuthenticatedUser, workspaceId: string, id: string) {
-    this.assertWorkspaceAccess(actor, workspaceId, 'write');
+  async testFire(actor: AuthenticatedUser, id: string) {
+    this.assertAccess(actor, 'write');
     const hook = await this.prisma.outboundWebhook.findUnique({ where: { id } });
-    if (!hook || hook.workspaceId !== workspaceId) {
+    if (!hook) {
       throw new NotFoundException('Webhook not found');
     }
     const payload = {
@@ -390,7 +328,6 @@ export class OutboundWebhooksService implements OnModuleInit {
     const delivery = await this.prisma.webhookDelivery.create({
       data: {
         webhookId: id,
-        workspaceId,
         eventType: 'test.delivery',
         payload,
         status: 'pending',
@@ -410,13 +347,12 @@ export class OutboundWebhooksService implements OnModuleInit {
    *  fixes a receiver bug and wants to replay the events that 500'd. */
   async redeliver(
     actor: AuthenticatedUser,
-    workspaceId: string,
     id: string,
     deliveryId: string,
   ) {
-    this.assertWorkspaceAccess(actor, workspaceId, 'write');
+    this.assertAccess(actor, 'write');
     const hook = await this.prisma.outboundWebhook.findUnique({ where: { id } });
-    if (!hook || hook.workspaceId !== workspaceId) {
+    if (!hook) {
       throw new NotFoundException('Webhook not found');
     }
     const original = await this.prisma.webhookDelivery.findUnique({ where: { id: deliveryId } });
@@ -426,7 +362,6 @@ export class OutboundWebhooksService implements OnModuleInit {
     const replay = await this.prisma.webhookDelivery.create({
       data: {
         webhookId: id,
-        workspaceId,
         eventType: original.eventType,
         payload: original.payload as Prisma.InputJsonValue,
         status: 'pending',
@@ -461,7 +396,7 @@ export class OutboundWebhooksService implements OnModuleInit {
         failureCount: { increment: 1 },
         lastDeliveryAt: new Date(),
       },
-      select: { id: true, failureCount: true, workspaceId: true, name: true, enabled: true, createdById: true },
+      select: { id: true, failureCount: true, name: true, enabled: true, createdById: true },
     });
     if (updated.failureCount >= AUTO_DISABLE_THRESHOLD && updated.enabled) {
       await this.prisma.outboundWebhook.update({
@@ -492,7 +427,6 @@ export class OutboundWebhooksService implements OnModuleInit {
       // Domain event so listeners (audit log, etc.) can pick it up.
       this.emitter.emit('outbound_webhook.disabled', {
         webhookId: updated.id,
-        workspaceId: updated.workspaceId,
         reason: 'consecutive_failures',
         threshold: AUTO_DISABLE_THRESHOLD,
       });
@@ -573,20 +507,17 @@ export class OutboundWebhooksService implements OnModuleInit {
     }
   }
 
-  /** Outbound webhooks are workspace-admin territory. Internal Admins always
-   *  pass; internal Members pass for reads but not for writes (Manager+ in
-   *  spec terms — for workspace-level resources we map that to Admin since
-   *  there's no per-workspace Manager). Clients never see this surface. */
-  private assertWorkspaceAccess(
+  /** Internal Admins always pass; internal Members pass for reads but not for
+   *  writes. Clients never see this surface. */
+  private assertAccess(
     actor: AuthenticatedUser,
-    _workspaceId: string,
     mode: 'read' | 'write',
   ): void {
     if (actor.kind !== 'internal') {
-      throw new ForbiddenException('Workspace webhooks are internal-only');
+      throw new ForbiddenException('Webhooks are internal-only');
     }
     if (mode === 'write' && actor.companyRole !== 'Admin') {
-      throw new ForbiddenException('Workspace Admins only');
+      throw new ForbiddenException('Admins only');
     }
   }
 
@@ -596,7 +527,6 @@ export class OutboundWebhooksService implements OnModuleInit {
   private publicProjection() {
     return {
       id: true,
-      workspaceId: true,
       name: true,
       url: true,
       eventTypes: true,

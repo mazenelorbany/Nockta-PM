@@ -11,6 +11,8 @@
 // To enable: `pnpm add exceljs --filter @nockta/api`.
 // =============================================================================
 
+import { InternalServerErrorException } from '@nestjs/common';
+
 export const XLSX_MISSING_MESSAGE =
   "XLSX export requires the 'exceljs' package. Run pnpm add exceljs to enable.";
 
@@ -28,7 +30,7 @@ export async function renderXlsx(
     // @ts-expect-error — dependency is optional; type may not resolve.
     ExcelJS = await import('exceljs');
   } catch {
-    throw new Error(XLSX_MISSING_MESSAGE);
+    throw new InternalServerErrorException(XLSX_MISSING_MESSAGE);
   }
 
   // The module shape is either `{ default: { Workbook } }` (ESM-wrapped) or

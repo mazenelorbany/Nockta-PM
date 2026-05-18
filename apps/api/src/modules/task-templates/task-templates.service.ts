@@ -153,16 +153,9 @@ export class TaskTemplatesService {
     if (!input.titleTemplate?.trim()) throw new BadRequestException('Title template is required');
     const tags = this.normaliseTags(input.tags);
     try {
-      // Pull workspaceId off the project so the template belongs to the same
-      // tenant as the project it scaffolds tasks for.
-      const project = await this.prisma.project.findUniqueOrThrow({
-        where: { id: projectId },
-        select: { workspaceId: true },
-      });
       return await this.prisma.taskTemplate.create({
         data: {
           projectId,
-          workspaceId: project.workspaceId,
           name: input.name.trim(),
           description: input.description?.trim() || null,
           titleTemplate: input.titleTemplate.trim(),

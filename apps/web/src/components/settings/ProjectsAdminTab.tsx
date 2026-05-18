@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { useTranslation } from 'react-i18next';
 import { Archive, ArchiveRestore, Trash2, UserCog } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@nockta/ui';
@@ -24,7 +23,6 @@ interface AdminProject {
 }
 
 export function ProjectsAdminTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
-  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const projectsQuery = useQuery({
     queryKey: ['projects'],
@@ -66,11 +64,8 @@ export function ProjectsAdminTab({ isAdmin }: { isAdmin: boolean }): JSX.Element
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-4xl space-y-6 sm:space-y-8">
       <SectionTitle
-        title={t('settings.projects_admin.title', 'Projects')}
-        hint={t(
-          'settings.projects_admin.hint',
-          'Archive, restore, or remove projects across the workspace. Per-project settings live inside each project.',
-        )}
+        title={'Projects'}
+        hint={'Archive, restore, or remove projects across the workspace. Per-project settings live inside each project.'}
       />
 
       <ProjectGroup

@@ -20,7 +20,6 @@ import {
 } from 'class-validator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import { WorkspaceContextService } from '../workspace/workspace-context.service';
 import {
   OutboundWebhooksService,
   type WebhookInput,
@@ -29,14 +28,8 @@ import {
 // =============================================================================
 // /outbound-webhooks
 //
-// Workspace-level webhook subscriptions. The workspace is derived from the
-// authenticated user's JWT (via WorkspaceContextService) rather than being
-// supplied as a URL path parameter. This is the multi-tenant boundary:
-// User A in workspace W1 simply cannot construct a URL that addresses
-// workspace W2 — the API never trusts a client-supplied workspaceId.
-//
 // Authorisation: internal users only; Admins for writes, Members for reads.
-// (Enforced inside the service via assertWorkspaceAccess.)
+// (Enforced inside the service via assertAccess.)
 // =============================================================================
 
 class CreateWebhookDto {
@@ -61,15 +54,11 @@ class UpdateWebhookDto {
 export class OutboundWebhooksController {
   constructor(
     private readonly svc: OutboundWebhooksService,
-    private readonly workspaceCtx: WorkspaceContextService,
   ) {}
 
   @Get()
   async list(@CurrentUser() actor: AuthenticatedUser) {
-    // Prefer the workspaceId baked into the JWT (Round 6 Pass A); fall
-    // back to a fresh lookup for legacy tokens that predate the claim.
-    const wsId = actor.workspaceId ?? (await this.workspaceCtx.resolveForUser(actor.id));
-    return this.svc.list(actor, wsId);
+    return this.svc.list(actor);
   }
 
   @Post()
@@ -77,10 +66,7 @@ export class OutboundWebhooksController {
     @CurrentUser() actor: AuthenticatedUser,
     @Body() dto: CreateWebhookDto,
   ) {
-    // Prefer the workspaceId baked into the JWT (Round 6 Pass A); fall
-    // back to a fresh lookup for legacy tokens that predate the claim.
-    const wsId = actor.workspaceId ?? (await this.workspaceCtx.resolveForUser(actor.id));
-    return this.svc.create(actor, wsId, dto as WebhookInput);
+    return this.svc.create(actor, dto as WebhookInput);
   }
 
   @Get(':id')
@@ -88,10 +74,7 @@ export class OutboundWebhooksController {
     @CurrentUser() actor: AuthenticatedUser,
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
-    // Prefer the workspaceId baked into the JWT (Round 6 Pass A); fall
-    // back to a fresh lookup for legacy tokens that predate the claim.
-    const wsId = actor.workspaceId ?? (await this.workspaceCtx.resolveForUser(actor.id));
-    return this.svc.get(actor, wsId, id);
+    return this.svc.get(actor, id);
   }
 
   @Patch(':id')
@@ -100,10 +83,7 @@ export class OutboundWebhooksController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdateWebhookDto,
   ) {
-    // Prefer the workspaceId baked into the JWT (Round 6 Pass A); fall
-    // back to a fresh lookup for legacy tokens that predate the claim.
-    const wsId = actor.workspaceId ?? (await this.workspaceCtx.resolveForUser(actor.id));
-    return this.svc.update(actor, wsId, id, dto as Partial<WebhookInput>);
+    return this.svc.update(actor, id, dto as Partial<WebhookInput>);
   }
 
   @Delete(':id')
@@ -111,10 +91,7 @@ export class OutboundWebhooksController {
     @CurrentUser() actor: AuthenticatedUser,
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
-    // Prefer the workspaceId baked into the JWT (Round 6 Pass A); fall
-    // back to a fresh lookup for legacy tokens that predate the claim.
-    const wsId = actor.workspaceId ?? (await this.workspaceCtx.resolveForUser(actor.id));
-    return this.svc.remove(actor, wsId, id);
+    return this.svc.remove(actor, id);
   }
 
   @Post(':id/test')
@@ -122,10 +99,7 @@ export class OutboundWebhooksController {
     @CurrentUser() actor: AuthenticatedUser,
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
-    // Prefer the workspaceId baked into the JWT (Round 6 Pass A); fall
-    // back to a fresh lookup for legacy tokens that predate the claim.
-    const wsId = actor.workspaceId ?? (await this.workspaceCtx.resolveForUser(actor.id));
-    return this.svc.testFire(actor, wsId, id);
+    return this.svc.testFire(actor, id);
   }
 
   @Post(':id/redeliver/:deliveryId')
@@ -134,10 +108,7 @@ export class OutboundWebhooksController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @Param('deliveryId', new ParseUUIDPipe()) deliveryId: string,
   ) {
-    // Prefer the workspaceId baked into the JWT (Round 6 Pass A); fall
-    // back to a fresh lookup for legacy tokens that predate the claim.
-    const wsId = actor.workspaceId ?? (await this.workspaceCtx.resolveForUser(actor.id));
-    return this.svc.redeliver(actor, wsId, id, deliveryId);
+    return this.svc.redeliver(actor, id, deliveryId);
   }
 
   @Get(':id/deliveries')
@@ -145,9 +116,6 @@ export class OutboundWebhooksController {
     @CurrentUser() actor: AuthenticatedUser,
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
-    // Prefer the workspaceId baked into the JWT (Round 6 Pass A); fall
-    // back to a fresh lookup for legacy tokens that predate the claim.
-    const wsId = actor.workspaceId ?? (await this.workspaceCtx.resolveForUser(actor.id));
-    return this.svc.listDeliveries(actor, wsId, id);
+    return this.svc.listDeliveries(actor, id);
   }
 }

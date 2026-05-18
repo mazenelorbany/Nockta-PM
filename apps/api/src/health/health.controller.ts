@@ -95,6 +95,7 @@ export class HealthController {
     if (Env.QDRANT_URL) {
       const q = await timed(async () => {
         const res = await fetch(`${Env.QDRANT_URL}/healthz`);
+        // internal: not reached from an HTTP request — caught by timed() to flip check to 'down'.
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
       });
       checks['qdrant'] = q.ok
@@ -107,6 +108,7 @@ export class HealthController {
     if (Env.OLLAMA_URL) {
       const o = await timed(async () => {
         const res = await fetch(`${Env.OLLAMA_URL}/api/tags`);
+        // internal: not reached from an HTTP request — caught by timed() to flip check to 'down'.
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
       });
       checks['ollama'] = o.ok
@@ -144,6 +146,7 @@ export class HealthController {
     if (Env.QDRANT_URL) {
       const q = await timed(async () => {
         const res = await fetch(`${Env.QDRANT_URL}/healthz`);
+        // internal: not reached from an HTTP request — caught by timed() to flip check to 'down'.
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
       });
       checks['qdrant'] = q.ok
@@ -163,6 +166,7 @@ export class HealthController {
     } else {
       const o = await timed(async () => {
         const res = await fetch(`${Env.OLLAMA_URL}/api/tags`);
+        // internal: not reached from an HTTP request — caught by timed() to flip check to 'down'.
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
       });
       checks['llm_ollama'] = o.ok

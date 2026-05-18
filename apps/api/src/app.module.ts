@@ -42,9 +42,7 @@ import { TasksModule } from './modules/tasks/tasks.module';
 import { TaskTemplatesModule } from './modules/task-templates/task-templates.module';
 import { TeamsModule } from './modules/teams/teams.module';
 import { UsersModule } from './modules/users/users.module';
-import { WebPushModule } from './modules/web-push/web-push.module';
 import { WorklogModule } from './modules/worklog/worklog.module';
-import { WorkspaceModule } from './modules/workspace/workspace.module';
 
 @Module({
   imports: [
@@ -82,11 +80,6 @@ import { WorkspaceModule } from './modules/workspace/workspace.module';
     PrismaModule,
     RedisModule,
     SchedulingModule,
-    // WorkspaceModule is @Global — every feature module gets
-    // WorkspaceContextService without an explicit `imports: [WorkspaceModule]`.
-    // Registered before AuthModule so guards can depend on it if/when they
-    // need to surface workspaceId to req.user.
-    WorkspaceModule,
     AuthModule,
     PermissionsModule,
     UsersModule,
@@ -110,7 +103,6 @@ import { WorkspaceModule } from './modules/workspace/workspace.module';
     NotificationsModule,
     OutboundWebhooksModule,
     ExportsModule,
-    WebPushModule,
     StorageModule,
     AttachmentsModule,
     GithubModule,

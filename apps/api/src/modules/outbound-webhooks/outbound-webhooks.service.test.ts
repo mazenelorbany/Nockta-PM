@@ -7,11 +7,13 @@ import type { PrismaService } from '../../prisma/prisma.service';
 import type { AuthenticatedUser } from '../auth/types';
 import {
   AUTO_DISABLE_THRESHOLD,
-  DEFAULT_WORKSPACE_ID,
   OutboundWebhooksService,
   RETRY_ATTEMPTS,
   RETRY_BACKOFF_MS,
 } from './outbound-webhooks.service';
+
+// Legacy constant retained for tests that pre-date the workspace removal.
+const DEFAULT_WORKSPACE_ID = 'default';
 import { customBackoffStrategy } from './outbound-webhooks.processor';
 
 // =============================================================================
@@ -353,7 +355,7 @@ describe('OutboundWebhooksService.create — auth + validation', () => {
       companyRole: 'Member',
     } as AuthenticatedUser;
     await expect(
-      service.create(member, DEFAULT_WORKSPACE_ID, {
+      service.create(member, {
         name: 'X',
         url: 'https://x.example',
         secret: 'aaaaaaaaaaaaaaaa',
@@ -369,14 +371,14 @@ describe('OutboundWebhooksService.create — auth + validation', () => {
       kind: 'client',
       companyRole: null,
     } as AuthenticatedUser;
-    await expect(service.list(client, DEFAULT_WORKSPACE_ID)).rejects.toThrow(
+    await expect(service.list(client)).rejects.toThrow(
       /internal-only/i,
     );
   });
 
   it('rejects an URL that is not http(s)', async () => {
     await expect(
-      service.create(ADMIN_ACTOR, DEFAULT_WORKSPACE_ID, {
+      service.create(ADMIN_ACTOR, {
         name: 'X',
         url: 'ftp://x.example',
         secret: 'aaaaaaaaaaaaaaaa',
@@ -390,7 +392,7 @@ describe('OutboundWebhooksService.create — auth + validation', () => {
     // unknown event would never fire, so reject up front rather than
     // silently storing it.
     await expect(
-      service.create(ADMIN_ACTOR, DEFAULT_WORKSPACE_ID, {
+      service.create(ADMIN_ACTOR, {
         name: 'X',
         url: 'https://x.example',
         secret: 'aaaaaaaaaaaaaaaa',

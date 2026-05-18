@@ -69,7 +69,6 @@ describe('AiCostTrackingService.record', () => {
     expect(args?.data?.costUsdCents).toBe(105);
     expect(args?.data?.userId).toBe('u-1');
     expect(args?.data?.status).toBe('ok');
-    expect(args?.data?.workspaceId).toBe('default');
   });
 
   it('does NOT throw when Prisma create errors (cost tracking is best-effort)', async () => {

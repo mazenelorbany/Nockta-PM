@@ -6,7 +6,7 @@ import { ExportsScheduler } from './exports.scheduler';
 import { EXPORTS_QUEUE, ExportsService } from './exports.service';
 
 // =============================================================================
-// ExportsModule — workspace-scoped scheduled + on-demand exports.
+// ExportsModule — scheduled + on-demand exports.
 //
 // Wires the BullMQ queue ('exports'), the CRUD controller, the service that
 // owns the lifecycle, the worker that does the actual serialise + upload, and
@@ -14,8 +14,6 @@ import { EXPORTS_QUEUE, ExportsService } from './exports.service';
 //
 // StorageService is provided globally by StorageModule, so it just falls
 // through into the processor's constructor without an explicit import here.
-// WorkspaceContextService is globally registered by WorkspaceModule for the
-// same reason.
 // =============================================================================
 
 @Module({

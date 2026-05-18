@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import {
   cn, EmptyState, NocktaMark, QueryErrorState, SkeletonList, Spinner,
 } from '@nockta/ui';
@@ -37,7 +36,6 @@ interface ProjectLite { id: string; key: string; name: string }
 interface TeamLite { id: string; name: string; slug: string }
 
 export function WorkloadPage(): JSX.Element {
-  const { t } = useTranslation();
   const [projectId, setProjectId] = useState('');
   const [teamId, setTeamId] = useState('');
   // Detail modal — which person's drill-down is open. Null = closed.
@@ -89,38 +87,35 @@ export function WorkloadPage(): JSX.Element {
           <NocktaMark className="h-[240px] w-[240px]" />
         </div>
         <div className="relative px-4 sm:px-6 md:px-8 pt-6 sm:pt-8 pb-6 sm:pb-8">
-          <span className="nockta-eyebrow text-brand">{t('nav.workspace', 'Workspace')}</span>
+          <span className="nockta-eyebrow text-brand">{'Workspace'}</span>
           <h1
             className="display-heading mt-2 leading-[1.04]"
             style={{ fontSize: 'clamp(1.8rem, 3.4vw, 2.6rem)' }}
           >
-            {t('nav.workload', 'Workload')}
+            {'Workload'}
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            {t(
-              'workload.subtitle',
-              "Who's loaded with what. Priority-weighted scoring across every open task — Critical counts as 4×, High 3×, Medium 2×, Low 1×.",
-            )}
+            {"Who's loaded with what. Priority-weighted scoring across every open task — Critical counts as 4×, High 3×, Medium 2×, Low 1×."}
           </p>
         </div>
       </header>
 
       <div className="px-4 sm:px-6 md:px-8 py-3 border-b border-border flex items-center gap-2 flex-wrap">
         <Pill
-          label={t('notifications_bell.filter_project', 'Project')}
+          label={'Project'}
           value={projectId}
           onChange={setProjectId}
           options={[
-            { value: '', label: t('inbox.all_projects', 'All projects') },
+            { value: '', label: 'All projects' },
             ...(projectsQuery.data ?? []).map((p) => ({ value: p.id, label: `${p.key} — ${p.name}` })),
           ]}
         />
         <Pill
-          label={t('workload.team', 'Team')}
+          label={'Team'}
           value={teamId}
           onChange={setTeamId}
           options={[
-            { value: '', label: t('workload.everyone', 'Everyone') },
+            { value: '', label: 'Everyone' },
             ...(teamsQuery.data ?? []).map((teamItem) => ({ value: teamItem.id, label: teamItem.name })),
           ]}
         />
