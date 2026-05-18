@@ -1,5 +1,5 @@
 import { useDraggable } from '@dnd-kit/core';
-import { Clock } from 'lucide-react';
+import { Clock, GripVertical } from 'lucide-react';
 import { cn } from '@nockta/ui';
 import {
   AvatarCircle,
@@ -38,16 +38,26 @@ export function BacklogRow({
     <div
       ref={setNodeRef}
       style={style}
+      {...listeners}
+      {...attributes}
       className={cn(
-        'group grid grid-cols-[20px_60px_80px_1fr_auto] gap-2 items-center rounded-md px-2 py-1.5 text-xs transition',
-        'hover:bg-accent/40',
+        'group grid grid-cols-[16px_20px_60px_80px_1fr_auto] gap-2 items-center rounded-md px-2 py-1.5 text-xs transition',
+        'hover:bg-accent/40 cursor-grab active:cursor-grabbing',
         isSelected && 'bg-primary/5 hover:bg-primary/10',
         isDragging && 'opacity-50',
       )}
     >
+      {/* Drag-handle affordance: an explicit grip icon so users know the row
+          is draggable. The whole row carries the listeners; this icon is just
+          visual signal. */}
+      <GripVertical
+        className="h-3 w-3 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity"
+        aria-hidden="true"
+      />
       <input
         type="checkbox"
         checked={isSelected}
+        onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
         onChange={onToggleSelect}
         className={cn(
@@ -56,14 +66,9 @@ export function BacklogRow({
         )}
         aria-label={`Select ${task.key}`}
       />
-      <button
-        type="button"
-        {...listeners}
-        {...attributes}
-        className="font-mono text-[10px] text-muted-foreground text-left cursor-grab active:cursor-grabbing truncate"
-      >
+      <span className="font-mono text-[10px] text-muted-foreground truncate">
         {task.key}
-      </button>
+      </span>
       <div className="flex items-center gap-1.5 min-w-0">
         {task.type && <TypeBadge type={task.type} />}
         <PriorityDot priority={task.priority} />
