@@ -28,6 +28,9 @@ COPY --from=deps /app /app
 COPY tsconfig.base.json turbo.json ./
 COPY apps/api ./apps/api
 COPY packages ./packages
+# Set Node heap to 4 GB for both prisma generate and nest build. The default
+# heap (~2 GB on most runners) OOMs on tsc with the upgraded toolchain.
+ENV NODE_OPTIONS=--max-old-space-size=4096
 RUN pnpm --filter @nockta/api exec prisma generate
 RUN pnpm --filter @nockta/api build
 

@@ -34,6 +34,9 @@ COPY apps/web ./apps/web
 # rather than silently calling `undefined/...`.
 ARG VITE_API_URL=https://MISSING_VITE_API_URL.invalid
 ENV VITE_API_URL=${VITE_API_URL}
+# Set Node heap to 4 GB for both tsc and vite — Vite 8 + Tailwind 4 +
+# TipTap 3 made the bundle step heavier and the default ~2 GB OOMs.
+ENV NODE_OPTIONS=--max-old-space-size=4096
 RUN pnpm --filter @nockta/web build
 
 FROM nginx:alpine AS runtime
@@ -52,3 +55,9 @@ COPY apps/web/security-headers.conf /etc/nginx/snippets/security-headers.conf
 # works.
 ENV PORT=80
 EXPOSE 80
+
+# Explicit CMD so the container's start command is well-defined. Without
+# this, Railway's deploy step couldn't infer a runtime entrypoint and tried
+# to fall back to `pnpm start` — which doesn't exist in nginx:alpine and
+# would explode with "executable `pnpm` could not be found".
+CMD ["nginx", "-g", "daemon off;"]
