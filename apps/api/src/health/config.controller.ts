@@ -24,7 +24,12 @@ export class ConfigController {
       githubAppSlug: Env.GITHUB_APP_SLUG ?? null,
       chatBindingEnabled: Boolean(Env.GOOGLE_CHAT_APP_ID),
       elasticSearchEnabled: Boolean(Env.SEARCH_ELASTIC_URL),
-      devLoginEnabled: Env.NODE_ENV !== 'production',
+      // Mirror the actual /auth/dev-login route's gate (Env.DEV_AUTH_ENABLED)
+      // so the LoginPage UI and the route agree. Using NODE_ENV here would
+      // hide the persona buttons on a production deploy even when an
+      // operator has deliberately flipped DEV_AUTH_ENABLED=true to test
+      // the first deploy before Google OAuth is wired.
+      devLoginEnabled: Env.DEV_AUTH_ENABLED,
     };
   }
 }
