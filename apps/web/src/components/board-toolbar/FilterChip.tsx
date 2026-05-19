@@ -18,7 +18,7 @@ export function FilterChip({
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
-  triggerRef?: React.RefObject<HTMLButtonElement>;
+  triggerRef?: React.RefObject<HTMLButtonElement | null>;
 }): JSX.Element {
   return (
     <button

@@ -17,7 +17,7 @@ export function FilterPopover({
 }: {
   open: boolean;
   onClose: () => void;
-  triggerRef: React.RefObject<HTMLElement>;
+  triggerRef: React.RefObject<HTMLElement | null>;
   children: React.ReactNode;
   className?: string;
 }): JSX.Element | null {

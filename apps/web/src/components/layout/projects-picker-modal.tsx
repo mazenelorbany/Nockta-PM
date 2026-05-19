@@ -32,7 +32,7 @@ export function ProjectsPickerModal({
   onClose: () => void;
   projects: ProjectSummary[];
   recentIds: string[];
-  anchorRef: React.RefObject<HTMLElement>;
+  anchorRef: React.RefObject<HTMLElement | null>;
 }): JSX.Element | null {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);

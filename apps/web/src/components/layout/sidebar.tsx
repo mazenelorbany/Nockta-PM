@@ -54,7 +54,7 @@ export function Sidebar({
 }: {
   mobileOpen: boolean;
   onMobileClose: () => void;
-  hamburgerRef: React.RefObject<HTMLButtonElement>;
+  hamburgerRef: React.RefObject<HTMLButtonElement | null>;
 }): JSX.Element {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
