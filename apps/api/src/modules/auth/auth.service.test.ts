@@ -7,13 +7,6 @@ import { makeEventsMock, makePrismaMock } from '../../test-utils/mocks';
 import type { PrismaService } from '../../prisma/prisma.service';
 
 import { AuthService } from './auth.service';
-import type { TokenPair } from './types';
-
-// MFA was removed; outcomes are always TokenPair. Helper retained so the
-// older tests keep compiling without churn.
-function isMfaChallenge(_outcome: TokenPair): _outcome is never {
-  return false;
-}
 
 // =============================================================================
 // auth.service — the highest-blast-radius surface in the API. Each test pins
@@ -91,11 +84,9 @@ describe('AuthService.loginWithGoogle', () => {
       '127.0.0.1',
     );
 
-    expect(isMfaChallenge(outcome)).toBe(false);
-    const pair = outcome as TokenPair;
-    expect(pair.accessToken).toBe('signed.access.token');
-    expect(typeof pair.refreshToken).toBe('string');
-    expect(pair.refreshToken.length).toBeGreaterThan(20);
+    expect(outcome.accessToken).toBe('signed.access.token');
+    expect(typeof outcome.refreshToken).toBe('string');
+    expect(outcome.refreshToken.length).toBeGreaterThan(20);
     expect(mocks.prisma.user.upsert).toHaveBeenCalledOnce();
     expect(mocks.events.emit).toHaveBeenCalledWith('user.login', {
       userId: 'u1',
@@ -103,9 +94,6 @@ describe('AuthService.loginWithGoogle', () => {
       method: 'google',
     });
   });
-
-  // (MFA flow removed — see GRILL-SUMMARY.md §23. The TOTP challenge branch
-  //  is no longer reachable; loginWithGoogle always issues tokens.)
 
   it('rejects archived users', async () => {
     const { service, mocks } = buildService();
@@ -145,11 +133,9 @@ describe('AuthService.loginWithGoogle', () => {
       name: 'Alice',
     });
 
-    expect(isMfaChallenge(outcome)).toBe(false);
-    const pair = outcome as TokenPair;
     const createCall = vi.mocked(mocks.prisma.refreshToken.create).mock.calls[0]?.[0];
-    expect(createCall?.data?.tokenHash).toBe(sha256(pair.refreshToken));
-    expect(createCall?.data?.tokenHash).not.toBe(pair.refreshToken);
+    expect(createCall?.data?.tokenHash).toBe(sha256(outcome.refreshToken));
+    expect(createCall?.data?.tokenHash).not.toBe(outcome.refreshToken);
   });
 });
 

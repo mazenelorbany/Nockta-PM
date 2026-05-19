@@ -21,7 +21,6 @@ import { cn, QueryErrorState, Spinner } from '@nockta/ui';
 
 import { ProjectTabs } from '../components/ProjectTabs';
 import { TaskDetailDrawer } from '../components/TaskDetailDrawer';
-import { PullIndicator, usePullToRefresh } from '../hooks/usePullToRefresh';
 import { type Priority } from '../components/task-bits';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
@@ -253,23 +252,6 @@ export function ProjectBacklogPage(): JSX.Element {
     });
   }
 
-  // Pull-to-refresh on the backlog scroll container — refetches sprints +
-  // backlog + per-sprint tasks via TanStack's broad-by-key invalidate.
-  //
-  // IMPORTANT: this hook MUST sit before the early returns below — otherwise
-  // the first render (project still loading) calls fewer hooks than the
-  // second (project loaded), which trips React's hook-order invariant and
-  // throws "Rendered more hooks than during the previous render."
-  const pull = usePullToRefresh({
-    onRefresh: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.sprints(projectId) }),
-        queryClient.invalidateQueries({ queryKey: ['backlog', projectId] }),
-        queryClient.invalidateQueries({ queryKey: ['sprint-tasks'] }),
-      ]);
-    },
-  });
-
   // ---------- Empty / disabled states ----------
   if (projectQuery.isError) {
     return (
@@ -397,9 +379,8 @@ export function ProjectBacklogPage(): JSX.Element {
           </div>
         </div>
 
-        <PullIndicator state={pull} />
         {/* Sections */}
-        <div ref={pull.ref} className="flex-1 overflow-y-auto px-3 sm:px-6 md:px-8 py-4 space-y-3">
+        <div className="flex-1 overflow-y-auto px-3 sm:px-6 md:px-8 py-4 space-y-3">
           {orderedSprints.map((s, idx) => {
             const q = sprintTasksQueries[idx];
             const tasks = filterFor(q?.data ?? []);

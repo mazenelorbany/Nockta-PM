@@ -7,7 +7,6 @@ import { ApiError } from '@nockta/sdk';
 import { cn, QueryErrorState, SkeletonList, Spinner } from '@nockta/ui';
 
 import { ProjectTabs } from '../components/ProjectTabs';
-import { PullIndicator, usePullToRefresh } from '../hooks/usePullToRefresh';
 import { AvatarCircle } from '../components/task-bits';
 import { DocEditor as TiptapDocEditor } from '../components/DocEditor';
 import {
@@ -74,19 +73,6 @@ export function ProjectDocsPage(): JSX.Element {
       navigate(`/projects/${projectId}/docs/${doc.id}`);
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Could not create doc')),
-  });
-
-  // Pull-to-refresh on the editor pane — refetches the doc list + current
-  // doc body so a doc edited in another tab shows up after a pull.
-  const pull = usePullToRefresh({
-    onRefresh: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['docs', projectId] }),
-        docId
-          ? queryClient.invalidateQueries({ queryKey: ['doc', docId] })
-          : Promise.resolve(),
-      ]);
-    },
   });
 
   return (
@@ -156,8 +142,7 @@ export function ProjectDocsPage(): JSX.Element {
 
         {/* Editor pane */}
         <div className="flex-1 flex flex-col min-h-0">
-          <PullIndicator state={pull} />
-          <div ref={pull.ref} className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto">
             {docId ? (
               <DocEditorPane docId={docId} projectId={projectId} />
             ) : (

@@ -6,7 +6,6 @@ import { cn } from '@nockta/ui';
 import { CheckCircle2, MessageSquarePlus, UserPlus } from 'lucide-react';
 
 import { api } from '../lib/api';
-import { useOnline } from '../hooks/useOnline';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { usePresence } from '../hooks/usePresence';
 import { getSocket } from '../lib/socket';
@@ -30,7 +29,7 @@ import type {
 } from './task-detail/types';
 import { apiErrorMessage } from './task-detail/utils';
 import { useTaskDrawerState } from './task-detail/useTaskDrawerState';
-import { useOfflineTaskUpdate } from './task-detail/useOfflineMutations';
+import { useTaskUpdate } from './task-detail/useTaskUpdate';
 
 
 export function TaskDetailDrawer({
@@ -131,12 +130,7 @@ export function TaskDetailDrawer({
   const task = taskQuery.data;
   const users = usersQuery.data?.items ?? [];
 
-  // Offline awareness — when navigator.onLine === false we render the drawer
-  // read-only and route any incoming mutations into the offline queue
-  // instead of letting them fail at the network layer.
-  const isOnline = useOnline();
-
-  const updateMutation = useOfflineTaskUpdate({ taskId, task, isOnline });
+  const updateMutation = useTaskUpdate({ taskId, task });
 
   const statusMutation = useMutation({
     mutationFn: (status: string) =>
@@ -247,15 +241,6 @@ export function TaskDetailDrawer({
   // so all the query/mutation state (and the realtime subscription) is
   // shared between layouts.
   // ---------------------------------------------------------------------
-  const offlineBanner = !isOnline && (
-    <div
-      role="status"
-      className="flex items-center gap-2 border-b border-amber-400/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-200"
-    >
-      <span aria-hidden="true" className="inline-block h-2 w-2 rounded-full bg-amber-300" />
-      <span>Offline — changes will sync when you reconnect.</span>
-    </div>
-  );
 
   // Shared dialog block — rendered as a sibling in both mobile and desktop
   // branches so the modals overlay correctly regardless of which drawer
@@ -334,7 +319,6 @@ export function TaskDetailDrawer({
               />
             )}
           </div>
-          {offlineBanner}
           {/* Tab strip — sticky just under the header. */}
           {task && (
             <div
@@ -378,14 +362,7 @@ export function TaskDetailDrawer({
               <span>Loading task…</span>
             </div>
           ) : (
-            <div
-              aria-disabled={!isOnline}
-              className={cn(
-                'flex-1 overflow-y-auto',
-                !isOnline &&
-                  '[&_button:not([data-offline-allow])]:opacity-60 [&_input]:opacity-70 [&_textarea]:opacity-70 [&_button:not([data-offline-allow])]:pointer-events-none [&_input]:pointer-events-none [&_textarea]:pointer-events-none',
-              )}
-            >
+            <div className="flex-1 overflow-y-auto">
               {mobileTab === 'details' && (
                 <div className="p-4 pb-24 space-y-5">
                   <TitleField
@@ -473,8 +450,7 @@ export function TaskDetailDrawer({
               <button
                 type="button"
                 onClick={quickAssign}
-                disabled={!isOnline}
-                className="tap flex-1 inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 h-10 text-xs font-medium hover:bg-accent transition-colors disabled:opacity-50"
+                className="tap flex-1 inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 h-10 text-xs font-medium hover:bg-accent transition-colors"
               >
                 <UserPlus className="h-4 w-4" />
                 Reassign
@@ -482,8 +458,7 @@ export function TaskDetailDrawer({
               <button
                 type="button"
                 onClick={quickStatus}
-                disabled={!isOnline}
-                className="tap flex-1 inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 h-10 text-xs font-medium hover:bg-accent transition-colors disabled:opacity-50"
+                className="tap flex-1 inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 h-10 text-xs font-medium hover:bg-accent transition-colors"
               >
                 <CheckCircle2 className="h-4 w-4" />
                 Status
@@ -491,8 +466,7 @@ export function TaskDetailDrawer({
               <button
                 type="button"
                 onClick={focusComment}
-                disabled={!isOnline}
-                className="tap flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 h-10 text-xs font-medium text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="tap flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 h-10 text-xs font-medium text-primary-foreground hover:opacity-90 transition-opacity"
               >
                 <MessageSquarePlus className="h-4 w-4" />
                 Comment
@@ -544,20 +518,9 @@ export function TaskDetailDrawer({
               watchPending={watchMutation.isPending}
               deleting={deleteMutation.isPending}
             />
-            {offlineBanner}
-            {/* Two-pane body: main details on the left, comments/activity on the right.
-                On narrow viewports the activity column drops below the main.
-                When offline, we drop input pointer-events on the *fields* so
-                clicking still focuses scroll but inputs/buttons inside the
-                main pane can't trigger network calls. The comments rail is
-                also disabled because comment creation needs the network. */}
-            <div
-              aria-disabled={!isOnline}
-              className={cn(
-                'flex-1 grid grid-cols-1 lg:grid-cols-[1fr_400px] divide-y lg:divide-y-0 lg:divide-x divide-border overflow-hidden',
-                !isOnline && '[&_button:not([data-offline-allow])]:opacity-60 [&_input]:opacity-70 [&_textarea]:opacity-70 [&_button:not([data-offline-allow])]:pointer-events-none [&_input]:pointer-events-none [&_textarea]:pointer-events-none',
-              )}
-            >
+              {/* Two-pane body: main details on the left, comments/activity on the right.
+                  On narrow viewports the activity column drops below the main. */}
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_400px] divide-y lg:divide-y-0 lg:divide-x divide-border overflow-hidden">
               {/* Main pane — scrollable */}
               <div className="overflow-y-auto p-6 space-y-6">
                 <TitleField

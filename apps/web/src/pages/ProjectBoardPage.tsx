@@ -18,7 +18,6 @@ import { PresenceAvatars } from '../components/PresenceAvatars';
 import { ProjectTabs } from '../components/ProjectTabs';
 import { StandupRunner } from '../components/StandupRunner';
 import { TaskDetailDrawer } from '../components/TaskDetailDrawer';
-import { PullIndicator, usePullToRefresh } from '../hooks/usePullToRefresh';
 import { api } from '../lib/api';
 import { getSocket } from '../lib/socket';
 import { queryKeys } from '../lib/query-keys';
@@ -286,23 +285,6 @@ export function ProjectBoardPage(): JSX.Element {
     return () => window.removeEventListener('nockta:create-task', onCreate);
   }, []);
 
-  // Pull-to-refresh: triggers a re-fetch of the board's tasks + sprints
-  // when the user drags down past the threshold on a touch device. Wired
-  // to the inner scroll container below.
-  //
-  // IMPORTANT: this hook MUST sit before the early returns below — otherwise
-  // the first render (project still loading) calls fewer hooks than the
-  // second (project loaded), which trips React's hook-order invariant and
-  // throws "Rendered more hooks than during the previous render."
-  const pull = usePullToRefresh({
-    onRefresh: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.projectTasks(projectId) }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.sprints(projectId) }),
-      ]);
-    },
-  });
-
   if (projectQuery.isError) {
     return (
       <QueryErrorState
@@ -401,8 +383,7 @@ export function ProjectBoardPage(): JSX.Element {
 
       {/* When standup mode is on, the runner sits as a fixed-width leftmost
           column; the board (or list) scrolls inside the remaining space. */}
-      <PullIndicator state={pull} />
-      <div ref={pull.ref} className="flex-1 flex min-h-0 overflow-hidden">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
         {standupOpen && (
           <StandupRunner
             tasks={tasks}

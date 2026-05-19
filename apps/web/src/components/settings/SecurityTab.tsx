@@ -191,8 +191,6 @@ export function SecurityTab(): JSX.Element {
   );
 }
 
-// MFA enrollment + disable flow was removed (GRILL-SUMMARY.md §23).
-
 // =============================================================================
 // Sessions — list active refresh tokens + revoke
 // =============================================================================
