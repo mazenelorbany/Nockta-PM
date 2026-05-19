@@ -24,7 +24,6 @@
 //   - Duplicate accountIds throw too (almost certainly a CSV mistake).
 // =============================================================================
 
-import { readFileSync } from 'node:fs';
 
 export interface UserMapEntry {
   email: string;
@@ -86,12 +85,3 @@ export function parseUserMapText(
   return out;
 }
 
-/**
- * Read a user-map CSV file from disk. Returns an empty map if the path is
- * falsy/empty — convenient for `--user-map` being optional.
- */
-export function loadUserMapFile(path: string | undefined | null): Map<string, UserMapEntry> {
-  if (!path) return new Map();
-  const text = readFileSync(path, 'utf8');
-  return parseUserMapText(text, path);
-}

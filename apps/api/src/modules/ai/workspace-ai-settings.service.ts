@@ -30,11 +30,14 @@ export interface PriorityWeights {
 export type ModelPreference = 'auto' | 'ollama' | 'anthropic';
 
 export interface AiSettingsPatch {
+  workspaceName?: string;
   dupThreshold?: number;
   priorityWeights?: PriorityWeights;
   autoSuggestEnabled?: boolean;
   modelPreference?: ModelPreference;
 }
+
+const WORKSPACE_NAME_MAX = 64;
 
 const CACHE_TTL_MS = 30 * 1000;
 const DUP_THRESHOLD_MIN = 0.7;
@@ -99,6 +102,13 @@ export class WorkspaceAiSettingsService {
     }
 
     const data: Prisma.WorkspaceAiSettingsUpdateInput = { updatedById: actor.id };
+    if (patch.workspaceName !== undefined) {
+      const trimmed = patch.workspaceName.trim();
+      if (trimmed.length === 0) {
+        throw new ForbiddenException('Workspace name cannot be empty');
+      }
+      data.workspaceName = trimmed.slice(0, WORKSPACE_NAME_MAX);
+    }
     if (patch.dupThreshold !== undefined) {
       data.dupThreshold = clamp(patch.dupThreshold, DUP_THRESHOLD_MIN, DUP_THRESHOLD_MAX);
     }

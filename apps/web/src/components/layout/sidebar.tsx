@@ -217,20 +217,10 @@ export function Sidebar({
           </Link>
         </div>
 
-        {/* Workspace pill — now with a subtle gradient and chevron tease so it
-            reads like the start of a richer hierarchy, not a static label. */}
-        <div className="px-3 pt-3">
-          <div className="group rounded-lg border border-border/60 bg-gradient-to-br from-brand/5 via-card/60 to-card/30 px-2.5 py-2 flex items-center gap-2 hover:border-brand/30 transition-colors cursor-default">
-            <span className="h-7 w-7 rounded-md bg-gradient-to-br from-brand to-brand/70 text-brand-foreground flex items-center justify-center text-[10px] font-bold flex-shrink-0 shadow-sm shadow-brand/30">
-              N
-            </span>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-semibold truncate">Nockta Internal</div>
-              <div className="nockta-eyebrow text-muted-foreground truncate">Workspace</div>
-            </div>
-            <span className="h-1.5 w-1.5 rounded-full bg-status-done animate-pulse" />
-          </div>
-        </div>
+        {/* Workspace pill — name is dynamic; edited from /settings/ai. The
+            avatar letter is just the first character of the workspace name
+            so it stays meaningful no matter what the workspace is called. */}
+        <WorkspacePill />
 
         {/* Cmd+K trigger */}
         <button
@@ -397,5 +387,33 @@ export function Sidebar({
         anchorRef={moreTriggerRef}
       />
     </>
+  );
+}
+
+// WorkspacePill — reads the workspace name from /workspace/ai-settings.
+// Cached 5min by default TanStack policy; falls back to "Workspace" while
+// the query is pending so the rail doesn't pop visually on first render.
+function WorkspacePill(): JSX.Element {
+  const settings = useQuery({
+    queryKey: ['workspace-ai-settings'],
+    queryFn: () => api.get<{ workspaceName?: string }>('/workspace/ai-settings'),
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  const name = (settings.data?.workspaceName ?? 'Workspace').trim() || 'Workspace';
+  const initial = name.charAt(0).toUpperCase();
+  return (
+    <div className="px-3 pt-3">
+      <div className="group rounded-lg border border-border/60 bg-gradient-to-br from-brand/5 via-card/60 to-card/30 px-2.5 py-2 flex items-center gap-2 hover:border-brand/30 transition-colors cursor-default">
+        <span className="h-7 w-7 rounded-md bg-gradient-to-br from-brand to-brand/70 text-brand-foreground flex items-center justify-center text-[10px] font-bold flex-shrink-0 shadow-sm shadow-brand/30">
+          {initial}
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="text-xs font-semibold truncate">{name}</div>
+          <div className="nockta-eyebrow text-muted-foreground truncate">Workspace</div>
+        </div>
+        <span className="h-1.5 w-1.5 rounded-full bg-status-done animate-pulse" />
+      </div>
+    </div>
   );
 }

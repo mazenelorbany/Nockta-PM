@@ -16,6 +16,7 @@ import { Field, SectionTitle, ToggleRow, apiErrorMessage } from './primitives';
 // =============================================================================
 
 interface AiSettings {
+  workspaceName: string;
   dupThreshold: number;
   priorityWeights: {
     deadline: number;
@@ -99,6 +100,18 @@ export function AiSettingsTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
       )}
 
       <div className="space-y-6">
+        <Field
+          label={'Workspace name'}
+          hint={'Shown in the sidebar, page title, and outgoing magic-link emails. Up to 64 characters.'}
+        >
+          <WorkspaceNameInput
+            value={draft.workspaceName}
+            disabled={!isAdmin}
+            onLocalChange={(v) => setDraftLocal({ workspaceName: v })}
+            onCommit={(v) => commit({ workspaceName: v })}
+          />
+        </Field>
+
         <Field
           label={'Duplicate threshold'}
           hint={`Tasks whose embedding similarity is ≥ ${draft.dupThreshold.toFixed(2)} are flagged as duplicates by the AI comment bot.`}
@@ -486,6 +499,56 @@ function DupPreview({ threshold, enabled }: { threshold: number; enabled: boolea
           similar open task{previewQuery.data?.count === 1 ? '' : 's'} at this threshold.
         </span>
       )}
+    </div>
+  );
+}
+
+// WorkspaceNameInput — text field with an explicit Save button (rather than
+// commit-on-blur) so users can type a new name and clearly opt in. Disabled
+// for non-Admin viewers; the parent passes draft state down + lifts the
+// commit back up through the standard save mutation.
+function WorkspaceNameInput({
+  value,
+  disabled,
+  onLocalChange,
+  onCommit,
+}: {
+  value: string;
+  disabled: boolean;
+  onLocalChange: (v: string) => void;
+  onCommit: (v: string) => void;
+}): JSX.Element {
+  const [touched, setTouched] = useState(false);
+  return (
+    <div className="flex gap-2">
+      <input
+        type="text"
+        value={value}
+        maxLength={64}
+        disabled={disabled}
+        onChange={(e) => {
+          onLocalChange(e.target.value);
+          setTouched(true);
+        }}
+        placeholder="Workspace"
+        className={cn(
+          'flex-1 rounded-md border border-border bg-card px-3 py-2 text-sm',
+          'placeholder:text-muted-foreground/60',
+          'focus:outline-none focus:ring-2 focus:ring-ring',
+          'disabled:opacity-60 disabled:cursor-not-allowed',
+        )}
+      />
+      <button
+        type="button"
+        disabled={disabled || !touched || value.trim().length === 0}
+        onClick={() => {
+          onCommit(value.trim());
+          setTouched(false);
+        }}
+        className="tap rounded-md bg-secondary px-3 py-2 text-xs font-medium text-foreground hover:bg-secondary/80 disabled:opacity-50 transition-colors"
+      >
+        Save
+      </button>
     </div>
   );
 }

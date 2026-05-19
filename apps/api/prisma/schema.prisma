@@ -1654,6 +1654,9 @@ model WorkspaceAiSettings {
   /// Singleton row — at most one. The `singleton` column carries a unique
   /// constraint and seed/test code writes `{ singleton: 1, ... }`.
   singleton             Int      @default(1) @unique
+  /// Display name of the workspace as shown in the app shell (sidebar
+  /// pill, page title, magic-link emails). Editable from /settings/ai.
+  workspaceName         String   @default("Nockta")
   /// Cosine similarity threshold for the duplicate-detection processor.
   /// 0.7..0.99 in the UI; the service clamps writes into that range.
   dupThreshold          Float    @default(0.85)

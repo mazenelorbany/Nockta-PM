@@ -1,7 +1,8 @@
 import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
-  IsBoolean, IsIn, IsNumber, IsObject, IsOptional, Max, Min,
+  IsBoolean, IsIn, IsNumber, IsObject, IsOptional, IsString,
+  Length, Max, Min,
 } from 'class-validator';
 
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -24,6 +25,9 @@ import {
 // =============================================================================
 
 class UpdateAiSettingsDto {
+  @IsOptional() @IsString() @Length(1, 64)
+  workspaceName?: string;
+
   @IsOptional() @IsNumber() @Min(0) @Max(1)
   dupThreshold?: number;
 
