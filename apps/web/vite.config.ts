@@ -75,23 +75,16 @@ export default defineConfig({
         //
         // socket.io-client is already in its own chunk via the dynamic
         // import in lib/socket.ts — no manualChunk entry needed.
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-          router: ['react-router-dom'],
-          query: ['@tanstack/react-query'],
-          dnd: ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
-          tiptap: [
-            '@tiptap/core',
-            '@tiptap/react',
-            '@tiptap/starter-kit',
-            '@tiptap/extension-link',
-            '@tiptap/extension-image',
-            '@tiptap/extension-mention',
-            '@tiptap/extension-task-list',
-            '@tiptap/extension-task-item',
-            '@tiptap/suggestion',
-          ],
-          recharts: ['recharts'],
+        manualChunks(id) {
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+            return 'react-vendor';
+          }
+          if (id.includes('node_modules/react-router-dom/')) return 'router';
+          if (id.includes('node_modules/@tanstack/react-query/')) return 'query';
+          if (id.includes('node_modules/@dnd-kit/')) return 'dnd';
+          if (id.includes('node_modules/@tiptap/')) return 'tiptap';
+          if (id.includes('node_modules/recharts/')) return 'recharts';
+          return null;
         },
       },
     },

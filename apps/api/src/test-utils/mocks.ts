@@ -375,7 +375,10 @@ export function makePrismaMock(): PrismaService {
 }
 
 /** Build an EventEmitter2 mock with a no-op emit. Returns the spy for assertions. */
-export function makeEventsMock() {
+export function makeEventsMock(): {
+  instance: EventEmitter2;
+  emit: ReturnType<typeof vi.fn>;
+} {
   const emit = vi.fn();
   return {
     instance: { emit } as unknown as EventEmitter2,
