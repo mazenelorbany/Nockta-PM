@@ -200,3 +200,174 @@ describe('ProjectsService.createFromTemplate — guards (Batch A A10 refactor)',
     ).rejects.toThrow(BadRequestException);
   });
 });
+
+// =============================================================================
+// inviteGuest — project-scoped invitation that combines user-create,
+// project-access-grant, and magic-link email in one call.
+// =============================================================================
+
+describe('ProjectsService.inviteGuest', () => {
+  let built: ReturnType<typeof build>;
+  let service: ProjectsService;
+  beforeEach(() => {
+    built = build();
+    service = built.service;
+    vi.mocked(built.mocks.prisma.project.findUnique).mockResolvedValue({
+      id: 'p-1',
+      name: 'Acme Redesign',
+      key: 'ACM',
+    } as never);
+    vi.mocked(built.mocks.prisma.user.findUnique).mockImplementation(
+      // The service queries user.findUnique TWICE: once for the actor
+      // (id-lookup, returns the admin row) and once for the recipient
+      // (email-lookup, returns null for new invitees, an existing row
+      // for re-invites). Switch on the `where` shape.
+      ((args: { where: { id?: string; email?: string } }) => {
+        if (args.where.id === ADMIN.id) {
+          return Promise.resolve({ id: ADMIN.id, name: 'Admin Alice', email: ADMIN.email });
+        }
+        return Promise.resolve(null);
+      }) as never,
+    );
+    vi.mocked(built.mocks.prisma.user.upsert).mockResolvedValue({ id: 'u-new' } as never);
+    vi.mocked(built.mocks.prisma.projectAccess.findFirst).mockResolvedValue(null);
+    vi.mocked(built.mocks.prisma.projectAccess.create).mockResolvedValue({
+      id: 'pa-new',
+    } as never);
+  });
+
+  it('creates a guest, grants project access, sends invite, emits event', async () => {
+    const result = await service.inviteGuest(ADMIN, 'p-1', {
+      email: 'bob@external.test',
+      name: 'Bob Builder',
+      role: 'Contributor',
+    });
+
+    expect(built.mocks.permissions.assertAtLeast).toHaveBeenCalledWith(ADMIN, 'p-1', 'Manager');
+    expect(built.mocks.prisma.user.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { email: 'bob@external.test' },
+        create: expect.objectContaining({
+          email: 'bob@external.test',
+          name: 'Bob Builder',
+          kind: 'client',
+          companyRole: null,
+        }),
+      }),
+    );
+    expect(built.mocks.prisma.projectAccess.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          projectId: 'p-1',
+          subjectKind: 'user',
+          userId: 'u-new',
+          role: 'Contributor',
+        }),
+      }),
+    );
+    expect(built.mocks.auth.sendProjectInvite).toHaveBeenCalledWith({
+      email: 'bob@external.test',
+      projectName: 'Acme Redesign',
+      inviterName: 'Admin Alice',
+      role: 'Contributor',
+    });
+    expect(built.mocks.events.emit).toHaveBeenCalledWith(
+      'project.guest_invited',
+      expect.objectContaining({
+        projectId: 'p-1',
+        userId: 'u-new',
+        role: 'Contributor',
+        actorUserId: ADMIN.id,
+      }),
+    );
+    expect(result).toMatchObject({
+      userId: 'u-new',
+      email: 'bob@external.test',
+      projectId: 'p-1',
+      role: 'Contributor',
+    });
+  });
+
+  it('rejects @nockta.com domain emails (internal users use Google OAuth)', async () => {
+    await expect(
+      service.inviteGuest(ADMIN, 'p-1', {
+        email: 'someone@nockta.com',
+        role: 'Contributor',
+      }),
+    ).rejects.toThrow(BadRequestException);
+    // Permission check still happens (it's the first guard) but no writes.
+    expect(built.mocks.prisma.projectAccess.create).not.toHaveBeenCalled();
+    expect(built.mocks.auth.sendProjectInvite).not.toHaveBeenCalled();
+  });
+
+  it('refuses to re-invite an existing INTERNAL user as a guest', async () => {
+    vi.mocked(built.mocks.prisma.user.findUnique).mockImplementation(
+      ((args: { where: { id?: string; email?: string } }) => {
+        if (args.where.id === ADMIN.id) {
+          return Promise.resolve({ id: ADMIN.id, name: 'Admin', email: ADMIN.email });
+        }
+        return Promise.resolve({ id: 'u-existing', kind: 'internal' });
+      }) as never,
+    );
+
+    await expect(
+      service.inviteGuest(ADMIN, 'p-1', {
+        email: 'staff@external.test',
+        role: 'Viewer',
+      }),
+    ).rejects.toThrow(/already an internal user/);
+    expect(built.mocks.auth.sendProjectInvite).not.toHaveBeenCalled();
+  });
+
+  it('is idempotent: re-invite reuses the user and updates role if changed', async () => {
+    vi.mocked(built.mocks.prisma.user.findUnique).mockImplementation(
+      ((args: { where: { id?: string; email?: string } }) => {
+        if (args.where.id === ADMIN.id) {
+          return Promise.resolve({ id: ADMIN.id, name: 'Admin', email: ADMIN.email });
+        }
+        return Promise.resolve({ id: 'u-existing', kind: 'client' });
+      }) as never,
+    );
+    vi.mocked(built.mocks.prisma.user.upsert).mockResolvedValue({ id: 'u-existing' } as never);
+    vi.mocked(built.mocks.prisma.projectAccess.findFirst).mockResolvedValue({
+      id: 'pa-old',
+      role: 'Viewer',
+    } as never);
+
+    const result = await service.inviteGuest(ADMIN, 'p-1', {
+      email: 'bob@external.test',
+      role: 'Contributor', // upgraded from Viewer
+    });
+
+    // No new ProjectAccess row — existing grant gets its role updated.
+    expect(built.mocks.prisma.projectAccess.create).not.toHaveBeenCalled();
+    expect(built.mocks.prisma.projectAccess.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'pa-old' },
+        data: expect.objectContaining({ role: 'Contributor' }),
+      }),
+    );
+    // Email is re-sent (so the guest can find the link again).
+    expect(built.mocks.auth.sendProjectInvite).toHaveBeenCalledOnce();
+    expect(result.grantId).toBe('pa-old');
+  });
+
+  it('falls back to actor.email when actor.name is empty in the invitation', async () => {
+    vi.mocked(built.mocks.prisma.user.findUnique).mockImplementation(
+      ((args: { where: { id?: string; email?: string } }) => {
+        if (args.where.id === ADMIN.id) {
+          return Promise.resolve({ id: ADMIN.id, name: '', email: 'admin@nockta.com' });
+        }
+        return Promise.resolve(null);
+      }) as never,
+    );
+
+    await service.inviteGuest(ADMIN, 'p-1', {
+      email: 'guest@external.test',
+      role: 'Viewer',
+    });
+    expect(built.mocks.auth.sendProjectInvite).toHaveBeenCalledWith(
+      expect.objectContaining({ inviterName: 'admin@nockta.com' }),
+    );
+  });
+});

@@ -58,7 +58,7 @@ export function makePrismaMock(): PrismaService {
       'update',
       'delete',
     ]),
-    projectAccess: model(['findFirst', 'findMany', 'create', 'delete']),
+    projectAccess: model(['findFirst', 'findMany', 'create', 'update', 'delete']),
     teamMember: model(['findMany', 'deleteMany', 'createMany']),
     team: model(['findMany', 'findUnique']),
     task: model([
