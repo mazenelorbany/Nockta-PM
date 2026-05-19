@@ -51,9 +51,13 @@ COPY apps/web/nginx.conf /etc/nginx/templates/default.conf.template
 COPY apps/web/security-headers.conf /etc/nginx/snippets/security-headers.conf
 # nginx:alpine has built-in template support: any file in /etc/nginx/templates
 # ending in .template is rendered through envsubst into /etc/nginx/conf.d
-# before nginx starts. PORT defaults to 80 so a vanilla `docker run` still
-# works.
-ENV PORT=80
+# before nginx starts.
+#
+# We DON'T set a default ENV PORT here — Railway injects PORT into the
+# container env at runtime, and if it ever fails to do so we want envsubst
+# to leave `${PORT}` empty so nginx refuses to start with a loud parse
+# error, instead of silently binding to 80 while Railway probes a
+# different port.
 EXPOSE 80
 
 # Explicit CMD so the container's start command is well-defined. Without
