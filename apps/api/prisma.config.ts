@@ -1,4 +1,7 @@
-import 'dotenv/config';
+// dotenv is a transitive dep (@nestjs/config) — not directly resolvable in
+// pnpm strict mode at runtime. Guard the import so the config still evaluates
+// when dotenv isn't reachable (Railway injects env vars into the container).
+try { require('dotenv/config'); } catch {}
 import { defineConfig } from 'prisma/config';
 
 // Prisma 7 moved connection config out of schema.prisma. The CLI (migrate /
