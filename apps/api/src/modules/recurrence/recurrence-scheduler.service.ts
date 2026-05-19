@@ -1,8 +1,8 @@
 import { Injectable, Logger, type OnModuleInit, type OnModuleDestroy } from '@nestjs/common';
 
-import type { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
+import { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
 
-import type { RecurrenceService } from './recurrence.service';
+import { RecurrenceService } from './recurrence.service';
 
 /**
  * Polls every 60 seconds and spawns any due recurrences. Wrapped in

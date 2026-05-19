@@ -7,9 +7,9 @@ import {
 } from '@prisma/client';
 import { generateKeyBetween } from 'fractional-indexing';
 
-import type { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
-import type { ImportRunsService } from './import-runs.service';
+import { ImportRunsService } from './import-runs.service';
 
 // =============================================================================
 // Jira → Nockta importer service.

@@ -6,7 +6,7 @@ import { IsBoolean, IsDateString, IsEnum, IsOptional, IsString, IsUUID, MaxLengt
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { SearchService } from './search.service';
+import { SearchService } from './search.service';
 import { type SearchInput } from './search.service';
 
 class SaveSearchDto {

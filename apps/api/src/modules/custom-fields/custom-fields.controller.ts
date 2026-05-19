@@ -8,7 +8,7 @@ import {
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { CustomFieldsService} from './custom-fields.service';
+import { CustomFieldsService} from './custom-fields.service';
 import { type CustomFieldInput, type CustomFieldOption, type RollupConfig } from './custom-fields.service';
 import type { VisibilityRule } from './formula-evaluator';
 

@@ -1,9 +1,9 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 
-import type { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
+import { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
 import { attachmentPurgeOps } from '../../health/metrics.controller';
-import type { PrismaService } from '../../prisma/prisma.service';
-import type { StorageService } from '../storage/storage.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { StorageService } from '../storage/storage.service';
 
 /**
  * Background housekeeping. Runs every hour:

@@ -1,9 +1,9 @@
 import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
-import type { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
-import type { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
-import type { RealtimeGateway } from './realtime.gateway';
+import { RealtimeGateway } from './realtime.gateway';
 
 /**
  * Listens on the in-process event bus and broadcasts to the relevant Socket.IO rooms.

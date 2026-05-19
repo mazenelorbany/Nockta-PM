@@ -8,7 +8,7 @@ import { IsArray, IsBoolean, IsEnum, IsIn, IsOptional, IsString, IsUUID, Matches
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { ProjectsService } from './projects.service';
+import { ProjectsService } from './projects.service';
 
 class CreateProjectDto {
   @IsString() @Matches(/^[A-Z]{2,10}$/) key!: string;

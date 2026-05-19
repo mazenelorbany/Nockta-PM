@@ -1,14 +1,14 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
-import type { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { Prisma } from '@prisma/client';
-import type { Queue } from 'bullmq';
+import { Queue } from 'bullmq';
 
 import { AI_SUMMARIZE_QUEUE } from '../ai/ai.queues';
-import type { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
-import type { GithubAppService } from './github-app.service';
-import type { AutoStatusService } from './auto-status.service';
+import { GithubAppService } from './github-app.service';
+import { AutoStatusService } from './auto-status.service';
 import { parseTaskKeys } from './task-key-parser';
 
 interface RepoRef {

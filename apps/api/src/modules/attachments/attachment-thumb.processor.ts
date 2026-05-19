@@ -8,8 +8,8 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import type { Job } from 'bullmq';
 import sharp from 'sharp';
 
-import type { PrismaService } from '../../prisma/prisma.service';
-import type { StorageService } from '../storage/storage.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { StorageService } from '../storage/storage.service';
 
 import { ATTACHMENT_THUMB_QUEUE } from './attachments.service';
 

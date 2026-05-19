@@ -11,7 +11,7 @@ import {
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { AttachmentsService } from './attachments.service';
+import { AttachmentsService } from './attachments.service';
 
 class SignUploadDto {
   @IsEnum(AttachmentParentType) parentType!: AttachmentParentType;

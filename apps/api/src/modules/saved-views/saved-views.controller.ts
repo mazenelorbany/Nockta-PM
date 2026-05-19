@@ -4,9 +4,9 @@ import { IsObject, IsOptional, IsString, MaxLength, MinLength } from 'class-vali
 
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import type { SearchService } from '../search/search.service';
+import { SearchService } from '../search/search.service';
 
-import type { SavedViewsService} from './saved-views.service';
+import { SavedViewsService} from './saved-views.service';
 import { type SavedViewInput } from './saved-views.service';
 
 class CreateSavedViewDto {

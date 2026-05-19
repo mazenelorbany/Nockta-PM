@@ -4,7 +4,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { EventsService } from './events.service';
+import { EventsService } from './events.service';
 
 @ApiTags('audit-log')
 @ApiBearerAuth()

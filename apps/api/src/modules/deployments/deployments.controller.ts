@@ -5,7 +5,7 @@ import type { DeploymentSource } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { DeploymentsService } from './deployments.service';
+import { DeploymentsService } from './deployments.service';
 
 @ApiTags('deployments')
 @ApiBearerAuth()

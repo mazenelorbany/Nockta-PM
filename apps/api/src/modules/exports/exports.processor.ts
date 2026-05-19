@@ -3,14 +3,14 @@ import { join } from 'node:path';
 
 import { Logger } from '@nestjs/common';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import type { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { Job } from 'bullmq';
 
 import { Env } from '../../config/env';
-import type { PrismaService } from '../../prisma/prisma.service';
-import type { StorageService } from '../storage/storage.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { StorageService } from '../storage/storage.service';
 import type { AuthenticatedUser } from '../auth/types';
-import type { PermissionsService } from '../permissions/permissions.service';
+import { PermissionsService } from '../permissions/permissions.service';
 
 import {
   EXPORTS_QUEUE,

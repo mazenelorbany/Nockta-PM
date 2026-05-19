@@ -10,8 +10,8 @@ import { Type } from 'class-transformer';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { SprintRetroService } from './retro.service';
-import type { SprintsService } from './sprints.service';
+import { SprintRetroService } from './retro.service';
+import { SprintsService } from './sprints.service';
 
 class CreateSprintDto {
   @IsString() @MinLength(1) @MaxLength(120) name!: string;

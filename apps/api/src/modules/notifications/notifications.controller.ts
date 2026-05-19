@@ -5,7 +5,7 @@ import { ArrayMinSize, IsArray, IsUUID } from 'class-validator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { NotificationsService } from './notifications.service';
+import { NotificationsService } from './notifications.service';
 
 class MarkReadDto {
   @IsArray()

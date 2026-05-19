@@ -15,7 +15,7 @@ import { IsIn, IsUUID } from 'class-validator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { NotificationMutesService} from './mutes.service';
+import { NotificationMutesService} from './mutes.service';
 import { type MuteableEntityType } from './mutes.service';
 
 class MuteDto {

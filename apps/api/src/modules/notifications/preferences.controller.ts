@@ -7,7 +7,7 @@ import {
 
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import type { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
 class UpsertPrefDto {
   @IsEnum(NotificationChannel) channel!: NotificationChannel;

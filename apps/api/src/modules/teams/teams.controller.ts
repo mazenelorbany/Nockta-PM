@@ -5,7 +5,7 @@ import { IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-valid
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { TeamsService } from './teams.service';
+import { TeamsService } from './teams.service';
 
 class CreateTeamDto {
   @IsString() @Matches(/^[a-z0-9-]+$/) @MinLength(2) @MaxLength(40)

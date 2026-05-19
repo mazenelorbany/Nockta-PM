@@ -30,9 +30,9 @@ import type { Response } from 'express';
 
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
-import type { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
-import type {
+import {
   ExportsService} from './exports.service';
 import {
   type ExportDeliveryKind,

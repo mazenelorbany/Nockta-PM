@@ -11,7 +11,7 @@ import {
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { TasksService } from './tasks.service';
+import { TasksService } from './tasks.service';
 
 class CreateTaskDto {
   @IsUUID() projectId!: string;

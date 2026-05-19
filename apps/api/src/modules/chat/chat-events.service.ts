@@ -1,14 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 import { Env } from '../../config/env';
-import type { PrismaService } from '../../prisma/prisma.service';
-import type { AiSyncService } from '../ai/ai-sync.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { AiSyncService } from '../ai/ai-sync.service';
 import type { AuthenticatedUser } from '../auth/types';
-import type { CommentsService } from '../comments/comments.service';
-import type { PermissionsService } from '../permissions/permissions.service';
-import type { TasksService } from '../tasks/tasks.service';
+import { CommentsService } from '../comments/comments.service';
+import { PermissionsService } from '../permissions/permissions.service';
+import { TasksService } from '../tasks/tasks.service';
 
-import type { ChatService } from './chat.service';
+import { ChatService } from './chat.service';
 
 // =============================================================================
 // chat-events.service — inbound bot event handler. Owns the slash-command

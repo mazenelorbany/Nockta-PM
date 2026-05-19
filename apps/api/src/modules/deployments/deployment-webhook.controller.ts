@@ -10,7 +10,7 @@ import type { Request } from 'express';
 
 import { Public } from '../auth/decorators/public.decorator';
 
-import type { DeploymentsService } from './deployments.service';
+import { DeploymentsService } from './deployments.service';
 import {
   normalizeGeneric, normalizeGithubActions, normalizeRailway, normalizeVercel,
 } from './source-adapters';

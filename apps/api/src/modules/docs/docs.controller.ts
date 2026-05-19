@@ -9,7 +9,7 @@ import {
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { DocsService } from './docs.service';
+import { DocsService } from './docs.service';
 import type { ProseMirrorDoc } from './prosemirror-markdown';
 
 class CreateDocDto {

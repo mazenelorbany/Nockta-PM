@@ -1,12 +1,12 @@
 import {
   BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException,
 } from '@nestjs/common';
-import type { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma, type Priority, type TaskType, type Visibility } from '@prisma/client';
 import { generateKeyBetween } from 'fractional-indexing';
 
-import type { PrismaService } from '../../prisma/prisma.service';
-import type { PermissionsService } from '../permissions/permissions.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { PermissionsService } from '../permissions/permissions.service';
 import type { AuthenticatedUser } from '../auth/types';
 
 import { defaultStatusFor, doneStatusesFor, isValidStatusFor } from './workflow';

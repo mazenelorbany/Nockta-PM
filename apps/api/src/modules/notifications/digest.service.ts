@@ -1,9 +1,9 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
-import type { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { Prisma } from '@prisma/client';
 
-import type { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
-import type { PrismaService } from '../../prisma/prisma.service';
+import { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
 // =============================================================================
 // NotificationDigestService — Pass I (Notifications 8 → 9).

@@ -9,7 +9,7 @@ import {
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { AutomationsService} from './automations.service';
+import { AutomationsService} from './automations.service';
 import { type AutomationInput } from './automations.service';
 
 const TRIGGERS = [

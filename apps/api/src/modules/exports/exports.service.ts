@@ -10,11 +10,11 @@ import {
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import type { Prisma } from '@prisma/client';
-import type { Queue } from 'bullmq';
+import { Queue } from 'bullmq';
 
-import type { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import type { AuthenticatedUser } from '../auth/types';
-import type { PermissionsService } from '../permissions/permissions.service';
+import { PermissionsService } from '../permissions/permissions.service';
 
 // =============================================================================
 // ExportsService — workspace-scoped scheduled/on-demand data exports.

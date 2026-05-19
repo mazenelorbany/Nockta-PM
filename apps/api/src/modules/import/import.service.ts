@@ -7,12 +7,12 @@ import {
 } from '@nestjs/common';
 import type { Priority, TaskType } from '@prisma/client';
 
-import type { PrismaService } from '../../prisma/prisma.service';
-import type { PermissionsService } from '../permissions/permissions.service';
-import type { TasksService } from '../tasks/tasks.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { PermissionsService } from '../permissions/permissions.service';
+import { TasksService } from '../tasks/tasks.service';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { ImportRunsService } from './import-runs.service';
+import { ImportRunsService } from './import-runs.service';
 
 // =============================================================================
 // CSV import — initial Import Center end-to-end path.

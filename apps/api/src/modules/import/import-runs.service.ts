@@ -1,7 +1,7 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 
-import type { PrismaService } from '../../prisma/prisma.service';
-import type { RealtimeGateway } from '../realtime/realtime.gateway';
+import { PrismaService } from '../../prisma/prisma.service';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 
 // =============================================================================
 // ImportRunsService — bookkeeping + realtime fan-out for every Import Center

@@ -22,7 +22,7 @@ import {
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type {
+import {
   OutboundWebhooksService} from './outbound-webhooks.service';
 import {
   type WebhookInput,

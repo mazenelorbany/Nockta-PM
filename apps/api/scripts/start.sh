@@ -16,18 +16,28 @@
 set -eu
 
 echo "[start] step 1/3 — prisma migrate deploy"
-node node_modules/prisma/build/index.js migrate deploy
+# Use the prisma CLI bin symlink that pnpm publishes into the workspace
+# package's node_modules. Going through the deep .pnpm path is brittle
+# across prisma versions.
+./node_modules/.bin/prisma migrate deploy
 
 echo "[start] step 2/3 — companion.sql (partitioning, FTS, MVs, constraints)"
 if [ -z "${DATABASE_URL:-}" ]; then
   echo "[start] ERROR: DATABASE_URL is not set; companion.sql cannot be applied"
   exit 1
 fi
+# Strip Prisma-only query parameters that libpq rejects. Prisma routinely
+# appends `?schema=public` (and friends like `?connection_limit=`,
+# `?pgbouncer=`) to DATABASE_URL; psql only knows the canonical libpq
+# parameters and bails on anything else. Cutting the entire query string
+# is safe — companion.sql operates on the default `public` schema
+# explicitly, and we don't rely on any libpq-only params here.
+PSQL_URL="${DATABASE_URL%%\?*}"
 # --single-transaction wraps every statement in a transaction so any failure
 # rolls the whole companion script back. Combined with ON_ERROR_STOP=1 this
 # means a malformed statement halts boot immediately rather than silently
 # leaving the DB half-migrated.
-psql "$DATABASE_URL" \
+psql "$PSQL_URL" \
   --single-transaction \
   --set ON_ERROR_STOP=1 \
   --file prisma/migrations/companion.sql \

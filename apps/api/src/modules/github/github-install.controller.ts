@@ -19,7 +19,7 @@ import type Redis from 'ioredis';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { REDIS_CLIENT } from '../redis/redis.module';
-import type { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { Env } from '../../config/env';
 
 /**

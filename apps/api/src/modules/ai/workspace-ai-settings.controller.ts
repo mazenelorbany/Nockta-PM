@@ -10,7 +10,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type {
+import {
   WorkspaceAiSettingsService} from './workspace-ai-settings.service';
 import {
   type ModelPreference,

@@ -7,7 +7,7 @@ import { IsHexadecimal, IsOptional, IsString, Length, MaxLength, MinLength } fro
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { LabelsService } from './labels.service';
+import { LabelsService } from './labels.service';
 
 class CreateLabelDto {
   @IsString() @MinLength(1) @MaxLength(40) name!: string;

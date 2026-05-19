@@ -27,21 +27,21 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { GithubIssuesImportService } from './github-issues-import.service';
-import type { ImportRunsService } from './import-runs.service';
-import type { ImportService} from './import.service';
+import { GithubIssuesImportService } from './github-issues-import.service';
+import { ImportRunsService } from './import-runs.service';
+import { ImportService} from './import.service';
 import { type CommitInput } from './import.service';
-import type { JiraImportService } from './jira-import.service';
-import type { LinearImportService } from './linear-import.service';
+import { JiraImportService } from './jira-import.service';
+import { LinearImportService } from './linear-import.service';
 import { fields as linearFields } from './linear/fields';
 import { fields as csvFields } from './csv/fields';
 import { fields as jiraCsvFields } from './jira-csv/fields';
-import type {
+import {
   ImportsDryRunService} from './imports-dry-run.service';
 import {
   type DryRunPayload,
 } from './imports-dry-run.service';
-import type {
+import {
   JiraCsvImporter} from './jira-csv/jira-csv.importer';
 import {
   type JiraCsvMapping,

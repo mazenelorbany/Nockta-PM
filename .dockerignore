@@ -15,4 +15,6 @@ infra/postgres/data
 **/.vscode
 **/.idea
 Nockta\ Flow.pdf
-GRILL-SUMMARY.md
+# Auditor scratchpads that should never bloat a Docker build context.
+*.scratch
+.scratch/

@@ -1,13 +1,13 @@
 import { randomBytes, createHash } from 'node:crypto';
 
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import type { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { Prisma} from '@prisma/client';
 import { type DeploymentSource } from '@prisma/client';
 import { generateKeyBetween } from 'fractional-indexing';
 
-import type { PrismaService } from '../../prisma/prisma.service';
-import type { PermissionsService } from '../permissions/permissions.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { PermissionsService } from '../permissions/permissions.service';
 import type { AuthenticatedUser } from '../auth/types';
 
 import type { NormalizedDeployment } from './source-adapters';

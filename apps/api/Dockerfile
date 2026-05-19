@@ -44,12 +44,18 @@ WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 ENV NODE_ENV=production PORT=3000
 
-COPY --from=build /app/apps/api/dist ./dist
-COPY --from=build /app/apps/api/prisma ./prisma
-COPY --from=build /app/apps/api/scripts ./scripts
-COPY --from=build /app/apps/api/package.json ./package.json
-# node_modules from the workspace root — Prisma client lives here.
+# pnpm workspace structure: the workspace root has node_modules/.pnpm/ (real
+# packages) and each workspace package has its own node_modules/ with
+# symlinks back into .pnpm. We need BOTH trees in the runtime image, plus
+# packages/* so workspace:* imports (@nockta/types, @nockta/sdk) resolve.
 COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/packages ./packages
+COPY --from=build /app/apps/api ./apps/api
+
+# Run from inside apps/api so relative paths in start.sh
+# (scripts/start.sh, prisma/migrations/companion.sql, dist/main.js,
+# node_modules/.bin/prisma) resolve naturally.
+WORKDIR /app/apps/api
 
 RUN chmod +x ./scripts/start.sh
 

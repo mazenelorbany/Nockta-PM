@@ -1,12 +1,12 @@
 import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 
-import type { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { Env } from '../../config/env';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { AiCostTrackingService } from './ai-cost-tracking.service';
-import type { LlmService } from './llm.service';
-import type { WorkspaceAiSettingsService } from './workspace-ai-settings.service';
+import { AiCostTrackingService } from './ai-cost-tracking.service';
+import { LlmService } from './llm.service';
+import { WorkspaceAiSettingsService } from './workspace-ai-settings.service';
 
 // =============================================================================
 // AiStandupService — the "structured standup with quoted comments" feature.

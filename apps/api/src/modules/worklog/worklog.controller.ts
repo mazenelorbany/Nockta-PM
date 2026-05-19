@@ -5,7 +5,7 @@ import { IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { WorklogService } from './worklog.service';
+import { WorklogService } from './worklog.service';
 
 class StartTimerDto {
   @IsOptional() @IsString() @MaxLength(500) note?: string;

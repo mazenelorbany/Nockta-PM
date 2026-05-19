@@ -3,7 +3,7 @@ import {
 } from '@nestjs/common';
 import type { DashboardScope, Prisma } from '@prisma/client';
 
-import type { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import type { AuthenticatedUser } from '../auth/types';
 
 type JsonObject = Record<string, unknown>;

@@ -1,13 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import type { Queue } from 'bullmq';
+import { Queue } from 'bullmq';
 
-import type { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
-import type { PrismaService } from '../../prisma/prisma.service';
-import type { ChatService } from '../chat/chat.service';
+import { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { ChatService } from '../chat/chat.service';
 
-import type { LlmService } from './llm.service';
+import { LlmService } from './llm.service';
 import { AI_BLOCKER_QUEUE } from './ai.queues';
 
 @Injectable()

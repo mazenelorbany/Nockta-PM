@@ -9,7 +9,7 @@ import {
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type {
+import {
   CustomReportsService} from './reports.service';
 import { REPORT_DIMENSIONS, REPORT_METRICS,
   type ReportDimension, type ReportMetric,

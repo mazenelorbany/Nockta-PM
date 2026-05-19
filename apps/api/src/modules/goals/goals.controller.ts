@@ -9,7 +9,7 @@ import {
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { GoalsService } from './goals.service';
+import { GoalsService } from './goals.service';
 
 class CreateGoalDto {
   @IsString() @MinLength(1) @MaxLength(200) name!: string;

@@ -6,7 +6,7 @@ import { IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min, MinL
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { CommentsService } from './comments.service';
+import { CommentsService } from './comments.service';
 import { ALLOWED_REACTION_EMOJIS } from './comments.service';
 
 class CreateCommentDto {

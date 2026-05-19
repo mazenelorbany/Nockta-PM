@@ -3,7 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 
 import { Env } from '../../config/env';
 
-import type { WorkspaceAiSettingsService } from './workspace-ai-settings.service';
+import { WorkspaceAiSettingsService } from './workspace-ai-settings.service';
 
 export interface GenerateOptions {
   temperature?: number;

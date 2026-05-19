@@ -1,7 +1,7 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 
-import type { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
-import type { PrismaService } from '../../prisma/prisma.service';
+import { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
 // =============================================================================
 // CfdSnapshotScheduler — once per day at 00:30 UTC, walks every active project

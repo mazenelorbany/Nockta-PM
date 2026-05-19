@@ -1,20 +1,20 @@
 import { Logger } from '@nestjs/common';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import type { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { Job } from 'bullmq';
 import type { Prisma } from '@prisma/client';
 
 import { aiProcessorRuns } from '../../health/metrics.controller';
-import type { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
-import type { AiCostTrackingService } from './ai-cost-tracking.service';
+import { AiCostTrackingService } from './ai-cost-tracking.service';
 import {
   AI_BLOCKER_QUEUE, AI_DUPLICATE_QUEUE, AI_EMBED_QUEUE, AI_PRIORITIZE_QUEUE, AI_SUMMARIZE_QUEUE,
 } from './ai.queues';
-import type { EmbeddingService } from './embedding.service';
-import type { LlmService } from './llm.service';
-import type { QdrantService } from './qdrant.service';
-import type { WorkspaceAiSettingsService } from './workspace-ai-settings.service';
+import { EmbeddingService } from './embedding.service';
+import { LlmService } from './llm.service';
+import { QdrantService } from './qdrant.service';
+import { WorkspaceAiSettingsService } from './workspace-ai-settings.service';
 
 // Wrap a processor body with success/failure metric emission. Throwing
 // caller's error is preserved so BullMQ still retries per its policy.

@@ -5,8 +5,8 @@ import type Redis from 'ioredis';
 import { Env } from '../config/env';
 import { Public } from '../modules/auth/decorators/public.decorator';
 import { REDIS_CLIENT } from '../modules/redis/redis.module';
-import type { StorageService } from '../modules/storage/storage.service';
-import type { PrismaService } from '../prisma/prisma.service';
+import { StorageService } from '../modules/storage/storage.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 interface HealthStatus {
   status: 'ok' | 'degraded';

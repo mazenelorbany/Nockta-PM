@@ -8,7 +8,7 @@ import {
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { TaskTemplatesService} from './task-templates.service';
+import { TaskTemplatesService} from './task-templates.service';
 import { type TaskTemplateInput } from './task-templates.service';
 
 class CreateTaskTemplateDto {

@@ -2,7 +2,7 @@ import { Injectable, InternalServerErrorException, Logger, type OnModuleInit } f
 import { OnEvent } from '@nestjs/event-emitter';
 
 import { Env } from '../../config/env';
-import type { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
 /**
  * Thin OpenSearch / Elasticsearch client + indexer. Speaks the v7+ REST API

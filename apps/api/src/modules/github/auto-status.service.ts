@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { WorkflowPreset } from '@prisma/client';
 import { generateKeyBetween } from 'fractional-indexing';
 
-import type { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
 type Trigger = 'commit_pushed' | 'pr_opened' | 'pr_ready_for_review' | 'pr_merged' | 'pr_reopened';
 

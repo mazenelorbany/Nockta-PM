@@ -4,14 +4,14 @@ import {
   BadRequestException, ForbiddenException, Injectable, NotFoundException,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
-import type { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { type AttachmentParentType, type Visibility } from '@prisma/client';
-import type { Queue } from 'bullmq';
+import { Queue } from 'bullmq';
 
-import type { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import type { AuthenticatedUser } from '../auth/types';
-import type { PermissionsService } from '../permissions/permissions.service';
-import type { StorageService } from '../storage/storage.service';
+import { PermissionsService } from '../permissions/permissions.service';
+import { StorageService } from '../storage/storage.service';
 
 export const ATTACHMENT_SCAN_QUEUE = 'attachment-scan';
 export const ATTACHMENT_THUMB_QUEUE = 'attachment-thumb';

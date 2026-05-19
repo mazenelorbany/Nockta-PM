@@ -9,7 +9,7 @@ import { Public } from '../auth/decorators/public.decorator';
 import { Env } from '../../config/env';
 import { REDIS_CLIENT } from '../redis/redis.module';
 
-import type { GithubEventsService } from './github-events.service';
+import { GithubEventsService } from './github-events.service';
 
 /** GitHub re-delivers webhooks for up to ~30 days after the initial fire on
  *  ping/network errors. 24h covers the realistic redelivery window plus a

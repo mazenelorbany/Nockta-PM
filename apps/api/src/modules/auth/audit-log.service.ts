@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-import type { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
 // =============================================================================
 // AuditLogService — thin wrapper around AuditLogEntry. Every login/MFA/session

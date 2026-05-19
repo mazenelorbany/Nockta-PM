@@ -10,7 +10,7 @@ import {
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
-import type { DashboardsService} from './dashboards.service';
+import { DashboardsService} from './dashboards.service';
 import { type DashboardInput } from './dashboards.service';
 
 class CreateDashboardDto {

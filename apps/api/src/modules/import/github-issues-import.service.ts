@@ -7,10 +7,10 @@ import {
 } from '@prisma/client';
 import { generateKeyBetween } from 'fractional-indexing';
 
-import type { PrismaService } from '../../prisma/prisma.service';
-import type { GithubAppService } from '../github/github-app.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { GithubAppService } from '../github/github-app.service';
 
-import type { ImportRunsService } from './import-runs.service';
+import { ImportRunsService } from './import-runs.service';
 
 // =============================================================================
 // GitHub Issues → Nockta importer service.
