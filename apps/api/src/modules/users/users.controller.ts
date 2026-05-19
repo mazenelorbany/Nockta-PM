@@ -131,6 +131,35 @@ export class UsersController {
     });
   }
 
+  /**
+   * Pending project invitations across the workspace — outstanding
+   * `project_invite` magic links that haven't been used or expired yet.
+   * Powers the Members → Pending Invitations panel.
+   */
+  @Get('pending-invites')
+  @ApiOperation({ summary: 'List pending project invitations (Admin only)' })
+  listPendingInvites(@CurrentUser() actor: AuthenticatedUser) {
+    return this.users.listPendingInvites(actor);
+  }
+
+  @Post('pending-invites/:linkId/resend')
+  @ApiOperation({ summary: 'Re-send a pending project invitation (Admin only)' })
+  resendPendingInvite(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('linkId', new ParseUUIDPipe()) linkId: string,
+  ) {
+    return this.users.resendPendingInvite(actor, linkId);
+  }
+
+  @Delete('pending-invites/:linkId')
+  @ApiOperation({ summary: 'Revoke a pending project invitation (Admin only)' })
+  revokePendingInvite(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('linkId', new ParseUUIDPipe()) linkId: string,
+  ) {
+    return this.users.revokePendingInvite(actor, linkId);
+  }
+
   @Patch(':id/role')
   changeRole(
     @CurrentUser() actor: AuthenticatedUser,

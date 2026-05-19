@@ -144,7 +144,10 @@ export class AuthController {
   @Public()
   @Post('magic-link/verify')
   @ApiOperation({ summary: 'Verify a magic-link token and issue tokens.' })
-  async magicLinkVerify(@Body() dto: MagicLinkVerifyDto, @Req() req: Request): Promise<TokenPair> {
+  async magicLinkVerify(
+    @Body() dto: MagicLinkVerifyDto,
+    @Req() req: Request,
+  ): Promise<TokenPair & { redirectPath?: string }> {
     return this.auth.verifyMagicLink(dto.email, dto.token, req.ip);
   }
 

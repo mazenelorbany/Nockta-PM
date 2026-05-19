@@ -267,7 +267,9 @@ describe('ProjectsService.inviteGuest', () => {
     );
     expect(built.mocks.auth.sendProjectInvite).toHaveBeenCalledWith({
       email: 'bob@external.test',
+      projectId: 'p-1',
       projectName: 'Acme Redesign',
+      inviterUserId: ADMIN.id,
       inviterName: 'Admin Alice',
       role: 'Contributor',
     });

@@ -31,6 +31,10 @@ export function MagicLinkCallbackPage(): JSX.Element {
           refreshToken: string;
           accessTokenExpiresAt: string;
           refreshTokenExpiresAt: string;
+          // Server-provided deep link. Populated when the verified link
+          // was a `project_invite` (the project the guest was invited to);
+          // absent for regular client_login / client_signup verifies.
+          redirectPath?: string;
         }>('/auth/magic-link/verify', { token, email });
         if (cancelled) return;
         setTokens({
@@ -48,7 +52,17 @@ export function MagicLinkCallbackPage(): JSX.Element {
         }>('/auth/me');
         if (cancelled) return;
         setUser(me);
-        navigate('/', { replace: true });
+        // Drop the recipient into the project they were invited to, when
+        // the server told us which one. Defense-in-depth on the URL: only
+        // accept absolute paths starting with /projects/<uuid> so a
+        // tampered server response can't redirect to an external host or
+        // an unrelated app route.
+        const safeRedirect =
+          tokens.redirectPath &&
+          /^\/projects\/[0-9a-f-]{36}\/board$/i.test(tokens.redirectPath)
+            ? tokens.redirectPath
+            : '/';
+        navigate(safeRedirect, { replace: true });
       } catch (err) {
         if (cancelled) return;
         const detail =

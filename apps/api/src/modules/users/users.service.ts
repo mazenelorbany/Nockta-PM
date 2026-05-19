@@ -105,6 +105,173 @@ export class UsersService {
     };
   }
 
+  /**
+   * Admin-only: outstanding project invitations. Returns one row per
+   * unconsumed, unexpired `project_invite` MagicLink, hydrated with the
+   * project name + inviter so the UI can render
+   *   "Alice invited bob@external.test to Acme Redesign as Contributor".
+   *
+   * The role is sourced from the live ProjectAccess row (the invite path
+   * creates one at invite-send time) rather than stored on MagicLink, so
+   * if a Manager bumps the role after invite, the panel reflects the
+   * current state.
+   */
+  async listPendingInvites(actor: AuthenticatedUser) {
+    if (actor.companyRole !== 'Admin') {
+      throw new ForbiddenException('Admin only');
+    }
+    const links = await this.prisma.magicLink.findMany({
+      where: {
+        intent: 'project_invite',
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      include: {
+        project: { select: { id: true, name: true, key: true } },
+        invitedBy: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    if (links.length === 0) return [];
+
+    // One round-trip for role + invitee identity. We key on (email, projectId)
+    // because the invitee might already exist as a User (re-invite case).
+    const emails = Array.from(new Set(links.map((l) => l.email.toLowerCase())));
+    const projectIds = Array.from(
+      new Set(links.map((l) => l.projectId).filter((v): v is string => Boolean(v))),
+    );
+    const invitees = await this.prisma.user.findMany({
+      where: { email: { in: emails } },
+      select: { id: true, email: true, name: true, kind: true },
+    });
+    const inviteeByEmail = new Map(invitees.map((u) => [u.email.toLowerCase(), u]));
+
+    const accesses = projectIds.length
+      ? await this.prisma.projectAccess.findMany({
+          where: {
+            projectId: { in: projectIds },
+            subjectKind: 'user',
+            userId: { in: invitees.map((u) => u.id) },
+          },
+          select: { projectId: true, userId: true, role: true },
+        })
+      : [];
+    const accessByPair = new Map(
+      accesses.map((a) => [`${a.projectId}|${a.userId}`, a.role]),
+    );
+
+    return links.map((l) => {
+      const invitee = inviteeByEmail.get(l.email.toLowerCase()) ?? null;
+      const role =
+        invitee && l.projectId ? accessByPair.get(`${l.projectId}|${invitee.id}`) ?? null : null;
+      return {
+        id: l.id,
+        email: l.email,
+        invitee: invitee
+          ? { id: invitee.id, name: invitee.name, kind: invitee.kind }
+          : null,
+        project: l.project,
+        invitedBy: l.invitedBy,
+        role,
+        invitedAt: l.createdAt.toISOString(),
+        expiresAt: l.expiresAt.toISOString(),
+      };
+    });
+  }
+
+  /**
+   * Admin-only: re-send a pending invitation. We re-derive the role from
+   * the live ProjectAccess row so a Manager's interim role change is
+   * picked up. The old MagicLink is invalidated (sendProjectInvite handles
+   * that side-effect), preventing token stockpiling for the same target.
+   */
+  async resendPendingInvite(actor: AuthenticatedUser, linkId: string) {
+    if (actor.companyRole !== 'Admin') {
+      throw new ForbiddenException('Admin only');
+    }
+    const link = await this.prisma.magicLink.findUnique({
+      where: { id: linkId },
+      include: {
+        project: { select: { id: true, name: true } },
+        invitedBy: { select: { id: true, name: true, email: true } },
+      },
+    });
+    if (!link || link.intent !== 'project_invite' || !link.projectId) {
+      throw new BadRequestException('Not a pending project invite');
+    }
+    if (link.usedAt) {
+      throw new BadRequestException('Invitation already accepted');
+    }
+    const invitee = await this.prisma.user.findUnique({
+      where: { email: link.email },
+      select: { id: true },
+    });
+    const access = invitee
+      ? await this.prisma.projectAccess.findFirst({
+          where: { projectId: link.projectId, subjectKind: 'user', userId: invitee.id },
+          select: { role: true },
+        })
+      : null;
+    if (!access) {
+      throw new BadRequestException(
+        'Project access for this invitation was revoked — invite again from project settings.',
+      );
+    }
+    await this.auth.sendProjectInvite({
+      email: link.email,
+      projectId: link.projectId,
+      projectName: link.project?.name ?? 'Project',
+      inviterUserId: actor.id,
+      inviterName: link.invitedBy?.name || link.invitedBy?.email || actor.email,
+      role: access.role,
+    });
+    return { ok: true, resentTo: link.email };
+  }
+
+  /**
+   * Admin-only: revoke a pending invitation. Two side-effects in one call:
+   *   1. Expire the magic link so a clicked-but-not-yet-verified copy
+   *      stops working.
+   *   2. Delete the corresponding ProjectAccess row.
+   *
+   * Done in this order so a half-completed revoke leaves the guest with
+   * no usable link (worst case: their ProjectAccess sticks around until
+   * an admin re-runs the revoke).
+   */
+  async revokePendingInvite(actor: AuthenticatedUser, linkId: string) {
+    if (actor.companyRole !== 'Admin') {
+      throw new ForbiddenException('Admin only');
+    }
+    const link = await this.prisma.magicLink.findUnique({
+      where: { id: linkId },
+      select: { id: true, intent: true, email: true, projectId: true, usedAt: true },
+    });
+    if (!link || link.intent !== 'project_invite') {
+      throw new BadRequestException('Not a project invitation');
+    }
+    if (link.usedAt) {
+      throw new BadRequestException('Invitation already accepted; revoke the project access instead.');
+    }
+    await this.prisma.magicLink.update({
+      where: { id: link.id },
+      data: { expiresAt: new Date() },
+    });
+    if (link.projectId) {
+      const invitee = await this.prisma.user.findUnique({
+        where: { email: link.email },
+        select: { id: true },
+      });
+      if (invitee) {
+        await this.prisma.projectAccess.deleteMany({
+          where: { projectId: link.projectId, subjectKind: 'user', userId: invitee.id },
+        });
+      }
+    }
+    return { ok: true };
+  }
+
   async listInternal(params: {
     cursor?: string;
     limit?: number;

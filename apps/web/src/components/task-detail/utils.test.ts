@@ -170,9 +170,17 @@ describe('formatDuration', () => {
 });
 
 describe('prettyEventType', () => {
-  it('strips dots/underscores and lower-cases', () => {
-    expect(prettyEventType('task.created')).toBe('task created');
+  it('strips dots/underscores and lower-cases (unknown types)', () => {
+    expect(prettyEventType('task.created_legacy')).toBe('task created legacy');
     expect(prettyEventType('USER_LOGGED_IN')).toBe('user logged in');
+  });
+  it('splits camelCase for unknown types', () => {
+    expect(prettyEventType('TaskMoved')).toBe('task moved');
+  });
+  it('returns a verb-shaped phrase for known event types', () => {
+    expect(prettyEventType('TaskCreated')).toBe('created the task');
+    expect(prettyEventType('ProjectGuestInvited')).toBe('invited a guest to the project');
+    expect(prettyEventType('ProjectMemberAdded')).toBe('granted project access');
   });
 });
 

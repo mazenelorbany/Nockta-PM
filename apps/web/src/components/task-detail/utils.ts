@@ -75,8 +75,44 @@ export function formatDuration(seconds: number): string {
   return `${m}m`;
 }
 
+// Human-readable verbs for known event types. Falls back to the
+// camelCase/snake_case splitter below for anything not enumerated. Keep
+// the labels short and verb-shaped — the timeline renders
+// `<Actor> <label> · <relative time>`, so the label should fit there
+// without sounding clunky.
+const EVENT_LABELS: Record<string, string> = {
+  TaskCreated: 'created the task',
+  TaskUpdated: 'updated the task',
+  TaskStatusChanged: 'changed the status',
+  TaskBlocked: 'flagged the task as blocked',
+  TaskUnblocked: 'cleared the blocked flag',
+  TaskDeleted: 'deleted the task',
+  CommentAdded: 'commented',
+  CommentEdited: 'edited a comment',
+  CommentDeleted: 'deleted a comment',
+  ProjectCreated: 'created the project',
+  ProjectVisibilityChanged: 'changed project visibility',
+  ProjectArchived: 'archived the project',
+  ProjectMemberAdded: 'granted project access',
+  ProjectMemberRemoved: 'revoked project access',
+  ProjectGuestInvited: 'invited a guest to the project',
+  SprintCreated: 'created a sprint',
+  SprintStarted: 'started the sprint',
+  SprintCompleted: 'completed the sprint',
+};
+
 export function prettyEventType(t: string): string {
-  return t.replace(/[._]/g, ' ').toLowerCase();
+  const known = EVENT_LABELS[t];
+  if (known) return known;
+  // Fallback: split camelCase boundaries, replace dot/underscore with
+  // spaces, lower-case. Matches the legacy behaviour for unknown event
+  // names like `feature.shipped` (→ "feature shipped") and `TaskMoved`
+  // (→ "task moved").
+  return t
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[._]/g, ' ')
+    .toLowerCase()
+    .trim();
 }
 
 export function apiErrorMessage(err: unknown, fallback: string): string {

@@ -369,10 +369,15 @@ export class ProjectsService {
     }
 
     // Issue + email the invitation link. AuthService owns the magic-link
-    // table and the SMTP send; we just pass the strings to render.
+    // table and the SMTP send; we just pass the strings to render. The
+    // `projectId` and `inviterUserId` get stamped on the MagicLink row so
+    // the verify path can deep-link the recipient to this project, and the
+    // admin "pending invitations" panel can list `Alice invited Bob to X`.
     await this.auth.sendProjectInvite({
       email,
+      projectId: project.id,
       projectName: project.name,
+      inviterUserId: actorRow.id,
       inviterName: actorRow.name || actorRow.email,
       role: input.role,
     });

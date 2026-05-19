@@ -17,6 +17,7 @@ import {
 import type { Team } from './TeamsTab';
 import { InviteGuestDialog } from './members-tab/invite-guest-dialog';
 import { PeopleTable } from './members-tab/people-table';
+import { PendingInvitesPanel } from './members-tab/PendingInvitesPanel';
 import type {
   CompanyRole,
   KindFilter,
@@ -32,11 +33,19 @@ import { UserDrawer } from './members-tab/user-drawer';
 // and open a per-user drawer for deeper edits (teams + project access).
 // =============================================================================
 
+// MembersTab's segmented control supports the three people views plus a
+// fourth "pending" view that swaps the PeopleTable for the pending-invite
+// list. We keep `KindFilter` (consumed by PeopleTable + the API call) as
+// the original 3-state union and layer a 4-state `MemberView` for the
+// segmented control's selected tab.
+type MemberView = KindFilter | 'pending';
+
 export function MembersTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
   const { user: me } = useAuth();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState('');
-  const [kind, setKind] = useState<KindFilter>('internal');
+  const [view, setView] = useState<MemberView>('internal');
+  const kind: KindFilter = view === 'pending' ? 'client' : view;
   const [teamFilter, setTeamFilter] = useState<string | 'all'>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -181,21 +190,27 @@ export function MembersTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
         </div>
       </div>
 
-      {/* Segmented control: Internal / Clients / Archived */}
+      {/* Segmented control: Internal / Clients / Pending / Archived */}
       <div className="inline-flex items-center rounded-md border border-border bg-card/30 p-0.5 text-xs">
-        {(['internal', 'client', 'archived'] as KindFilter[]).map((k) => (
+        {(['internal', 'client', 'pending', 'archived'] as MemberView[]).map((v) => (
           <button
-            key={k}
+            key={v}
             type="button"
-            onClick={() => setKind(k)}
+            onClick={() => setView(v)}
             className={cn(
               'px-3 py-1 rounded-sm transition-colors capitalize',
-              kind === k
+              view === v
                 ? 'bg-accent text-foreground font-medium'
                 : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            {k === 'client' ? 'Clients' : k === 'internal' ? 'Internal' : 'Archived'}
+            {v === 'client'
+              ? 'Clients'
+              : v === 'internal'
+              ? 'Internal'
+              : v === 'pending'
+              ? 'Pending'
+              : 'Archived'}
           </button>
         ))}
       </div>
@@ -250,7 +265,9 @@ export function MembersTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
         </div>
       )}
 
-      {membersQuery.isLoading ? (
+      {view === 'pending' ? (
+        <PendingInvitesPanel />
+      ) : membersQuery.isLoading ? (
         <SkeletonList rows={6} rowClassName="h-12" />
       ) : sorted.length === 0 ? (
         <div className="rounded-lg border border-border p-6 text-center text-xs text-muted-foreground">
@@ -295,7 +312,7 @@ export function MembersTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
             // Refresh members so the new guest appears immediately, and flip
             // the kind tab so the admin sees the new row land in Clients.
             void queryClient.invalidateQueries({ queryKey: queryKeys.members() });
-            setKind('client');
+            setView('client');
             setInviteOpen(false);
           }}
         />

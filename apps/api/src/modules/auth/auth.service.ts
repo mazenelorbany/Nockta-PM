@@ -143,7 +143,9 @@ export class AuthService {
    */
   async sendProjectInvite(args: {
     email: string;
+    projectId: string;
     projectName: string;
+    inviterUserId: string;
     inviterName: string;
     role: string;
     ip?: string;
@@ -157,6 +159,19 @@ export class AuthService {
       );
     }
 
+    // Invalidate any prior outstanding invite for the same (email, project) —
+    // re-inviting should produce exactly one valid link, not stack them.
+    await this.prisma.magicLink.updateMany({
+      where: {
+        email,
+        projectId: args.projectId,
+        intent: 'project_invite',
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      data: { expiresAt: new Date() },
+    });
+
     const rawToken = randomBytes(32).toString('base64url');
     const tokenHash = sha256(rawToken);
     const expiresAt = new Date(Date.now() + Env.PROJECT_INVITE_TTL_SECONDS * 1000);
@@ -167,6 +182,8 @@ export class AuthService {
         tokenHash,
         intent: 'project_invite',
         expiresAt,
+        projectId: args.projectId,
+        invitedByUserId: args.inviterUserId,
         ...(args.ip ? { ip: args.ip } : {}),
       },
     });
@@ -187,7 +204,11 @@ export class AuthService {
     this.events.emit('auth.magic_link_sent', { email, ip: args.ip });
   }
 
-  async verifyMagicLink(email: string, rawToken: string, ip?: string): Promise<TokenPair> {
+  async verifyMagicLink(
+    email: string,
+    rawToken: string,
+    ip?: string,
+  ): Promise<TokenPair & { redirectPath?: string }> {
     const tokenHash = sha256(rawToken);
     const link = await this.prisma.magicLink.findUnique({ where: { tokenHash } });
 
@@ -224,13 +245,26 @@ export class AuthService {
       action: 'login.magic_link',
       ip: ip ?? null,
     });
-    return this.issueTokens({
+
+    const tokens = await this.issueTokens({
       sub: user.id,
       email: user.email,
       kind: user.kind,
       role: user.companyRole,
       ip,
     });
+
+    // Project-scoped invitation? Hand back a deep link so the SPA can drop
+    // the recipient onto the project board they were invited to instead of
+    // the generic dashboard. Verified against the live link only — a stale
+    // / spoofed projectId could otherwise route the user to a project they
+    // don't actually have access to, but the magic-link verify already
+    // ensures (a) the link was issued by us and (b) the project_invite
+    // path's ProjectAccess grant happens at invite-send time.
+    if (link.intent === 'project_invite' && link.projectId) {
+      return { ...tokens, redirectPath: `/projects/${link.projectId}/board` };
+    }
+    return tokens;
   }
 
   // ---------- Token rotation ----------
