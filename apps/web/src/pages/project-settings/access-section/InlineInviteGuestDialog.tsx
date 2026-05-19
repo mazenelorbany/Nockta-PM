@@ -4,40 +4,65 @@ import toast from 'react-hot-toast';
 import { UserPlus } from 'lucide-react';
 
 import { api } from '../../../lib/api';
+import type { ProjectRole } from '../types';
 import { apiErrorMessage } from '../utils';
 
-// InlineInviteGuestDialog — slim local version of the workspace-level
-// InviteGuestDialog. Lives inline here so a Manager can spin up a brand-new
-// guest and grant them access to this project without leaving Settings.
+// =============================================================================
+// InlineInviteGuestDialog — invite an external collaborator to THIS project.
+//
+// Calls `POST /projects/:projectId/invite-guest` which atomically:
+//   1. Creates (or fetches) the guest User row (kind='client'),
+//   2. Grants ProjectAccess at the picked role,
+//   3. Emails a 7-day invitation link naming the inviter + the project.
+//
+// One round-trip — the old two-step ("invite guest" → "grant access") had a
+// race window where step 2 could fail and leave the user invited but
+// project-less.
+// =============================================================================
+
+interface InvitePayload {
+  userId: string;
+  email: string;
+  name: string;
+  projectId: string;
+  role: ProjectRole;
+  grantId: string;
+  invitedAt: string;
+}
+
+// Roles a guest can hold. The 'Client' default matches the most common
+// "external stakeholder" case — Manager / Contributor / Viewer are for the
+// less-frequent agency-or-vendor flow.
+const ROLE_OPTIONS: Array<{ value: ProjectRole; label: string; hint: string }> = [
+  { value: 'Client', label: 'Client', hint: 'Read-only on tasks, can file bugs and read docs.' },
+  { value: 'Viewer', label: 'Viewer', hint: 'Read-only across the whole project.' },
+  { value: 'Contributor', label: 'Contributor', hint: 'Can create + edit tasks, can\'t grant access.' },
+  { value: 'Manager', label: 'Manager', hint: 'Full control of the project (invites, settings, danger zone).' },
+];
+
 export function InlineInviteGuestDialog({
+  projectId,
   onClose,
   onInvited,
 }: {
+  projectId: string;
   onClose: () => void;
-  onInvited: (user: { id: string; email: string; name: string }) => void;
+  onInvited: (resp: InvitePayload) => void;
 }): JSX.Element {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
+  const [role, setRole] = useState<ProjectRole>('Client');
 
   const invite = useMutation({
     mutationFn: () =>
-      api.post<{
-        id: string;
-        email: string;
-        name: string;
-        kind: 'client';
-        alreadyExisted: boolean;
-      }>('/users/invite-guest', {
+      api.post<InvitePayload>(`/projects/${projectId}/invite-guest`, {
         email: email.trim().toLowerCase(),
         ...(name.trim() ? { name: name.trim() } : {}),
+        role,
       }),
     onSuccess: (resp) => {
-      toast.success(
-        resp.alreadyExisted
-          ? `Re-sent magic link to ${resp.email}`
-          : `Invited ${resp.email}`,
-      );
-      onInvited({ id: resp.id, email: resp.email, name: resp.name });
+      toast.success(`Invited ${resp.email} as ${resp.role}`);
+      onInvited(resp);
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Invite failed')),
   });
@@ -61,8 +86,9 @@ export function InlineInviteGuestDialog({
             Invite a guest to this project
           </h2>
           <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-            We'll email them a one-time sign-in link. After the invite sends
-            we'll automatically grant them Client access to this project.
+            We'll email them a 7-day sign-in link and grant them the role you
+            pick below. Internal teammates (on the company domain) sign in
+            via Google OAuth — they don't need to be invited.
           </p>
         </div>
         <div className="px-5 py-4 space-y-3">
@@ -79,9 +105,6 @@ export function InlineInviteGuestDialog({
               placeholder="someone@partner-co.com"
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
-            <p className="mt-1 text-[10px] text-muted-foreground">
-              Must NOT be on the company domain — internal accounts use Google OAuth instead.
-            </p>
           </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground block mb-1">
@@ -94,6 +117,36 @@ export function InlineInviteGuestDialog({
               maxLength={120}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground block mb-1">
+              Role on this project
+            </label>
+            <div className="grid grid-cols-1 gap-1.5">
+              {ROLE_OPTIONS.map((opt) => (
+                <label
+                  key={opt.value}
+                  className={`flex items-start gap-2 rounded-md border px-3 py-2 cursor-pointer transition-colors ${
+                    role === opt.value
+                      ? 'border-brand bg-brand/5'
+                      : 'border-input hover:bg-accent'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="role"
+                    value={opt.value}
+                    checked={role === opt.value}
+                    onChange={() => setRole(opt.value)}
+                    className="mt-0.5"
+                  />
+                  <span className="flex-1">
+                    <span className="block text-sm font-medium">{opt.label}</span>
+                    <span className="block text-[11px] text-muted-foreground">{opt.hint}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
           </div>
         </div>
         <div className="px-5 py-3 border-t border-border flex justify-end gap-2">
@@ -109,7 +162,7 @@ export function InlineInviteGuestDialog({
             disabled={!email.trim() || invite.isPending}
             className="rounded-md bg-foreground text-background px-4 py-1.5 text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
           >
-            {invite.isPending ? 'Sending…' : 'Send invite + grant access'}
+            {invite.isPending ? 'Sending…' : `Invite as ${role}`}
           </button>
         </div>
       </form>

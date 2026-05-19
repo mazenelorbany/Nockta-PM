@@ -331,20 +331,16 @@ export function ProjectAccessManager({
         />
       </AccessGroup>
 
-      {/* Inline invite-guest dialog. After a successful invite we refresh the
-          users list so the new guest shows up in the dropdown immediately. */}
+      {/* Inline invite-guest dialog. The endpoint atomically creates the
+          user + grants project access + emails the invite, so the parent
+          just needs to refresh both the users picker and the access list. */}
       {inviteOpen && (
         <InlineInviteGuestDialog
+          projectId={projectId}
           onClose={() => setInviteOpen(false)}
-          onInvited={(user) => {
-            // Refresh the user picker, then auto-grant the new guest to this
-            // project so the Admin doesn't have to re-pick them.
+          onInvited={() => {
             void queryClient.invalidateQueries({ queryKey: ['users', 'list-all'] });
-            grantMutation.mutate({
-              subjectKind: 'user',
-              userId: user.id,
-              role: 'Client',
-            });
+            void queryClient.invalidateQueries({ queryKey: ['project-access', projectId] });
             setInviteOpen(false);
           }}
         />
