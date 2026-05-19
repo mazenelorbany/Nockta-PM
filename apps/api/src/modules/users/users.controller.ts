@@ -40,6 +40,12 @@ class UpdateProfileDto {
   @IsOptional() @IsEmail() email?: string;
 }
 
+class UpdateMyProfileDto {
+  @IsOptional() @IsString() @MaxLength(120) name?: string;
+  // Pass null to clear the avatar; omit to leave unchanged.
+  @IsOptional() avatarUrl?: string | null;
+}
+
 class UpdateMyPreferencesDto {
   /**
    * Weekly worklog target in hours. Set to `null` (or pass an explicit body
@@ -79,6 +85,23 @@ export class UsersController {
       ...(kind ? { kind: kind as 'internal' | 'client' | 'all' } : {}),
       ...(archived === 'true' ? { archived: true } : {}),
       ...(q ? { q } : {}),
+    });
+  }
+
+  /**
+   * Self-service profile update. Any signed-in user can edit their own name +
+   * avatar. Kept above the generic `:id` PATCH so the literal `me` segment
+   * doesn't get UUID-parsed and rejected.
+   */
+  @Patch('me/profile')
+  @ApiOperation({ summary: "Update the signed-in user's own name + avatar" })
+  updateMyProfile(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Body() dto: UpdateMyProfileDto,
+  ) {
+    return this.users.updateMyProfile(actor, {
+      ...(dto.name !== undefined ? { name: dto.name } : {}),
+      ...(dto.avatarUrl !== undefined ? { avatarUrl: dto.avatarUrl } : {}),
     });
   }
 

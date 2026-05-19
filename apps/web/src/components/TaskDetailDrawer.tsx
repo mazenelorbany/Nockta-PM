@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import { useSearchParams } from 'react-router-dom';
 import { cn } from '@nockta/ui';
@@ -286,7 +287,7 @@ export function TaskDetailDrawer({
   );
 
   if (isMobile) {
-    return (
+    return createPortal(
       <>
       <div
         className="animate-overlay-in glass-scrim fixed inset-0 z-[70] flex items-end justify-center"
@@ -483,7 +484,8 @@ export function TaskDetailDrawer({
         </div>
       </div>
       {dialogs}
-      </>
+      </>,
+      document.body,
     );
   }
 
@@ -491,7 +493,7 @@ export function TaskDetailDrawer({
   // Desktop layout — two-pane centered modal. Preserves the existing UX
   // exactly so we don't regress muscle memory.
   // ---------------------------------------------------------------------
-  return (
+  return createPortal(
     <>
     <div
       className="animate-overlay-in glass-scrim fixed inset-0 z-[70] flex items-stretch sm:items-center justify-center sm:p-4 md:p-8"
@@ -601,6 +603,7 @@ export function TaskDetailDrawer({
       </div>
     </div>
     {dialogs}
-    </>
+    </>,
+    document.body,
   );
 }

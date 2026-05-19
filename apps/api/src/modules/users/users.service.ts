@@ -272,6 +272,58 @@ export class UsersService {
     return { ok: true };
   }
 
+  /**
+   * Self-service profile update. Any signed-in user can rename themselves or
+   * set their avatar — explicitly NOT email (that's the auth key and would
+   * silently steal account membership) and NOT companyRole/kind (those
+   * stay Admin-only via `updateProfile` / `changeRole` / `changeKind`).
+   *
+   * Name comes from Google for OAuth users by default, but is editable: a
+   * client (kind='client') invited via magic-link has no Google profile at
+   * all, and even internal users sometimes want a display name distinct
+   * from their Workspace one.
+   */
+  async updateMyProfile(
+    actor: AuthenticatedUser,
+    input: { name?: string; avatarUrl?: string | null },
+  ): Promise<{ id: string; name: string; avatarUrl: string | null }> {
+    const data: { name?: string; avatarUrl?: string | null } = {};
+    if (input.name !== undefined) {
+      const trimmed = input.name.trim();
+      if (trimmed.length === 0 || trimmed.length > 120) {
+        throw new BadRequestException('Name must be 1–120 characters');
+      }
+      data.name = trimmed;
+    }
+    if (input.avatarUrl !== undefined) {
+      if (input.avatarUrl === null || input.avatarUrl === '') {
+        data.avatarUrl = null;
+      } else {
+        // Lightweight URL sanity check — defer to UI's <input type=url> for
+        // the strict shape. We just block injection-style content.
+        if (!/^https?:\/\//i.test(input.avatarUrl) || input.avatarUrl.length > 2048) {
+          throw new BadRequestException('Invalid avatar URL');
+        }
+        data.avatarUrl = input.avatarUrl;
+      }
+    }
+    if (Object.keys(data).length === 0) {
+      // No-op write — return the current row.
+      const row = await this.prisma.user.findUniqueOrThrow({
+        where: { id: actor.id },
+        select: { id: true, name: true, avatarUrl: true },
+      });
+      return row;
+    }
+    const updated = await this.prisma.user.update({
+      where: { id: actor.id },
+      data,
+      select: { id: true, name: true, avatarUrl: true },
+    });
+    this.events.emit('user.profile_updated', { userId: actor.id, fields: Object.keys(data) });
+    return updated;
+  }
+
   async listInternal(params: {
     cursor?: string;
     limit?: number;
