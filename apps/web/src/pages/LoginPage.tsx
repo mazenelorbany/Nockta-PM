@@ -41,7 +41,7 @@ export function LoginPage(): JSX.Element {
     staleTime: 5 * 60_000,
     retry: false,
   });
-  const _config = configQuery.data;
+  const config = configQuery.data;
 
   async function devLogin(persona: Persona): Promise<void> {
     setLoadingPersona(persona);
@@ -198,62 +198,71 @@ export function LoginPage(): JSX.Element {
               <div className="flex-1 h-px bg-border" />
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="nockta-eyebrow text-muted-foreground/70">
-                  {'Quick login · dev only'}
-                </span>
-                {loadingPersona && (
-                  <span className="text-[10px] text-muted-foreground animate-pulse">
-                    {'signing in…'}
+            {/* Dev-only persona buttons. The /config endpoint reports
+                devLoginEnabled=false when NODE_ENV=production, which is
+                where the corresponding /auth/dev-login route is also
+                disabled. Hiding the buttons here avoids confusing the
+                user with a row of options that all 401 — without this
+                gate, the page also fetches the config but never uses it,
+                which produced the "401 on dev-login" footgun in prod. */}
+            {config?.devLoginEnabled && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="nockta-eyebrow text-muted-foreground/70">
+                    {'Quick login · dev only'}
                   </span>
-                )}
+                  {loadingPersona && (
+                    <span className="text-[10px] text-muted-foreground animate-pulse">
+                      {'signing in…'}
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <PersonaButton
+                    label={'Admin'}
+                    sub={'Full access'}
+                    disabled={loadingPersona !== null}
+                    active={loadingPersona === 'admin'}
+                    onClick={() => void devLogin('admin')}
+                  />
+                  <PersonaButton
+                    label={'Engineering'}
+                    sub={'Member · Eng team'}
+                    disabled={loadingPersona !== null}
+                    active={loadingPersona === 'engineering'}
+                    onClick={() => void devLogin('engineering')}
+                  />
+                  <PersonaButton
+                    label={'Design'}
+                    sub={'Member · Design team'}
+                    disabled={loadingPersona !== null}
+                    active={loadingPersona === 'design'}
+                    onClick={() => void devLogin('design')}
+                  />
+                  <PersonaButton
+                    label={'Guest · Contributor'}
+                    sub={'External · can edit'}
+                    disabled={loadingPersona !== null}
+                    active={loadingPersona === 'guest-contributor'}
+                    onClick={() => void devLogin('guest-contributor')}
+                  />
+                  <PersonaButton
+                    label={'Guest · Viewer'}
+                    sub={'External · read-only'}
+                    disabled={loadingPersona !== null}
+                    active={loadingPersona === 'guest-viewer'}
+                    onClick={() => void devLogin('guest-viewer')}
+                  />
+                  <PersonaButton
+                    label={'Guest · Client'}
+                    sub={'Bug reports only'}
+                    disabled={loadingPersona !== null}
+                    active={loadingPersona === 'guest-client'}
+                    onClick={() => void devLogin('guest-client')}
+                  />
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <PersonaButton
-                  label={'Admin'}
-                  sub={'Full access'}
-                  disabled={loadingPersona !== null}
-                  active={loadingPersona === 'admin'}
-                  onClick={() => void devLogin('admin')}
-                />
-                <PersonaButton
-                  label={'Engineering'}
-                  sub={'Member · Eng team'}
-                  disabled={loadingPersona !== null}
-                  active={loadingPersona === 'engineering'}
-                  onClick={() => void devLogin('engineering')}
-                />
-                <PersonaButton
-                  label={'Design'}
-                  sub={'Member · Design team'}
-                  disabled={loadingPersona !== null}
-                  active={loadingPersona === 'design'}
-                  onClick={() => void devLogin('design')}
-                />
-                <PersonaButton
-                  label={'Guest · Contributor'}
-                  sub={'External · can edit'}
-                  disabled={loadingPersona !== null}
-                  active={loadingPersona === 'guest-contributor'}
-                  onClick={() => void devLogin('guest-contributor')}
-                />
-                <PersonaButton
-                  label={'Guest · Viewer'}
-                  sub={'External · read-only'}
-                  disabled={loadingPersona !== null}
-                  active={loadingPersona === 'guest-viewer'}
-                  onClick={() => void devLogin('guest-viewer')}
-                />
-                <PersonaButton
-                  label={'Guest · Client'}
-                  sub={'Bug reports only'}
-                  disabled={loadingPersona !== null}
-                  active={loadingPersona === 'guest-client'}
-                  onClick={() => void devLogin('guest-client')}
-                />
-              </div>
-            </div>
+            )}
 
             <p className="nockta-eyebrow text-muted-foreground/60 text-center pt-4">
               {'v0.1 · Internal Engineering Operations'}
