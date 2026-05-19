@@ -1,7 +1,7 @@
-const globals = require('globals');
-const base = require('./index.js');
+import globals from 'globals';
+import base from './index.mjs';
 
-module.exports = [
+export default [
   ...base,
   {
     languageOptions: {

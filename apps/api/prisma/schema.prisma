@@ -9,13 +9,9 @@ generator client {
 }
 
 datasource db {
+  // Prisma 7: connection URL lives in prisma.config.ts (via the PrismaPg
+  // adapter), not here. Schema only declares provider + extensions.
   provider   = "postgresql"
-  url        = env("DATABASE_URL")
-  // directUrl is omitted because the production deploy points DATABASE_URL
-  // directly at managed Postgres (no PgBouncer/pgpool in front). Re-add
-  // `directUrl = env("DATABASE_DIRECT_URL")` and set the env var if you
-  // ever introduce a connection pooler — migrations need a non-pooled
-  // connection.
   extensions = [pgcrypto, pg_trgm, citext, btree_gin]
 }
 

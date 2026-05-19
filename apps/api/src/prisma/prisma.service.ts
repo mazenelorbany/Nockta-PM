@@ -1,4 +1,5 @@
 import { Injectable, type OnModuleDestroy, type OnModuleInit, Logger } from '@nestjs/common';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
 import { Env } from '../config/env';
@@ -8,8 +9,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   private readonly logger = new Logger(PrismaService.name);
 
   constructor() {
+    // Prisma 7 takes connection config through a driver adapter rather than
+    // the legacy `datasources.db.url` option. PrismaPg wraps node-postgres
+    // and accepts the same DATABASE_URL we used before.
     super({
-      datasources: { db: { url: Env.DATABASE_URL } },
+      adapter: new PrismaPg({ connectionString: Env.DATABASE_URL }),
       log:
         Env.NODE_ENV === 'development'
           ? [{ level: 'warn', emit: 'event' }, { level: 'error', emit: 'event' }]

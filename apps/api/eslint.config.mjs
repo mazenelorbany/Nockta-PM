@@ -1,6 +1,6 @@
-const nodeConfig = require('@nockta/eslint-config/node');
+import nodeConfig from '@nockta/eslint-config/node';
 
-module.exports = [
+export default [
   ...nodeConfig,
   {
     rules: {

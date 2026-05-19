@@ -1,17 +1,14 @@
-const js = require('@eslint/js');
-const tseslint = require('typescript-eslint');
-const importPlugin = require('eslint-plugin-import');
-const prettierConfig = require('eslint-config-prettier');
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+import importPlugin from 'eslint-plugin-import';
+import prettierConfig from 'eslint-config-prettier';
 
 /** Shared base. Consumers extend this and add either react or node specifics. */
-module.exports = [
+export default [
   {
     ignores: ['**/dist/**', '**/build/**', '**/node_modules/**', '**/.turbo/**'],
   },
-  {
-    files: ['**/*.{ts,tsx,mts,cts}'],
-    ...js.configs.recommended,
-  },
+  { files: ['**/*.{ts,tsx,mts,cts}'], ...js.configs.recommended },
   ...tseslint.configs.recommended.map((c) => ({
     ...c,
     files: ['**/*.{ts,tsx,mts,cts}'],
