@@ -14,9 +14,9 @@
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "gen:secrets": "node scripts/gen-secrets.mjs",
     "hygiene": "node scripts/check-hygiene.mjs",
-    "db:generate": "pnpm --filter @nockta/api prisma generate",
-    "db:migrate": "pnpm --filter @nockta/api prisma migrate dev",
-    "db:studio": "pnpm --filter @nockta/api prisma studio",
+    "db:generate": "pnpm --filter @nockta/api exec prisma generate",
+    "db:migrate": "pnpm --filter @nockta/api exec prisma migrate dev",
+    "db:studio": "pnpm --filter @nockta/api exec prisma studio",
     "docker:up": "docker compose -f infra/docker-compose.yml up -d",
     "docker:down": "docker compose -f infra/docker-compose.yml down",
     "docker:logs": "docker compose -f infra/docker-compose.yml logs -f"
