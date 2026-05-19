@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "prebuild": "rimraf dist",
-    "build": "nest build",
+    "build": "NODE_OPTIONS='--max-old-space-size=4096' nest build",
     "_comment_dev": "rimraf nukes any stale dist (incl. ones built with the old tsconfig that placed main.js at dist/apps/api/src/main.js). nest build then produces dist/main.js. nest start --watch keeps it updated; deleteOutDir:false in nest-cli.json preserves the pre-built dist so node can find main.js immediately.",
     "dev": "rimraf dist && nest build && nest start --watch",
     "start": "node dist/main.js",

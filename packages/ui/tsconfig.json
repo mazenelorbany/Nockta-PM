@@ -2,7 +2,8 @@
   "extends": "@nockta/tsconfig/react.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "types": []
   },
   "include": ["src/**/*"]
 }
