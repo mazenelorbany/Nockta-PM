@@ -191,10 +191,16 @@ export class AttachmentsService {
     const role = await this.permissions.effectiveRole(actor, att.projectId);
     const isManagerOrAdmin = role === 'Manager' || (actor.kind === 'internal' && actor.companyRole === 'Admin');
     if (!isUploader && !isManagerOrAdmin) throw new ForbiddenException('Cannot delete');
-    await this.prisma.attachment.update({
-      where: { id }, data: { deletedAt: new Date() },
+    // Idempotent: a concurrent delete on the same id leaves us at the
+    // intended end state. Skip the event emit if we lost the race so the
+    // activity timeline shows a single deletion, not two.
+    const res = await this.prisma.attachment.updateMany({
+      where: { id, deletedAt: null },
+      data: { deletedAt: new Date() },
     });
-    this.events.emit('attachment.deleted', { attachmentId: id, projectId: att.projectId, actorUserId: actor.id });
+    if (res.count > 0) {
+      this.events.emit('attachment.deleted', { attachmentId: id, projectId: att.projectId, actorUserId: actor.id });
+    }
   }
 
   // --------- helpers ---------

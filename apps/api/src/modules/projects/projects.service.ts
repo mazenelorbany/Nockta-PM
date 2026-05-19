@@ -329,44 +329,39 @@ export class ProjectsService {
         `${email} is already an internal user and can't be invited as a guest.`,
       );
     }
-    const user = await this.prisma.user.upsert({
-      where: { email },
-      // Preserve any state a previously-invited guest set on their account.
-      update: {},
-      create: { email, name, kind: 'client', companyRole: null },
-      select: { id: true },
-    });
-
-    // Idempotent ProjectAccess. The unique constraint on
-    // (projectId, subjectKind, userId) makes findFirst/upsert here cleaner
-    // than catching a P2002 error.
-    const existingGrant = await this.prisma.projectAccess.findFirst({
-      where: { projectId, subjectKind: 'user', userId: user.id },
-      select: { id: true, role: true },
-    });
-    let grantId: string;
-    if (existingGrant) {
-      grantId = existingGrant.id;
-      if (existingGrant.role !== input.role) {
-        await this.prisma.projectAccess.update({
-          where: { id: existingGrant.id },
-          data: { role: input.role, grantedById: actor.id },
-        });
-      }
-    } else {
-      const created = await this.prisma.projectAccess.create({
-        data: {
+    // User upsert + ProjectAccess upsert in one transaction so two
+    // concurrent inviteGuest calls for the same (email, project) don't:
+    //   (a) double-create the access row (the @@unique([projectId,userId])
+    //       on ProjectAccess would throw P2002 on the second create), or
+    //   (b) leave a user row without a corresponding grant if the second
+    //       write fails after the first commits.
+    // The Prisma `upsert` keyed on `projectId_userId` lets us collapse the
+    // previous findFirst+create/update branches into one atomic statement.
+    // The SMTP send (auth.sendProjectInvite) stays OUTSIDE the transaction
+    // — Resend latency would otherwise hold a row lock open for hundreds
+    // of ms; an email failure shouldn't roll back the access grant.
+    const { user, grantId } = await this.prisma.$transaction(async (tx) => {
+      const u = await tx.user.upsert({
+        where: { email },
+        update: {},
+        create: { email, name, kind: 'client', companyRole: null },
+        select: { id: true },
+      });
+      const access = await tx.projectAccess.upsert({
+        where: { projectId_userId: { projectId, userId: u.id } },
+        update: { role: input.role, grantedById: actor.id },
+        create: {
           projectId,
           subjectKind: 'user',
-          userId: user.id,
+          userId: u.id,
           teamId: null,
           role: input.role,
           grantedById: actor.id,
         },
         select: { id: true },
       });
-      grantId = created.id;
-    }
+      return { user: u, grantId: access.id };
+    });
 
     // Issue + email the invitation link. AuthService owns the magic-link
     // table and the SMTP send; we just pass the strings to render. The

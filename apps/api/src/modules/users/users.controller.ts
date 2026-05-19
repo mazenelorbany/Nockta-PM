@@ -1,5 +1,5 @@
 import {
-  BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpStatus, Param,
+  BadRequestException, Body, Controller, Delete, ForbiddenException, Get, HttpCode, HttpStatus, Param,
   ParseUUIDPipe, Patch, Post, Put, Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -135,8 +135,25 @@ export class UsersController {
     });
   }
 
+  /**
+   * Look up a user by id.
+   *
+   * Access: self OR Admin. Without this gate any authenticated user could
+   * pull any other user's profile by id-iterating — classic IDOR. The Admin
+   * carve-out keeps the Members tab + audit tooling working. Members tab
+   * already uses `GET /users` (kind-filtered list) for its row data; this
+   * route is reached by deep-linking a user drawer in Settings.
+   */
   @Get(':id')
-  get(@Param('id', new ParseUUIDPipe()) id: string) {
+  get(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    if (actor.id !== id && actor.companyRole !== 'Admin') {
+      throw new ForbiddenException(
+        'You can only read your own profile unless you are an Admin.',
+      );
+    }
     return this.users.getById(id);
   }
 

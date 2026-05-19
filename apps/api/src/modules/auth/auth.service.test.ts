@@ -258,7 +258,12 @@ describe('AuthService.verifyMagicLink', () => {
       usedAt: null,
       expiresAt: new Date(Date.now() + 60_000),
     } as never);
-    vi.mocked(mocks.prisma.magicLink.update).mockResolvedValueOnce({} as never);
+    // Verify now atomicizes mark-used + user upsert in a $transaction. The
+    // updateMany returns count=1 on the happy path (no other concurrent
+    // verify); the user.upsert runs inside the same tx callback.
+    vi.mocked(mocks.prisma.magicLink.updateMany).mockResolvedValueOnce({
+      count: 1,
+    } as never);
     vi.mocked(mocks.prisma.user.upsert).mockResolvedValueOnce({
       id: 'u-client',
       email: 'client@external.test',
@@ -271,9 +276,9 @@ describe('AuthService.verifyMagicLink', () => {
     const pair = await service.verifyMagicLink('client@external.test', 'raw-token');
 
     expect(pair.accessToken).toBe('signed.access.token');
-    expect(mocks.prisma.magicLink.update).toHaveBeenCalledWith(
+    expect(mocks.prisma.magicLink.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 'ml-1' },
+        where: { id: 'ml-1', usedAt: null },
         data: expect.objectContaining({ usedAt: expect.any(Date) as Date }),
       }),
     );
@@ -372,7 +377,14 @@ describe('AuthService.refresh — rotation + reuse detection', () => {
         archivedAt: null,
       },
     } as never);
-    // issueTokens() inserts the new token then looks it up via findUniqueOrThrow.
+    // Rotation now does a conditional updateMany on the OLD token first
+    // (revokedAt placeholder), THEN issueTokens, THEN a back-fill update
+    // for rotatedToId. The updateMany must return count>0 on the happy
+    // path — count=0 simulates a concurrent refresh winning the race and
+    // triggers the reuse-detection branch.
+    vi.mocked(mocks.prisma.refreshToken.updateMany).mockResolvedValueOnce({
+      count: 1,
+    } as never);
     vi.mocked(mocks.prisma.refreshToken.create).mockResolvedValueOnce({} as never);
     vi.mocked(mocks.prisma.refreshToken.findUniqueOrThrow).mockResolvedValueOnce({
       id: 'rt-new',
@@ -382,6 +394,14 @@ describe('AuthService.refresh — rotation + reuse detection', () => {
     const pair = await service.refresh('raw');
 
     expect(pair.refreshToken).not.toBe('raw');
+    // The conditional updateMany fires first — gates the rotation on the
+    // old token not already being rotated. Without this, two concurrent
+    // refreshes could both succeed with the same old token.
+    expect(mocks.prisma.refreshToken.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: 'rt-old', rotatedToId: null }),
+      }),
+    );
     // The old row gets marked as rotated-to. This is the breadcrumb future
     // reuse-detection relies on; if it's missing, reuse detection is dead.
     expect(mocks.prisma.refreshToken.update).toHaveBeenCalledWith(

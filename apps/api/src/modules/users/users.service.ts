@@ -359,6 +359,11 @@ export class UsersService {
         companyRole: true,
         archivedAt: true,
         createdAt: true,
+        // Stamped by JwtStrategy.touchLastSeen on every authenticated
+        // request (throttled to 5min). Drives the Members tab "Last
+        // Activity" column. Backfilled by a default of now() on user
+        // creation so freshly-invited users don't show "—" forever.
+        lastSeenAt: true,
         // Team chips on each row so the admin sees membership at a glance —
         // small payload (slug + name only) and bounded by the workspace team
         // count which is in the tens, not thousands.
@@ -383,6 +388,7 @@ export class UsersService {
       select: {
         id: true, email: true, name: true, avatarUrl: true,
         kind: true, companyRole: true, archivedAt: true, createdAt: true,
+        lastSeenAt: true,
         teamMemberships: {
           include: {
             team: { select: { id: true, slug: true, name: true, description: true } },

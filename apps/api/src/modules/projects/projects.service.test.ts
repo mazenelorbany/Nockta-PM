@@ -230,8 +230,7 @@ describe('ProjectsService.inviteGuest', () => {
       }) as never,
     );
     vi.mocked(built.mocks.prisma.user.upsert).mockResolvedValue({ id: 'u-new' } as never);
-    vi.mocked(built.mocks.prisma.projectAccess.findFirst).mockResolvedValue(null);
-    vi.mocked(built.mocks.prisma.projectAccess.create).mockResolvedValue({
+    vi.mocked(built.mocks.prisma.projectAccess.upsert).mockResolvedValue({
       id: 'pa-new',
     } as never);
   });
@@ -255,14 +254,16 @@ describe('ProjectsService.inviteGuest', () => {
         }),
       }),
     );
-    expect(built.mocks.prisma.projectAccess.create).toHaveBeenCalledWith(
+    expect(built.mocks.prisma.projectAccess.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({
+        where: { projectId_userId: { projectId: 'p-1', userId: 'u-new' } },
+        create: expect.objectContaining({
           projectId: 'p-1',
           subjectKind: 'user',
           userId: 'u-new',
           role: 'Contributor',
         }),
+        update: expect.objectContaining({ role: 'Contributor' }),
       }),
     );
     expect(built.mocks.auth.sendProjectInvite).toHaveBeenCalledWith({
@@ -298,7 +299,7 @@ describe('ProjectsService.inviteGuest', () => {
       }),
     ).rejects.toThrow(BadRequestException);
     // Permission check still happens (it's the first guard) but no writes.
-    expect(built.mocks.prisma.projectAccess.create).not.toHaveBeenCalled();
+    expect(built.mocks.prisma.projectAccess.upsert).not.toHaveBeenCalled();
     expect(built.mocks.auth.sendProjectInvite).not.toHaveBeenCalled();
   });
 
@@ -331,9 +332,12 @@ describe('ProjectsService.inviteGuest', () => {
       }) as never,
     );
     vi.mocked(built.mocks.prisma.user.upsert).mockResolvedValue({ id: 'u-existing' } as never);
-    vi.mocked(built.mocks.prisma.projectAccess.findFirst).mockResolvedValue({
+    // Returning a stable id from upsert so the test can assert it bubbles
+    // out as `grantId`. With Prisma upsert we no longer get a distinct
+    // findFirst step; the update path is selected by the unique-where
+    // clause when the row already exists.
+    vi.mocked(built.mocks.prisma.projectAccess.upsert).mockResolvedValue({
       id: 'pa-old',
-      role: 'Viewer',
     } as never);
 
     const result = await service.inviteGuest(ADMIN, 'p-1', {
@@ -341,12 +345,13 @@ describe('ProjectsService.inviteGuest', () => {
       role: 'Contributor', // upgraded from Viewer
     });
 
-    // No new ProjectAccess row — existing grant gets its role updated.
-    expect(built.mocks.prisma.projectAccess.create).not.toHaveBeenCalled();
-    expect(built.mocks.prisma.projectAccess.update).toHaveBeenCalledWith(
+    // upsert was called with the role update payload — Prisma decides
+    // create-vs-update from the where clause hitting (or not hitting)
+    // the unique index.
+    expect(built.mocks.prisma.projectAccess.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 'pa-old' },
-        data: expect.objectContaining({ role: 'Contributor' }),
+        where: { projectId_userId: { projectId: 'p-1', userId: 'u-existing' } },
+        update: expect.objectContaining({ role: 'Contributor' }),
       }),
     );
     // Email is re-sent (so the guest can find the link again).

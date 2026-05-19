@@ -32,6 +32,12 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     if (!user || user.archivedAt) {
       throw new UnauthorizedException('User not found or archived');
     }
+    // Best-effort heartbeat: update User.lastSeenAt for the Members tab
+    // "Last Activity" column. Throttled to ~5 min via a conditional
+    // updateMany so we're not stamping the row on every single request —
+    // a chatty SPA can hit 30+ endpoints per minute. Fire-and-forget so
+    // a transient DB blip can't block authentication.
+    void this.touchLastSeen(user.id);
     return {
       id: user.id,
       email: user.email,
@@ -39,5 +45,17 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       companyRole: user.companyRole,
       jti: payload.jti,
     };
+  }
+
+  private async touchLastSeen(userId: string): Promise<void> {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    await this.prisma.user
+      .updateMany({
+        where: { id: userId, lastSeenAt: { lt: fiveMinutesAgo } },
+        data: { lastSeenAt: new Date() },
+      })
+      .catch(() => {
+        /* don't blow up auth over a heartbeat write */
+      });
   }
 }

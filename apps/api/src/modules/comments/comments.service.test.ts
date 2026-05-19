@@ -313,11 +313,11 @@ describe('CommentsService.delete — authorization', () => {
       task: { projectId: 'p1' },
     } as never);
     mocks.permissions.effectiveRole.mockResolvedValueOnce('Contributor');
-    vi.mocked(mocks.prisma.comment.update).mockResolvedValueOnce({} as never);
+    vi.mocked(mocks.prisma.comment.updateMany).mockResolvedValueOnce({ count: 1 } as never);
 
     await service.delete(buildActor(), 'c-1');
 
-    expect(mocks.prisma.comment.update).toHaveBeenCalledOnce();
+    expect(mocks.prisma.comment.updateMany).toHaveBeenCalledOnce();
   });
 
   it('rejects author after edit window closes', async () => {
@@ -340,11 +340,11 @@ describe('CommentsService.delete — authorization', () => {
       task: { projectId: 'p1' },
     } as never);
     mocks.permissions.effectiveRole.mockResolvedValueOnce('Viewer');
-    vi.mocked(mocks.prisma.comment.update).mockResolvedValueOnce({} as never);
+    vi.mocked(mocks.prisma.comment.updateMany).mockResolvedValueOnce({ count: 1 } as never);
 
     await service.delete(buildActor({ companyRole: 'Admin' }), 'c-1');
 
-    expect(mocks.prisma.comment.update).toHaveBeenCalledOnce();
+    expect(mocks.prisma.comment.updateMany).toHaveBeenCalledOnce();
   });
 
   it('allows project Manager to delete any comment', async () => {
@@ -355,11 +355,11 @@ describe('CommentsService.delete — authorization', () => {
       task: { projectId: 'p1' },
     } as never);
     mocks.permissions.effectiveRole.mockResolvedValueOnce('Manager');
-    vi.mocked(mocks.prisma.comment.update).mockResolvedValueOnce({} as never);
+    vi.mocked(mocks.prisma.comment.updateMany).mockResolvedValueOnce({ count: 1 } as never);
 
     await service.delete(buildActor(), 'c-1');
 
-    expect(mocks.prisma.comment.update).toHaveBeenCalledOnce();
+    expect(mocks.prisma.comment.updateMany).toHaveBeenCalledOnce();
   });
 });
 

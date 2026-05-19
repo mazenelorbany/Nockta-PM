@@ -48,7 +48,7 @@ export function makePrismaMock(): PrismaService {
       'updateMany',
       'delete',
     ]),
-    magicLink: model(['findUnique', 'create', 'update']),
+    magicLink: model(['findUnique', 'create', 'update', 'updateMany']),
     project: model([
       'findUnique',
       'findUniqueOrThrow',
@@ -58,7 +58,7 @@ export function makePrismaMock(): PrismaService {
       'update',
       'delete',
     ]),
-    projectAccess: model(['findFirst', 'findMany', 'create', 'update', 'delete']),
+    projectAccess: model(['findFirst', 'findMany', 'create', 'update', 'upsert', 'delete']),
     teamMember: model(['findMany', 'deleteMany', 'createMany']),
     team: model(['findMany', 'findUnique']),
     task: model([
@@ -80,6 +80,7 @@ export function makePrismaMock(): PrismaService {
       'findMany',
       'create',
       'update',
+      'updateMany',
       'delete',
       'deleteMany',
     ]),
@@ -102,10 +103,12 @@ export function makePrismaMock(): PrismaService {
     ]),
     attachment: model([
       'findUnique',
+      'findUniqueOrThrow',
       'findFirst',
       'findMany',
       'create',
       'update',
+      'updateMany',
       'delete',
       'deleteMany',
     ]),

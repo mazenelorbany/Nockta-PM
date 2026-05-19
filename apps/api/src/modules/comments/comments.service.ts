@@ -349,11 +349,19 @@ export class CommentsService {
     if (!isAuthorWithinWindow && !isAdminOrManager) {
       throw new ForbiddenException('Cannot delete this comment');
     }
-    await this.prisma.comment.update({
-      where: { id },
+    // Idempotent soft-delete. Using updateMany with a `deletedAt: null`
+    // guard means a concurrent second delete is a no-op instead of a
+    // P2025 "record not found" — the comment is already gone, that's
+    // the desired end state. count===0 here also catches the case where
+    // a concurrent edit already deleted it, which the activity timeline
+    // should still emit once (not twice) so we skip the event then.
+    const res = await this.prisma.comment.updateMany({
+      where: { id, deletedAt: null },
       data: { deletedAt: new Date(), deletedById: actor.id },
     });
-    this.events.emit('comment.deleted', { commentId: id, actorUserId: actor.id });
+    if (res.count > 0) {
+      this.events.emit('comment.deleted', { commentId: id, actorUserId: actor.id });
+    }
   }
 
   async listByTask(actor: AuthenticatedUser, taskId: string) {

@@ -154,15 +154,24 @@ describe('OutboundWebhooksService.recordTerminalFailure', () => {
       enabled: true,
       createdById: 'user-1',
     } as never);
-    vi.mocked(mocks.prisma.outboundWebhook.update).mockResolvedValueOnce({} as never); // the disable write
+    // updateMany returns count=1 so the disable + notification path runs.
+    // A 0-count would mean another concurrent failure already flipped it.
+    vi.mocked(mocks.prisma.outboundWebhook.updateMany).mockResolvedValueOnce({
+      count: 1,
+    } as never);
     vi.mocked(mocks.prisma.notification.create).mockResolvedValueOnce({} as never);
 
     await service.recordTerminalFailure('wh-1', 500);
 
-    // Update called twice — first to increment, second to set enabled=false.
-    expect(mocks.prisma.outboundWebhook.update).toHaveBeenCalledTimes(2);
-    const disableCall = vi.mocked(mocks.prisma.outboundWebhook.update).mock.calls[1]?.[0];
+    // update called once (the increment), updateMany once (the conditional
+    // disable). Tests the new race-safe shape: the second write is now an
+    // updateMany guarded on `enabled: true` so only one of N concurrent
+    // failures performs the flip.
+    expect(mocks.prisma.outboundWebhook.update).toHaveBeenCalledTimes(1);
+    expect(mocks.prisma.outboundWebhook.updateMany).toHaveBeenCalledTimes(1);
+    const disableCall = vi.mocked(mocks.prisma.outboundWebhook.updateMany).mock.calls[0]?.[0];
     expect(disableCall?.data?.enabled).toBe(false);
+    expect(disableCall?.where?.enabled).toBe(true);
 
     // A notification row is written to the creator so they see the bell badge.
     expect(mocks.prisma.notification.create).toHaveBeenCalledTimes(1);

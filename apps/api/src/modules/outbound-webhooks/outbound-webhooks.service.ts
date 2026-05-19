@@ -393,6 +393,14 @@ export class OutboundWebhooksService implements OnModuleInit {
    *  or non-retryable status code). Bumps failureCount and auto-disables at
    *  the threshold, emitting an event so the UI / digest can surface it. */
   async recordTerminalFailure(webhookId: string, lastResponseCode: number | null): Promise<void> {
+    // Atomic threshold-flip. The previous shape (increment, then a
+    // separate enabled=false update) raced when N parallel deliveries
+    // failed in the same window: each saw enabled=true and only one
+    // updateMany would actually flip it. With a conditional updateMany
+    // gated on `enabled: true AND failureCount >= threshold-1` (note the
+    // -1 because the increment hasn't been committed when we evaluate),
+    // exactly one of the N concurrent failures performs the disable +
+    // notification, and the rest see count=0 and skip.
     const updated = await this.prisma.outboundWebhook.update({
       where: { id: webhookId },
       data: {
@@ -402,10 +410,15 @@ export class OutboundWebhooksService implements OnModuleInit {
       select: { id: true, failureCount: true, name: true, enabled: true, createdById: true },
     });
     if (updated.failureCount >= AUTO_DISABLE_THRESHOLD && updated.enabled) {
-      await this.prisma.outboundWebhook.update({
-        where: { id: webhookId },
+      const flipped = await this.prisma.outboundWebhook.updateMany({
+        where: { id: webhookId, enabled: true },
         data: { enabled: false },
       });
+      if (flipped.count === 0) {
+        // Another concurrent failure already disabled the hook + sent the
+        // notification. Bail out so we don't double-notify the creator.
+        return;
+      }
       // Write a notification row so the creator sees it in the in-app bell.
       // We don't go through NotificationsService (it's owned by other passes
       // and the API is heavier than we need); a raw Notification row hits

@@ -222,21 +222,33 @@ export class AuthService {
       throw new UnauthorizedException('Link expired');
     }
 
-    await this.prisma.magicLink.update({
-      where: { id: link.id },
-      data: { usedAt: new Date() },
+    // Atomically: mark the link as used + upsert the user. If two concurrent
+    // verify calls hit the same link, only one updateMany succeeds — the
+    // other gets count=0 and we fail closed. This prevents a link from
+    // being "consumed" twice and avoids the window where the link is
+    // marked used but the user upsert fails (leaking a consumed link
+    // with no recoverable session).
+    const result = await this.prisma.$transaction(async (tx) => {
+      const used = await tx.magicLink.updateMany({
+        where: { id: link.id, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+      if (used.count === 0) {
+        throw new UnauthorizedException('Link already used');
+      }
+      const upserted = await tx.user.upsert({
+        where: { email },
+        update: {},
+        create: {
+          email,
+          name: email.split('@')[0] ?? 'Client',
+          kind: 'client',
+          companyRole: null,
+        },
+      });
+      return upserted;
     });
-
-    const user = await this.prisma.user.upsert({
-      where: { email },
-      update: {},
-      create: {
-        email,
-        name: email.split('@')[0] ?? 'Client',
-        kind: 'client',
-        companyRole: null,
-      },
-    });
+    const user = result;
     if (user.archivedAt) throw new UnauthorizedException('User is archived');
 
     this.events.emit('user.login', { userId: user.id, ip, method: 'magic_link' });
@@ -302,6 +314,31 @@ export class AuthService {
       throw new UnauthorizedException('User is archived');
     }
 
+    // Atomically rotate: mark the old token as rotated FIRST with a
+    // conditional updateMany (only rotates if not already rotated). If
+    // the row count is 0, a concurrent refresh got there first — fail
+    // closed and treat this as reuse. Without this, two concurrent
+    // refreshes can both pass the `if (stored.rotatedToId)` check above
+    // and both succeed, doubling the user's access tokens.
+    //
+    // We mint the new token AFTER the conditional update so a failed
+    // rotation doesn't leak an orphan refreshToken row.
+    const rotated = await this.prisma.refreshToken.updateMany({
+      where: { id: stored.id, rotatedToId: null, revokedAt: null },
+      data: { revokedAt: new Date() }, // placeholder; rotatedToId set below
+    });
+    if (rotated.count === 0) {
+      // Another concurrent refresh already consumed this token. Treat as
+      // reuse for safety — revoke everything and force re-login.
+      this.logger.warn(
+        { userId: stored.userId, tokenId: stored.id },
+        'Refresh token concurrent-rotation lost — revoking all tokens for user',
+      );
+      await this.revokeAllRefreshTokens(stored.userId);
+      this.events.emit('auth.refresh_reuse', { userId: stored.userId, ip });
+      throw new UnauthorizedException('Refresh token reuse detected — please sign in again');
+    }
+
     const pair = await this.issueTokens({
       sub: stored.user.id,
       email: stored.user.email,
@@ -311,10 +348,11 @@ export class AuthService {
       userAgent,
     });
 
-    // Mark this token as rotated, pointing at the newly issued one.
-    const newRaw = pair.refreshToken;
+    // Now back-fill rotatedToId on the consumed row so future reuse
+    // detection (the `if (stored.rotatedToId)` branch above) keeps
+    // working — revokedAt alone wouldn't trigger the reuse alarm.
     const newStored = await this.prisma.refreshToken.findUniqueOrThrow({
-      where: { tokenHash: sha256(newRaw) },
+      where: { tokenHash: sha256(pair.refreshToken) },
     });
     await this.prisma.refreshToken.update({
       where: { id: stored.id },
