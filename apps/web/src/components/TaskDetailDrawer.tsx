@@ -289,7 +289,7 @@ export function TaskDetailDrawer({
     return (
       <>
       <div
-        className="animate-overlay-in glass-scrim fixed inset-0 z-50 flex items-end justify-center"
+        className="animate-overlay-in glass-scrim fixed inset-0 z-[70] flex items-end justify-center"
         data-state={closing ? 'closed' : 'open'}
         onClick={requestClose}
         role="presentation"
@@ -494,7 +494,7 @@ export function TaskDetailDrawer({
   return (
     <>
     <div
-      className="animate-overlay-in glass-scrim fixed inset-0 z-50 flex items-stretch sm:items-center justify-center sm:p-4 md:p-8"
+      className="animate-overlay-in glass-scrim fixed inset-0 z-[70] flex items-stretch sm:items-center justify-center sm:p-4 md:p-8"
       data-state={closing ? 'closed' : 'open'}
       onClick={requestClose}
       role="presentation"
