@@ -342,50 +342,75 @@
     animation: nockta-dialog-in 200ms var(--ease-out) forwards;
   }
 
-  /* Overlay (the dim/blur backdrop behind modals). Keep it fast so the modal
-   * doesn't feel delayed. */
+  /* Overlay (the dim/blur backdrop behind modals). Fade opacity AND the
+   * backdrop blur together so the page softens rather than just dimming.
+   * Keep it fast so the modal doesn't feel delayed. */
   @keyframes nockta-overlay-in {
-    from { opacity: 0; }
-    to   { opacity: 1; }
+    from { opacity: 0; backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
+    to   { opacity: 1; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
   }
   .animate-overlay-in {
-    animation: nockta-overlay-in 140ms ease forwards;
-  }
-
-  /* Drawer — slides from the right. translateX with % so it adapts to width.
-   * Enter via keyframe (one-shot, smooth); exit via a transition so it can
-   * retarget cleanly. Asymmetric timing: enter is 320ms (deliberate), exit is
-   * 200ms (system response). Pair the wrapping component with a `closing`
-   * state that flips data-state to `closed` ~200ms before unmount. */
-  @keyframes nockta-drawer-in-right {
-    from { transform: translateX(100%); }
-    to   { transform: translateX(0); }
-  }
-  .animate-drawer-in-right {
-    animation: nockta-drawer-in-right 320ms var(--ease-drawer) forwards;
-    transition: transform var(--dur-base) var(--ease-out);
-  }
-  .animate-drawer-in-right[data-state='closed'] {
-    transform: translateX(100%);
-  }
-  /* Mobile drawer — slides up from the bottom. Same asymmetric timing as the
-   * right drawer: 320ms enter, 200ms exit on data-state='closed'. */
-  @keyframes nockta-drawer-in-bottom {
-    from { transform: translateY(100%); }
-    to   { transform: translateY(0); }
-  }
-  .animate-drawer-in-bottom {
-    animation: nockta-drawer-in-bottom 320ms var(--ease-drawer) forwards;
-    transition: transform var(--dur-base) var(--ease-out);
-  }
-  .animate-drawer-in-bottom[data-state='closed'] {
-    transform: translateY(100%);
-  }
-  .animate-overlay-in {
-    transition: opacity var(--dur-base) ease;
+    animation: nockta-overlay-in 200ms var(--ease-out) forwards;
+    transition:
+      opacity var(--dur-base) var(--ease-out),
+      backdrop-filter var(--dur-base) var(--ease-out),
+      -webkit-backdrop-filter var(--dur-base) var(--ease-out);
   }
   .animate-overlay-in[data-state='closed'] {
     opacity: 0;
+    backdrop-filter: blur(0);
+    -webkit-backdrop-filter: blur(0);
+  }
+
+  /* Drawer (desktop) — the TaskDetailDrawer is rendered as a CENTERED modal
+   * (max-w-7xl, items-center) so a pure slide-from-right felt jarring.
+   * Now: subtle lift from 12px below + a scale from 0.96 + fade. Reads as
+   * "the card pops up and settles" rather than "a panel flies in".
+   * Asymmetric timing: 260ms enter (deliberate), 180ms exit (responsive).
+   * Pair the wrapping component with a `closing` state that flips
+   * data-state to `closed` ~180ms before unmount. */
+  @keyframes nockta-drawer-in-right {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  .animate-drawer-in-right {
+    transform-origin: center;
+    animation: nockta-drawer-in-right 260ms var(--ease-out) forwards;
+    transition:
+      opacity 180ms var(--ease-out),
+      transform 180ms var(--ease-out);
+  }
+  .animate-drawer-in-right[data-state='closed'] {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  /* Mobile drawer — slides up from the bottom (true sheet pattern). Same
+   * easing curve as desktop to keep the system coherent. */
+  @keyframes nockta-drawer-in-bottom {
+    from {
+      opacity: 0.6;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .animate-drawer-in-bottom {
+    animation: nockta-drawer-in-bottom 320ms var(--ease-drawer) forwards;
+    transition:
+      opacity 200ms var(--ease-out),
+      transform 200ms var(--ease-out);
+  }
+  .animate-drawer-in-bottom[data-state='closed'] {
+    opacity: 0.6;
+    transform: translateY(100%);
   }
 
   /* List stagger — child fade+rise. Tag rows with `.stagger-item` and a parent
