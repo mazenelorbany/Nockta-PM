@@ -194,7 +194,7 @@ describe('AttachmentsService.sign', () => {
       size: 2 * 1024 * 1024,
     });
 
-    expect(result.putUrl).toBe('https://s3.test/put?sig=1');
+    expect(result.uploadUrl).toBe('https://s3.test/put?sig=1');
     // storageKey contains the project + parent identifiers and a slugged
     // filename — pins the convention attachments.processor relies on.
     expect(result.storageKey).toMatch(

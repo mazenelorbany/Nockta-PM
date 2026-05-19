@@ -68,7 +68,7 @@ export class AttachmentsService {
     filename: string;
     mimeType: string;
     size: number;
-  }): Promise<{ uploadId: string; storageKey: string; putUrl: string; expiresInSeconds: number }> {
+  }): Promise<{ uploadId: string; storageKey: string; uploadUrl: string; expiresInSeconds: number }> {
     if (input.size <= 0 || input.size > MAX_FILE_BYTES_HARD) {
       throw new BadRequestException(`Size out of range (max ${MAX_FILE_BYTES_HARD} bytes)`);
     }
@@ -97,8 +97,8 @@ export class AttachmentsService {
     const id = randomUUID();
     const slug = slugifyFilename(input.filename);
     const storageKey = `projects/${projectId}/${input.parentType}/${input.parentId}/${id}-${slug}`;
-    const putUrl = await this.storage.signedPutUrl(storageKey, input.mimeType, 300);
-    return { uploadId: id, storageKey, putUrl, expiresInSeconds: 300 };
+    const uploadUrl = await this.storage.signedPutUrl(storageKey, input.mimeType, 300);
+    return { uploadId: id, storageKey, uploadUrl, expiresInSeconds: 300 };
   }
 
   async confirm(actor: AuthenticatedUser, input: {

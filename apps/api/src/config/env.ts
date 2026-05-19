@@ -43,6 +43,16 @@ const EnvSchema = z.object({
   DATABASE_DIRECT_URL: z.string().url().optional(),
   REDIS_URL: z.string().url(),
 
+  // Attachment storage backend selector.
+  //   - 's3'   → S3-compatible (R2 / MinIO / AWS). Requires the S3_* env vars
+  //              below to be filled in.
+  //   - 'disk' → local filesystem under STORAGE_DISK_ROOT. Pair with a Railway
+  //              Volume mounted at the same path so files survive redeploys.
+  //              No third-party credential, fixed monthly cost.
+  //   - unset  → no-op; attachment routes return 503.
+  STORAGE_KIND: z.enum(['s3', 'disk']).optional(),
+  STORAGE_DISK_ROOT: z.string().default('/data'),
+
   // S3 / object storage — optional. Set all six (endpoint + region + access
   // key + secret + buckets) to enable attachment uploads. Missing any of
   // them disables the feature; the API still boots and other routes work.
