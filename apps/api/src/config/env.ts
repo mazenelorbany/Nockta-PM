@@ -43,22 +43,30 @@ const EnvSchema = z.object({
   DATABASE_DIRECT_URL: z.string().url().optional(),
   REDIS_URL: z.string().url(),
 
-  S3_ENDPOINT: z.string().url(),
+  // S3 / object storage — optional. Set all six (endpoint + region + access
+  // key + secret + buckets) to enable attachment uploads. Missing any of
+  // them disables the feature; the API still boots and other routes work.
+  S3_ENDPOINT: z.string().url().optional(),
   S3_REGION: z.string().default('us-east-1'),
-  S3_ACCESS_KEY: z.string().min(1),
-  S3_SECRET_KEY: z.string().min(1),
-  S3_BUCKET: z.string().min(1),
-  S3_QUARANTINE_BUCKET: z.string().min(1),
+  S3_ACCESS_KEY: optionalNonEmpty,
+  S3_SECRET_KEY: optionalNonEmpty,
+  S3_BUCKET: optionalNonEmpty,
+  S3_QUARANTINE_BUCKET: optionalNonEmpty,
   S3_FORCE_PATH_STYLE: bool(true),
 
   CLAMAV_HOST: z.string().default('localhost'),
   CLAMAV_PORT: z.coerce.number().default(3310),
 
-  QDRANT_URL: z.string().url(),
+  // Vector DB — optional. AI features that depend on embeddings
+  // (duplicate-detection, semantic search) gracefully no-op when unset.
+  QDRANT_URL: z.string().url().optional(),
   QDRANT_API_KEY: optionalNonEmpty,
 
   LLM_PROVIDER: z.enum(['ollama', 'anthropic']).default('ollama'),
-  OLLAMA_URL: z.string().url(),
+  // Ollama is the default for local dev. Production usually uses anthropic
+  // (set LLM_PROVIDER=anthropic + ANTHROPIC_API_KEY) so OLLAMA_URL is
+  // optional too — only the active provider's vars need to be set.
+  OLLAMA_URL: z.string().url().optional(),
   OLLAMA_MODEL: z.string().default('llama3.2'),
   ANTHROPIC_API_KEY: optionalNonEmpty,
   ANTHROPIC_MODEL: z.string().default('claude-sonnet-4-6'),
@@ -73,16 +81,21 @@ const EnvSchema = z.object({
   JWT_ACCESS_TTL_SECONDS: z.coerce.number().default(900),
   JWT_REFRESH_TTL_SECONDS: z.coerce.number().default(2_592_000),
 
-  GOOGLE_OAUTH_CLIENT_ID: z.string().min(1),
-  GOOGLE_OAUTH_CLIENT_SECRET: z.string().min(1),
-  GOOGLE_OAUTH_REDIRECT_URI: z.string().url(),
+  // Google OAuth — optional. When unset, the /auth/google routes return
+  // 503 and the rest of the API (including magic-link auth for clients)
+  // continues to work. Set all four to enable SSO for internal users.
+  GOOGLE_OAUTH_CLIENT_ID: optionalNonEmpty,
+  GOOGLE_OAUTH_CLIENT_SECRET: optionalNonEmpty,
+  GOOGLE_OAUTH_REDIRECT_URI: z.string().url().optional(),
   GOOGLE_OAUTH_ALLOWED_DOMAIN: z.string().default('nockta.com'),
 
-  SMTP_HOST: z.string().min(1),
-  SMTP_PORT: z.coerce.number(),
+  // SMTP — optional. Magic-link auth and digest emails need this; if
+  // unset they no-op. JWT issuance/refresh works without SMTP.
+  SMTP_HOST: optionalNonEmpty,
+  SMTP_PORT: z.coerce.number().optional(),
   SMTP_USER: optionalNonEmpty,
   SMTP_PASSWORD: optionalNonEmpty,
-  SMTP_FROM: z.string().min(1),
+  SMTP_FROM: optionalNonEmpty,
   SMTP_USE_TLS: bool(false),
 
   MAGIC_LINK_TTL_SECONDS: z.coerce.number().default(900),

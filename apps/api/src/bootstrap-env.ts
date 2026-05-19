@@ -28,16 +28,15 @@ if (existsSync(envPath)) {
 // =============================================================================
 
 if (process.env.NODE_ENV === 'production') {
+  // Hard requirements — the API can't issue tokens or talk to its primary
+  // datastores without these. Anything optional (S3 for attachments, Google
+  // OAuth for SSO) is validated at use-time inside its feature module so a
+  // partial deploy (no uploads, magic-link-only auth) can still boot.
   const required = [
     'JWT_ACCESS_SECRET',
     'JWT_REFRESH_SECRET',
     'DATABASE_URL',
     'REDIS_URL',
-    'S3_ACCESS_KEY',
-    'S3_SECRET_KEY',
-    'S3_BUCKET',
-    'GOOGLE_OAUTH_CLIENT_ID',
-    'GOOGLE_OAUTH_CLIENT_SECRET',
   ] as const;
   const secretsNeedingLength: Record<string, number> = {
     JWT_ACCESS_SECRET: 32,

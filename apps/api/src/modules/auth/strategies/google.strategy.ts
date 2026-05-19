@@ -16,6 +16,22 @@ export interface GoogleProfile {
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor() {
+    // Google OAuth is optional in env validation so the API can boot without
+    // SSO configured. If this strategy is being instantiated we assume the
+    // consumer wired up the /auth/google routes — fail loud at construction
+    // time with a clear message instead of letting passport throw at the
+    // first request.
+    if (
+      !Env.GOOGLE_OAUTH_CLIENT_ID ||
+      !Env.GOOGLE_OAUTH_CLIENT_SECRET ||
+      !Env.GOOGLE_OAUTH_REDIRECT_URI
+    ) {
+      throw new Error(
+        'GoogleStrategy requires GOOGLE_OAUTH_CLIENT_ID, ' +
+          'GOOGLE_OAUTH_CLIENT_SECRET, and GOOGLE_OAUTH_REDIRECT_URI. Either ' +
+          'configure them or remove GoogleStrategy from the auth module.',
+      );
+    }
     super({
       clientID: Env.GOOGLE_OAUTH_CLIENT_ID,
       clientSecret: Env.GOOGLE_OAUTH_CLIENT_SECRET,

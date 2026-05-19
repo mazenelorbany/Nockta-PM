@@ -20,6 +20,23 @@ export class StorageService {
   readonly quarantineBucket: string;
 
   constructor() {
+    // S3 became optional in env validation so the API can boot without
+    // attachments configured. If StorageService is being instantiated we
+    // assume the consumer needs S3 — fail loud at construction time rather
+    // than producing a cryptic AWS error on the first signedPutUrl call.
+    if (
+      !Env.S3_ENDPOINT ||
+      !Env.S3_ACCESS_KEY ||
+      !Env.S3_SECRET_KEY ||
+      !Env.S3_BUCKET ||
+      !Env.S3_QUARANTINE_BUCKET
+    ) {
+      throw new Error(
+        'StorageService requires S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, ' +
+          'S3_BUCKET, S3_QUARANTINE_BUCKET to be set. Either configure them or ' +
+          'remove StorageService from the module graph.',
+      );
+    }
     this.client = new S3Client({
       endpoint: Env.S3_ENDPOINT,
       region: Env.S3_REGION,
