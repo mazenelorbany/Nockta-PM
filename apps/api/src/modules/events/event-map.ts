@@ -37,6 +37,10 @@ export const EVENT_MAP: Record<string, EventMapEntry> = {
   'project.archived':           { type: 'ProjectArchived',          visibility: 'internal', entityType: 'Project', entityIdKey: 'projectId', projectIdKey: 'projectId' },
   'project.access_granted':     { type: 'ProjectMemberAdded',       visibility: 'internal', entityType: 'Project', entityIdKey: 'projectId', projectIdKey: 'projectId' },
   'project.access_revoked':     { type: 'ProjectMemberRemoved',     visibility: 'internal', entityType: 'Project', entityIdKey: 'projectId', projectIdKey: 'projectId' },
+  // Project-scoped invitation. Distinct from access_granted because the
+  // invite emits BEFORE the guest has logged in — the activity timeline
+  // shows "Alice invited bob@external.test" rather than "Alice added Bob".
+  'project.guest_invited':      { type: 'ProjectGuestInvited',      visibility: 'internal', entityType: 'Project', entityIdKey: 'projectId', projectIdKey: 'projectId' },
 
   // Sprints
   'sprint.created':       { type: 'SprintCreated',     visibility: 'public', entityType: 'Sprint',  entityIdKey: 'sprintId',  projectIdKey: 'projectId' },

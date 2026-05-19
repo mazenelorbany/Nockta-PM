@@ -3,7 +3,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ProjectRole, ProjectVisibility, Visibility, WorkflowPreset } from '@prisma/client';
-import { IsArray, IsBoolean, IsEnum, IsIn, IsOptional, IsString, IsUUID, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsArray, IsBoolean, IsEmail, IsEnum, IsIn, IsOptional, IsString, IsUUID, Matches, MaxLength, MinLength } from 'class-validator';
 
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
@@ -40,6 +40,12 @@ class GrantAccessDto {
   @IsIn(['user', 'team']) subjectKind!: 'user' | 'team';
   @IsOptional() @IsUUID() userId?: string;
   @IsOptional() @IsUUID() teamId?: string;
+  @IsEnum(ProjectRole) role!: ProjectRole;
+}
+
+class InviteGuestToProjectDto {
+  @IsEmail() email!: string;
+  @IsOptional() @IsString() @MaxLength(120) name?: string;
   @IsEnum(ProjectRole) role!: ProjectRole;
 }
 
@@ -153,6 +159,30 @@ export class ProjectsController {
     @Param('grantId', new ParseUUIDPipe()) grantId: string,
   ) {
     return this.projects.revokeAccess(actor, id, grantId);
+  }
+
+  /**
+   * Invite an external collaborator to this project. One call:
+   *   1. Creates (or fetches) the User row with kind='client'.
+   *   2. Grants project access at the requested role.
+   *   3. Emails a 7-day invitation link with the inviter's name + project name.
+   *
+   * Manager-or-above on the project may invite. Rejects @nockta.com domain
+   * emails — internal users sign in via Google OAuth and don't need an
+   * invitation. Re-invoking with the same email is safe: re-uses the user
+   * row, updates the role if it changed, and re-sends the email.
+   */
+  @Post(':id/invite-guest')
+  inviteGuest(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: InviteGuestToProjectDto,
+  ) {
+    return this.projects.inviteGuest(actor, id, {
+      email: dto.email,
+      ...(dto.name ? { name: dto.name } : {}),
+      role: dto.role,
+    });
   }
 
   // ---- Project templates ----

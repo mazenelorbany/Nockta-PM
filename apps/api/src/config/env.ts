@@ -100,6 +100,10 @@ const EnvSchema = z.object({
 
   MAGIC_LINK_TTL_SECONDS: z.coerce.number().default(900),
   MAGIC_LINK_BASE_URL: z.string().url(),
+  // TTL for project-scoped invitation magic links. Defaults to 7 days because
+  // invitations sit in inboxes — a 15-minute sign-in TTL would force admins
+  // to re-send most invitations.
+  PROJECT_INVITE_TTL_SECONDS: z.coerce.number().default(604_800),
 
   GITHUB_APP_ID: optionalNonEmpty,
   GITHUB_APP_SLUG: optionalNonEmpty,

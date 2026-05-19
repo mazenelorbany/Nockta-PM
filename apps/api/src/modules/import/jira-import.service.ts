@@ -82,6 +82,27 @@ export interface JiraImportPreview {
 export interface JiraRunOptions {
   actorUserId: string;
   dryRun?: boolean;
+  /**
+   * Optional override: Jira accountId → real email (+ optional name).
+   *
+   * Why this exists: by default Atlassian hides each user's emailAddress
+   * from API responses unless the workspace owner has explicitly set
+   * email visibility to "anyone". When the field is hidden, the importer
+   * has no way to recover the real address, so it falls back to the
+   * stub `${accountId}@jira-imported.local`. When the real person then
+   * signs in via Google OAuth with `you@nockta.com`, the API creates a
+   * brand-new User row and the imported assignments stay orphaned.
+   *
+   * Pass this map (typically loaded from a CSV by the CLI flag
+   * `--user-map`) to short-circuit the stub. Keys are atlassian
+   * accountIds (e.g. `5f7a8b9c-1234-…`), values are the real Nockta
+   * domain email + optional display name.
+   *
+   * When provided, the map takes priority over Atlassian's response so
+   * even partially-visible emails get overridden — useful when Atlassian
+   * exposes a `noreply@`-style stub but you have the real address.
+   */
+  userMap?: ReadonlyMap<string, { email: string; name?: string }>;
 }
 
 interface JiraUser {
@@ -278,12 +299,17 @@ export class JiraImportService {
     // restricted) the address — and we'd silently create deactivated seats.
     const directory = await fetchJiraUserDirectory(creds);
 
-    // User cache. Resolution rules:
+    // User cache. Resolution rules, in order:
     //   - Null author → admin.
     //   - Non-atlassian account (app / customer) → admin.
     //   - Inactive atlassian account → admin (drops the deactivated seat).
-    //   - Active atlassian account → upserted Nockta user keyed by email.
+    //   - Explicit override in options.userMap → upsert with that email/name.
+    //     The map wins over Atlassian's response so a real `@nockta.com`
+    //     address replaces a hidden / `noreply@`-style stub.
+    //   - Otherwise → atlassian-provided email if visible, else the
+    //     `${accountId}@jira-imported.local` stub.
     const userCache = new Map<string, string>();
+    const userMap = options.userMap;
     const resolveUser = async (j: JiraUser | null | undefined): Promise<string> => {
       if (!j) return admin.id;
       const cached = userCache.get(j.accountId);
@@ -297,13 +323,18 @@ export class JiraImportService {
         userCache.set(j.accountId, admin.id);
         return admin.id;
       }
-      const email = merged.emailAddress?.toLowerCase() || `${j.accountId}@jira-imported.local`;
+      const override = userMap?.get(j.accountId);
+      const email =
+        override?.email.toLowerCase() ??
+        merged.emailAddress?.toLowerCase() ??
+        `${j.accountId}@jira-imported.local`;
+      const name = override?.name ?? merged.displayName ?? email;
       const u = await prisma.user.upsert({
         where: { email },
-        update: { name: merged.displayName ?? email },
+        update: { name },
         create: {
           email,
-          name: merged.displayName ?? email,
+          name,
           kind: 'internal',
           companyRole: 'Member',
         },

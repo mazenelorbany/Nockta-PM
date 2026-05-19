@@ -108,7 +108,9 @@ echo "→ Generating Prisma client..."
 (cd "$ROOT/apps/api" && "$PRISMA_BIN" generate) >/dev/null
 
 echo "→ Pushing schema to dev database..."
-(cd "$ROOT/apps/api" && "$PRISMA_BIN" db push --skip-generate)
+# Prisma 7 dropped --skip-generate from `db push`. Client generation already
+# happened in the step above (line 108), so plain `db push` is equivalent.
+(cd "$ROOT/apps/api" && "$PRISMA_BIN" db push)
 
 # Apply companion SQL — partial unique indexes, check constraints, FTS columns.
 # Idempotent (every statement uses IF NOT EXISTS / DROP IF EXISTS). Runs via

@@ -129,6 +129,64 @@ export class AuthService {
     this.events.emit('auth.magic_link_sent', { email, ip });
   }
 
+  /**
+   * Send a project-scoped invitation. Different from `requestMagicLink` on
+   * three axes:
+   *   - Intent is recorded as `project_invite` so verifyMagicLink can route
+   *     the post-accept landing page to the project board instead of the
+   *     generic dashboard.
+   *   - TTL is `PROJECT_INVITE_TTL_SECONDS` (default 7 days). Invitations
+   *     sit in inboxes; a 15-minute sign-in TTL would force the admin to
+   *     re-send most of them.
+   *   - Email subject + body name the project and inviter, which gives the
+   *     recipient enough context to trust the link.
+   */
+  async sendProjectInvite(args: {
+    email: string;
+    projectName: string;
+    inviterName: string;
+    role: string;
+    ip?: string;
+  }): Promise<void> {
+    const email = args.email.toLowerCase();
+    const domain = email.split('@')[1];
+    if (domain === Env.GOOGLE_OAUTH_ALLOWED_DOMAIN) {
+      throw new BadRequestException(
+        `Project invitations are for external collaborators. ${email} is on the company domain — ` +
+          `they sign in via Google OAuth and don't need an invitation link.`,
+      );
+    }
+
+    const rawToken = randomBytes(32).toString('base64url');
+    const tokenHash = sha256(rawToken);
+    const expiresAt = new Date(Date.now() + Env.PROJECT_INVITE_TTL_SECONDS * 1000);
+
+    await this.prisma.magicLink.create({
+      data: {
+        email,
+        tokenHash,
+        intent: 'project_invite',
+        expiresAt,
+        ...(args.ip ? { ip: args.ip } : {}),
+      },
+    });
+
+    const url = `${Env.MAGIC_LINK_BASE_URL}?token=${rawToken}&email=${encodeURIComponent(email)}`;
+    const days = Math.round(Env.PROJECT_INVITE_TTL_SECONDS / 86_400);
+    await this.mail.send({
+      to: email,
+      subject: `${args.inviterName} invited you to collaborate on ${args.projectName}`,
+      text:
+        `Hi,\n\n` +
+        `${args.inviterName} has invited you to collaborate on the ${args.projectName} ` +
+        `project in Nockta Flow as a ${args.role}.\n\n` +
+        `Click the link below to accept and sign in:\n\n${url}\n\n` +
+        `The invitation expires in ${days} day${days === 1 ? '' : 's'}. If you weren't ` +
+        `expecting this email you can safely ignore it.`,
+    });
+    this.events.emit('auth.magic_link_sent', { email, ip: args.ip });
+  }
+
   async verifyMagicLink(email: string, rawToken: string, ip?: string): Promise<TokenPair> {
     const tokenHash = sha256(rawToken);
     const link = await this.prisma.magicLink.findUnique({ where: { tokenHash } });

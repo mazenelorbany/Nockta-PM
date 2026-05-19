@@ -139,6 +139,11 @@ enum NotificationChannel {
 enum MagicLinkIntent {
   client_login
   client_signup
+  // Project-scoped invitation. Same shape as client_signup but with a longer
+  // TTL because invitation emails commonly sit in the recipient's inbox for
+  // hours or days before they click. Emitted by
+  // POST /projects/:projectId/invite-guest.
+  project_invite
 }
 
 enum GoalStatus {

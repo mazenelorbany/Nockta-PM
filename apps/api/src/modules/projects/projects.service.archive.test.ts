@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeEventsMock, makePrismaMock } from '../../test-utils/mocks';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { PermissionsService } from '../permissions/permissions.service';
+import type { AuthService } from '../auth/auth.service';
 import type { AuthenticatedUser } from '../auth/types';
 import type { SchedulerLockService } from '../../common/scheduling/scheduler-lock.service';
 
@@ -44,10 +45,15 @@ function buildService(): { service: ProjectsService; mocks: ArchiveMocks } {
     canSeeTask: vi.fn(),
   };
   const events = makeEventsMock();
+  const auth = {
+    sendProjectInvite: vi.fn().mockResolvedValue(undefined),
+    requestMagicLink: vi.fn().mockResolvedValue(undefined),
+  };
   const service = new ProjectsService(
     prisma,
     permissions as unknown as PermissionsService,
     events.instance,
+    auth as unknown as AuthService,
   );
   return { service, mocks: { prisma, permissions, events } };
 }

@@ -17,10 +17,17 @@
 //   IMPORT_ADMIN_EMAIL   defaults to admin@nockta.com
 //   IMPORT_PROJECT_KEYS  optional comma-separated subset
 //   IMPORT_DRY_RUN       set to "1" to log without writing
+//   IMPORT_USER_MAP      optional path to CSV mapping Jira accountId → real
+//                        Nockta email + display name. Format:
+//                          accountId,email,name
+//                        Atlassian hides emails by default; without this map
+//                        every imported user gets a `${accountId}@jira-imported.local`
+//                        stub and won't be picked up on Google OAuth login.
 //
 // Run:
 //   pnpm --filter @nockta/api import:jira
 //   pnpm --filter @nockta/api import:jira:dry
+//   IMPORT_USER_MAP=./users.csv pnpm --filter @nockta/api import:jira
 // =============================================================================
 
 import '../src/bootstrap-env';
@@ -31,6 +38,7 @@ import {
   JiraImportService,
   type JiraImportMapping,
 } from '../src/modules/import/jira-import.service';
+import { loadUserMapFile } from '../src/modules/import/user-map';
 
 const JIRA_DOMAIN = requireEnv('JIRA_DOMAIN');
 const JIRA_EMAIL = requireEnv('JIRA_EMAIL');
@@ -41,6 +49,8 @@ const PROJECT_FILTER = (process.env['IMPORT_PROJECT_KEYS'] ?? '')
   .map((s) => s.trim())
   .filter(Boolean);
 const DRY_RUN = process.env['IMPORT_DRY_RUN'] === '1';
+const USER_MAP_PATH = process.env['IMPORT_USER_MAP'] ?? null;
+const USER_MAP = loadUserMapFile(USER_MAP_PATH);
 
 function requireEnv(name: string): string {
   const v = process.env[name];
@@ -60,6 +70,9 @@ async function main(): Promise<void> {
     `  filter          ${PROJECT_FILTER.length > 0 ? PROJECT_FILTER.join(', ') : '(all visible projects)'}`,
   );
   console.log(`  dry run         ${DRY_RUN ? 'YES' : 'no'}`);
+  console.log(
+    `  user map        ${USER_MAP_PATH ? `${USER_MAP_PATH} (${USER_MAP.size} overrides)` : '(none — falls back to atlassian visibility)'}`,
+  );
   console.log();
 
   const prisma = new PrismaClient();
@@ -101,7 +114,11 @@ async function main(): Promise<void> {
       mappingSnapshot: { projectKey: jp.key, mapping: {} as JiraImportMapping },
     });
     try {
-      await service.executeRun(prisma, runId, creds, jp, {}, { actorUserId: admin.id, dryRun: DRY_RUN });
+      await service.executeRun(prisma, runId, creds, jp, {}, {
+        actorUserId: admin.id,
+        dryRun: DRY_RUN,
+        ...(USER_MAP.size > 0 ? { userMap: USER_MAP } : {}),
+      });
       const final = await runs.get(runId);
       const f = final as { createdRows: number; skippedRows: number; erroredRows: number } | null;
       console.log(

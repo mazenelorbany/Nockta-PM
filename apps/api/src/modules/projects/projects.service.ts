@@ -10,6 +10,8 @@ import {
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { PermissionsService } from '../permissions/permissions.service';
+import { AuthService } from '../auth/auth.service';
+import { Env } from '../../config/env';
 import type { AuthenticatedUser } from '../auth/types';
 
 interface CreateProjectInput {
@@ -36,12 +38,19 @@ function assertAdmin(actor: AuthenticatedUser): void {
   }
 }
 
+interface InviteGuestInput {
+  email: string;
+  name?: string;
+  role: 'Manager' | 'Contributor' | 'Viewer' | 'Client';
+}
+
 @Injectable()
 export class ProjectsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly permissions: PermissionsService,
     private readonly events: EventEmitter2,
+    private readonly auth: AuthService,
   ) {}
 
   async create(actor: AuthenticatedUser, input: CreateProjectInput) {
@@ -265,6 +274,129 @@ export class ProjectsService {
     await this.permissions.assertAtLeast(actor, projectId, 'Manager');
     await this.prisma.projectAccess.delete({ where: { id: grantId } });
     this.events.emit('project.access_revoked', { projectId, grantId, actorUserId: actor.id });
+  }
+
+  /**
+   * One-call "invite an external collaborator to this project". Creates (or
+   * fetches) the User row, grants project access, issues a long-TTL magic
+   * link, and sends a personalised invitation email naming the project and
+   * inviter. Idempotent on re-invite: re-using the same email re-sends the
+   * link and either upserts the role or no-ops if the grant is identical.
+   *
+   * Authorisation: Manager (or above) on the project. The standalone
+   * Admin-only `POST /users/invite-guest` still exists for company-wide
+   * "make a guest with no specific project yet" cases.
+   */
+  async inviteGuest(actor: AuthenticatedUser, projectId: string, input: InviteGuestInput) {
+    await this.permissions.assertAtLeast(actor, projectId, 'Manager');
+
+    const email = input.email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new BadRequestException('Invalid email');
+    }
+    const domain = email.split('@')[1];
+    if (domain === Env.GOOGLE_OAUTH_ALLOWED_DOMAIN) {
+      throw new BadRequestException(
+        `Invite-guest is for external collaborators. ${email} is on the company domain — ` +
+          `they sign in via Google OAuth and don't need an invitation link.`,
+      );
+    }
+
+    // Fetch project + actor in one round-trip; the email needs both names.
+    const [project, actorRow] = await Promise.all([
+      this.prisma.project.findUnique({
+        where: { id: projectId },
+        select: { id: true, name: true, key: true },
+      }),
+      this.prisma.user.findUnique({
+        where: { id: actor.id },
+        select: { id: true, name: true, email: true },
+      }),
+    ]);
+    if (!project) throw new NotFoundException('Project not found');
+    if (!actorRow) throw new NotFoundException('Actor not found');
+
+    const name = (input.name?.trim() || email.split('@')[0] || 'Guest').slice(0, 120);
+
+    // Upsert the user row. An existing INTERNAL user can't be re-invited
+    // as a guest — that would silently downgrade them on Google login.
+    const existing = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, kind: true },
+    });
+    if (existing && existing.kind === 'internal') {
+      throw new BadRequestException(
+        `${email} is already an internal user and can't be invited as a guest.`,
+      );
+    }
+    const user = await this.prisma.user.upsert({
+      where: { email },
+      // Preserve any state a previously-invited guest set on their account.
+      update: {},
+      create: { email, name, kind: 'client', companyRole: null },
+      select: { id: true },
+    });
+
+    // Idempotent ProjectAccess. The unique constraint on
+    // (projectId, subjectKind, userId) makes findFirst/upsert here cleaner
+    // than catching a P2002 error.
+    const existingGrant = await this.prisma.projectAccess.findFirst({
+      where: { projectId, subjectKind: 'user', userId: user.id },
+      select: { id: true, role: true },
+    });
+    let grantId: string;
+    if (existingGrant) {
+      grantId = existingGrant.id;
+      if (existingGrant.role !== input.role) {
+        await this.prisma.projectAccess.update({
+          where: { id: existingGrant.id },
+          data: { role: input.role, grantedById: actor.id },
+        });
+      }
+    } else {
+      const created = await this.prisma.projectAccess.create({
+        data: {
+          projectId,
+          subjectKind: 'user',
+          userId: user.id,
+          teamId: null,
+          role: input.role,
+          grantedById: actor.id,
+        },
+        select: { id: true },
+      });
+      grantId = created.id;
+    }
+
+    // Issue + email the invitation link. AuthService owns the magic-link
+    // table and the SMTP send; we just pass the strings to render.
+    await this.auth.sendProjectInvite({
+      email,
+      projectName: project.name,
+      inviterName: actorRow.name || actorRow.email,
+      role: input.role,
+    });
+
+    // Emit two events: the project-scoped one for activity timelines and
+    // the user-scoped one so the notification dispatcher can fan it out
+    // (e.g., notify other project managers that someone new was added).
+    this.events.emit('project.guest_invited', {
+      projectId,
+      userId: user.id,
+      grantId,
+      role: input.role,
+      actorUserId: actor.id,
+    });
+
+    return {
+      userId: user.id,
+      email,
+      name,
+      projectId,
+      role: input.role,
+      grantId,
+      invitedAt: new Date().toISOString(),
+    };
   }
 
   // ---------- Project templates ----------
