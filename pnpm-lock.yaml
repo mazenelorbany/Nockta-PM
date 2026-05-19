@@ -25,7 +25,7 @@ importers:
     dependencies:
       '@anthropic-ai/sdk':
         specifier: ^0.97.0
-        version: 0.97.0(zod@3.25.76)
+        version: 0.97.0(zod@4.4.3)
       '@aws-sdk/client-s3':
         specifier: ^3.1049.0
         version: 3.1049.0
@@ -162,8 +162,8 @@ importers:
         specifier: ^3.0.2
         version: 3.0.2
       zod:
-        specifier: ^3.25.76
-        version: 3.25.76
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@nestjs/cli':
         specifier: ^11.0.21
@@ -330,7 +330,7 @@ importers:
         version: 18.3.7(@types/react@18.3.28)
       '@vitejs/plugin-react':
         specifier: ^6.0.2
-        version: 6.0.2(vite@8.0.13(@types/node@25.9.0)(esbuild@0.28.0)(jiti@1.21.7)(terser@5.47.1)(tsx@4.22.3))
+        version: 6.0.2(vite@8.0.13(@types/node@25.9.0)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.3))
       autoprefixer:
         specifier: ^10.5.0
         version: 10.5.0(postcss@8.5.15)
@@ -348,10 +348,10 @@ importers:
         version: 5.9.3
       vite:
         specifier: ^8.0.13
-        version: 8.0.13(@types/node@25.9.0)(esbuild@0.28.0)(jiti@1.21.7)(terser@5.47.1)(tsx@4.22.3)
+        version: 8.0.13(@types/node@25.9.0)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.3)
       vitest:
         specifier: ^4.1.6
-        version: 4.1.6(@opentelemetry/api@1.9.1)(@types/node@25.9.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.9.0)(esbuild@0.28.0)(jiti@1.21.7)(terser@5.47.1)(tsx@4.22.3))
+        version: 4.1.6(@opentelemetry/api@1.9.1)(@types/node@25.9.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.9.0)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.3))
 
   packages/eslint-config:
     dependencies:
@@ -5526,8 +5526,8 @@ packages:
     resolution: {integrity: sha512-U/PBtDf35ff0D8X8D0jfdzHYEPFxAI7jJlxZXwCSez5M3190m+QobIfh+sWDWSHMCWWJN2AWamkegn6vr6YBTw==}
     engines: {node: '>=18'}
 
-  zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
 
   zustand@5.0.13:
     resolution: {integrity: sha512-efI2tVaVQPqtOh114loML/Z80Y4NP3yc+Ff0fYiZJPauNeWZeIp/bRFD7I9bfmCOYBh/PHxlglQ9+wvlwnPikQ==}
@@ -5586,12 +5586,12 @@ snapshots:
     transitivePeerDependencies:
       - chokidar
 
-  '@anthropic-ai/sdk@0.97.0(zod@3.25.76)':
+  '@anthropic-ai/sdk@0.97.0(zod@4.4.3)':
     dependencies:
       json-schema-to-ts: 3.1.1
       standardwebhooks: 1.0.0
     optionalDependencies:
-      zod: 3.25.76
+      zod: 4.4.3
 
   '@asamuzakjp/css-color@5.1.11':
     dependencies:
@@ -7441,10 +7441,10 @@ snapshots:
 
   '@ungap/structured-clone@1.3.1': {}
 
-  '@vitejs/plugin-react@6.0.2(vite@8.0.13(@types/node@25.9.0)(esbuild@0.28.0)(jiti@1.21.7)(terser@5.47.1)(tsx@4.22.3))':
+  '@vitejs/plugin-react@6.0.2(vite@8.0.13(@types/node@25.9.0)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.3))':
     dependencies:
       '@rolldown/pluginutils': 1.0.1
-      vite: 8.0.13(@types/node@25.9.0)(esbuild@0.28.0)(jiti@1.21.7)(terser@5.47.1)(tsx@4.22.3)
+      vite: 8.0.13(@types/node@25.9.0)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.3)
 
   '@vitest/expect@4.1.6':
     dependencies:
@@ -7454,14 +7454,6 @@ snapshots:
       '@vitest/utils': 4.1.6
       chai: 6.2.2
       tinyrainbow: 3.1.0
-
-  '@vitest/mocker@4.1.6(vite@8.0.13(@types/node@25.9.0)(esbuild@0.28.0)(jiti@1.21.7)(terser@5.47.1)(tsx@4.22.3))':
-    dependencies:
-      '@vitest/spy': 4.1.6
-      estree-walker: 3.0.3
-      magic-string: 0.30.21
-    optionalDependencies:
-      vite: 8.0.13(@types/node@25.9.0)(esbuild@0.28.0)(jiti@1.21.7)(terser@5.47.1)(tsx@4.22.3)
 
   '@vitest/mocker@4.1.6(vite@8.0.13(@types/node@25.9.0)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.3))':
     dependencies:
@@ -10895,21 +10887,6 @@ snapshots:
       d3-time: 3.1.0
       d3-timer: 3.0.1
 
-  vite@8.0.13(@types/node@25.9.0)(esbuild@0.28.0)(jiti@1.21.7)(terser@5.47.1)(tsx@4.22.3):
-    dependencies:
-      lightningcss: 1.32.0
-      picomatch: 4.0.4
-      postcss: 8.5.15
-      rolldown: 1.0.1
-      tinyglobby: 0.2.16
-    optionalDependencies:
-      '@types/node': 25.9.0
-      esbuild: 0.28.0
-      fsevents: 2.3.3
-      jiti: 1.21.7
-      terser: 5.47.1
-      tsx: 4.22.3
-
   vite@8.0.13(@types/node@25.9.0)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.3):
     dependencies:
       lightningcss: 1.32.0
@@ -10924,35 +10901,6 @@ snapshots:
       jiti: 2.7.0
       terser: 5.47.1
       tsx: 4.22.3
-
-  vitest@4.1.6(@opentelemetry/api@1.9.1)(@types/node@25.9.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.9.0)(esbuild@0.28.0)(jiti@1.21.7)(terser@5.47.1)(tsx@4.22.3)):
-    dependencies:
-      '@vitest/expect': 4.1.6
-      '@vitest/mocker': 4.1.6(vite@8.0.13(@types/node@25.9.0)(esbuild@0.28.0)(jiti@1.21.7)(terser@5.47.1)(tsx@4.22.3))
-      '@vitest/pretty-format': 4.1.6
-      '@vitest/runner': 4.1.6
-      '@vitest/snapshot': 4.1.6
-      '@vitest/spy': 4.1.6
-      '@vitest/utils': 4.1.6
-      es-module-lexer: 2.1.0
-      expect-type: 1.3.0
-      magic-string: 0.30.21
-      obug: 2.1.1
-      pathe: 2.0.3
-      picomatch: 4.0.4
-      std-env: 4.1.0
-      tinybench: 2.9.0
-      tinyexec: 1.1.2
-      tinyglobby: 0.2.16
-      tinyrainbow: 3.1.0
-      vite: 8.0.13(@types/node@25.9.0)(esbuild@0.28.0)(jiti@1.21.7)(terser@5.47.1)(tsx@4.22.3)
-      why-is-node-running: 2.3.0
-    optionalDependencies:
-      '@opentelemetry/api': 1.9.1
-      '@types/node': 25.9.0
-      jsdom: 29.1.1
-    transitivePeerDependencies:
-      - msw
 
   vitest@4.1.6(@opentelemetry/api@1.9.1)(@types/node@25.9.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.9.0)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.3)):
     dependencies:
@@ -11145,7 +11093,7 @@ snapshots:
 
   yoctocolors-cjs@2.1.3: {}
 
-  zod@3.25.76: {}
+  zod@4.4.3: {}
 
   zustand@5.0.13(@types/react@18.3.28)(immer@11.1.8)(react@18.3.1)(use-sync-external-store@1.6.0(react@18.3.1)):
     optionalDependencies:

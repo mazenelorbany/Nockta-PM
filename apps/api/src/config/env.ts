@@ -108,7 +108,7 @@ const EnvSchema = z.object({
   APP_URL_CLIENT: z.string().url(),
   APP_URL_API: z.string().url(),
 
-  CORS_ORIGINS: csv.default('http://localhost:5173'),
+  CORS_ORIGINS: csv.default(['http://localhost:5173']),
 
   RATE_LIMIT_GLOBAL_PER_MIN: z.coerce.number().default(600),
   RATE_LIMIT_PER_USER_PER_MIN: z.coerce.number().default(120),
