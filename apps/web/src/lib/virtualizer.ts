@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useState } from 'react';
 
 // =============================================================================
 // virtualizer — lightweight vertical list virtualizer.
@@ -99,12 +99,3 @@ export const VIRTUALIZE_THRESHOLD = 50;
  *  card on the board (one title line, chip row, assignee row, borders). */
 export const ESTIMATED_CARD_HEIGHT = 132;
 
-// Re-render hook that signals "we just mounted and need to read clientHeight".
-// Exposed so consumers can force a sync layout read on first paint.
-export function useReadyAfterMount(): boolean {
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    setReady(true);
-  }, []);
-  return ready;
-}

@@ -7,8 +7,6 @@ export const WORKFLOW_STATUSES = {
   generic:     ['Todo', 'In Progress', 'Done'] as const,
 } satisfies Record<WorkflowPreset, readonly string[]>;
 
-export type WorkflowStatus = (typeof WORKFLOW_STATUSES)[WorkflowPreset][number];
-
 export function isValidStatusFor(preset: WorkflowPreset, status: string): boolean {
   return (WORKFLOW_STATUSES[preset] as readonly string[]).includes(status);
 }

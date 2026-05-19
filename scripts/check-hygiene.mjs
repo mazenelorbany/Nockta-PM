@@ -145,8 +145,27 @@ function checkUnusedExports() {
       // Non-zero from ts-prune just means it found things; not a tool error.
     }
     const lines = (res.stdout ?? '').split('\n').filter((l) => l.trim().length > 0);
-    // Filter: drop "used in module" — that's an internal export, fine.
-    const real = lines.filter((l) => !l.includes('used in module'));
+    // ts-prune misparses `satisfies Record<...>` and similar generic
+    // expressions as exported identifiers named after TS keywords / builtin
+    // types. None of those are real exports — filter them out by name.
+    const KEYWORD_NOISE = new Set([
+      'satisfies', 'Record', 'Promise', 'Partial', 'Pick', 'Omit',
+      'Readonly', 'ReturnType', 'Awaited', 'Extract', 'Exclude',
+    ]);
+    // Filter: drop "used in module" (internal-only exports are fine),
+    // ts-prune keyword false positives, and the entrypoint default exports
+    // that frameworks consume by filename (vite.config, vitest.config, etc.)
+    // rather than via a TypeScript import.
+    const ENTRYPOINT_DEFAULTS = /(?:vite|vitest|playwright|tailwind|postcss|next)\.config\.[cm]?[jt]sx?$/;
+    const real = lines.filter((l) => {
+      if (l.includes('used in module')) return false;
+      const [filePart, ...nameParts] = l.split(' - ');
+      const name = nameParts.join(' - ').trim();
+      if (KEYWORD_NOISE.has(name)) return false;
+      const path = (filePart ?? '').split(':')[0] ?? '';
+      if (name === 'default' && ENTRYPOINT_DEFAULTS.test(path)) return false;
+      return true;
+    });
     for (const l of real.slice(0, 200)) {
       violations.push({
         category: 'unused-export',
@@ -174,18 +193,41 @@ function checkConsoleLog() {
     skipped.push({ category: 'console-log', reason: `git grep failed: ${err.message}` });
     return;
   }
+  // Tests and CLI scripts may use console.log freely.
   const ALLOWED = ['apps/api/scripts/', 'scripts/', '/main.ts', '__tests__'];
+  const TEST_FILE = /\.(test|spec)\.[cm]?[jt]sx?$/;
+  const fileCache = new Map();
+  function readFileLines(filePath) {
+    if (!fileCache.has(filePath)) {
+      try {
+        fileCache.set(filePath, readFileSync(join(ROOT, filePath), 'utf-8').split('\n'));
+      } catch {
+        fileCache.set(filePath, []);
+      }
+    }
+    return fileCache.get(filePath);
+  }
   for (const line of raw.split('\n').filter(Boolean)) {
-    const [filePath] = line.split(':');
-    if (!filePath) continue;
-    if (ALLOWED.some((p) => filePath.includes(p))) continue;
-    // Allow eslint-suppressed lines.
     const m = line.match(/^([^:]+):(\d+):(.*)$/);
-    if (m && /eslint-disable.*no-console/.test(m[3])) continue;
-    // Allow if the preceding line had a no-console disable.
+    if (!m) continue;
+    const [, filePath, lineNo, content] = m;
+    if (ALLOWED.some((p) => filePath.includes(p))) continue;
+    if (TEST_FILE.test(filePath)) continue;
+    // Allow eslint-disable on the same line.
+    if (/eslint-disable.*no-console/.test(content)) continue;
+    // Allow eslint-disable-next-line on the preceding line.
+    const lines = readFileLines(filePath);
+    const prev = lines[parseInt(lineNo, 10) - 2] ?? '';
+    if (/eslint-disable-next-line.*no-console/.test(prev)) continue;
+    // Allow console.log when it appears inside a string literal — the line
+    // starts (after whitespace) with a string-quote or template-quote that
+    // wraps the entire content. Cheap heuristic; catches markdown test
+    // fixtures without parsing.
+    const trimmed = content.trim();
+    if (/^['"`]/.test(trimmed)) continue;
     violations.push({
       category: 'console-log',
-      file: line.split(':').slice(0, 2).join(':'),
+      file: `${filePath}:${lineNo}`,
       detail: 'Use the Logger or Sentry; CLI scripts may keep console.log.',
     });
   }

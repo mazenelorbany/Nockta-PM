@@ -116,9 +116,6 @@ export const JIRA_CSV_SOURCE_FIELDS: readonly ImportSourceFieldDescriptor[] = [
   },
 ] as const;
 
-/** Type alias for downstream consumers — matches the descriptor type shape. */
-export type JiraCsvSourceFieldDescriptor = ImportSourceFieldDescriptor;
-
 /** Per-workflow-preset status-mapping presets. Keys are LOWERCASED Jira
  *  status names; values are the Nockta status to write. Anything not present
  *  falls back to mapStatusFallback() below. */

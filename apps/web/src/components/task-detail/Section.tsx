@@ -17,5 +17,3 @@ export function Section({
     </div>
   );
 }
-
-export default Section;

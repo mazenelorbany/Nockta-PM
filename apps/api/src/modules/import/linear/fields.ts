@@ -15,10 +15,7 @@
 // logic already consults the concrete mapping object via stable keys.
 // =============================================================================
 
-import type {
-  ImportSourceField,
-  NocktaTaskField,
-} from '../adapter.types';
+import type { ImportSourceField } from '../adapter.types';
 
 export const fields: readonly ImportSourceField[] = [
   {
@@ -67,12 +64,3 @@ export const fields: readonly ImportSourceField[] = [
   { sourceKey: 'labels', label: 'Labels', requiredFor: 'optional', defaultTargetField: 'labels' },
   { sourceKey: 'dueDate', label: 'Due date', requiredFor: 'optional', defaultTargetField: 'dueDate' },
 ] as const;
-
-/** Re-export of the canonical type so adapter consumers don't import twice. */
-export type LinearField = (typeof fields)[number];
-
-/** Convenience: every default target that isn't `skip`. Used by the frontend
- *  to compute "did the user remap anything?" badges. */
-export const linearDefaultTargets: ReadonlyArray<NocktaTaskField> = fields
-  .map((f) => f.defaultTargetField)
-  .filter((t): t is NocktaTaskField => Boolean(t) && t !== 'skip');

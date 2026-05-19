@@ -77,19 +77,6 @@ export type NocktaFieldKey =
   | 'labels'
   | 'skip';
 
-export const NOCKTA_FIELD_LABELS: Record<NocktaFieldKey, string> = {
-  title: 'Title (required)',
-  description: 'Description',
-  priority: 'Priority',
-  type: 'Type',
-  status: 'Status',
-  assigneeEmail: 'Assignee (email)',
-  dueDate: 'Due date',
-  estimate: 'Estimate',
-  labels: 'Labels',
-  skip: '— skip —',
-};
-
 /** A row error surfaced from any importer's dry-run preview. */
 export interface DryRunRowError {
   /** 1-based row number in the user-facing source (e.g. spreadsheet line). */
@@ -120,6 +107,3 @@ export interface DryRunResult {
   totalRows: number;
 }
 
-/** Sources the new dry-run endpoint accepts. Matches ImportSource minus the
- *  legacy github_issues channel (which keeps its source-specific preview). */
-export type DryRunSource = 'csv' | 'linear' | 'jira-csv';

@@ -90,5 +90,3 @@ export const fields: readonly ImportSourceField[] = [
     defaultTargetField: 'labels',
   },
 ] as const;
-
-export type JiraCsvField = (typeof fields)[number];

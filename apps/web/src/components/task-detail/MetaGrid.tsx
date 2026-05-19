@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 import { api } from '../../lib/api';
-import { AvatarCircle, type Priority, type TaskType } from '../task-bits';
+import { type Priority, type TaskType } from '../task-bits';
 
 import { PRESET_STATUSES } from './constants';
 import { LabelsPicker } from './Labels';
@@ -28,7 +28,6 @@ import { StatusPicker } from './pickers/StatusPicker';
 import { TimeTrackedCompact } from './TimeTracking';
 import { TypePicker } from './pickers/TypePicker';
 import type { TaskDetail, User } from './types';
-import { formatRelative } from './utils';
 
 export function MetaGrid({
   task,
@@ -181,21 +180,3 @@ export function RailRow({
   );
 }
 
-export function ReporterRow({ task, users }: { task: TaskDetail; users: User[] }): JSX.Element {
-  const reporter = users.find((u) => u.id === task.reporterUserId);
-  return (
-    <div className="flex items-center justify-between gap-4 text-xs text-muted-foreground border-t border-border pt-3">
-      <div className="flex items-center gap-2">
-        <span className="nockta-eyebrow">Reported by</span>
-        <span className="flex items-center gap-1.5 text-foreground">
-          <AvatarCircle user={reporter ?? null} size={18} />
-          {reporter?.name ?? reporter?.email ?? 'Unknown'}
-        </span>
-      </div>
-      <div className="flex items-center gap-4">
-        <span><span className="nockta-eyebrow">Created</span> · {new Date(task.createdAt).toLocaleDateString()}</span>
-        <span><span className="nockta-eyebrow">Updated</span> · {formatRelative(task.updatedAt)}</span>
-      </div>
-    </div>
-  );
-}

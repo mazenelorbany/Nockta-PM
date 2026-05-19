@@ -4,6 +4,4 @@
 // files.
 export { ActivityTab } from './activity/ActivityTab';
 export { CommentsThread } from './activity/CommentsThread';
-export { CommentReactionsRow } from './activity/CommentReactionsRow';
-export { RevisionHistoryModal } from './activity/RevisionHistoryModal';
 export { ActivitySection } from './activity/ActivitySection';

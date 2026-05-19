@@ -45,8 +45,6 @@ import {
 // untouched.
 // =============================================================================
 
-export type DryRunSource = 'csv' | 'linear' | 'jira-csv';
-
 export interface DryRunPreviewRow {
   /** 1-based row number in the source (header = row 1 for spreadsheets). */
   row: number;

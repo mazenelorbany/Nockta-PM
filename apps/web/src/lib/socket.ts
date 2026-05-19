@@ -55,9 +55,3 @@ export async function getSocket(): Promise<Socket> {
   return inflight;
 }
 
-export function disconnectSocket(): void {
-  socket?.removeAllListeners();
-  socket?.disconnect();
-  socket = null;
-  inflight = null;
-}

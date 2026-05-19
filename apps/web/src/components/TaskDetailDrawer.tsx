@@ -33,32 +33,6 @@ import { useTaskDrawerState } from './task-detail/useTaskDrawerState';
 import { useOfflineTaskUpdate } from './task-detail/useOfflineMutations';
 
 
-// Re-exports for backward compat: external importers of TaskDetailDrawer.tsx
-// named exports keep working after the decomposition.
-export type {
-  Attachment,
-  Comment,
-  CommentRevisionRow,
-  CustomFieldDef,
-  CustomFieldOption,
-  CustomFieldValueRow,
-  Label,
-  LinkType,
-  ParentLite,
-  Preset,
-  ReactionEmoji,
-  Recurrence,
-  SimilarTask,
-  SubtaskLite,
-  TaskDetail,
-  TaskLink,
-  TimelineEvent,
-  User,
-  UserListResponse,
-  WorklogEntry,
-  WorklogSummary,
-} from './task-detail/types';
-
 export function TaskDetailDrawer({
   taskId,
   onClose,
