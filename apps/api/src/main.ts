@@ -112,8 +112,6 @@ async function bootstrap(): Promise<void> {
   // a fresh deploy before Google OAuth is wired), and the warning is loudest
   // exactly when that posture has been forgotten about.
   if (Env.DEV_AUTH_ENABLED) {
-    // intentional — boot log
-    // eslint-disable-next-line no-console
     console.warn(
       `⚠️  DEV_AUTH_ENABLED=true (NODE_ENV=${Env.NODE_ENV}) — dev login endpoints ` +
         '(POST /auth/dev-login) are active and accept arbitrary persona ' +
