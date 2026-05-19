@@ -30,9 +30,13 @@ import { AuditLogService } from './audit-log.service';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
-import type { MagicLinkRequestDto } from './dto/magic-link-request.dto';
-import type { MagicLinkVerifyDto } from './dto/magic-link-verify.dto';
-import type { RefreshDto } from './dto/refresh.dto';
+// NOTE: runtime imports (not `import type`). class-validator + ValidationPipe
+// reflect on the DTO classes at runtime; `import type` would erase them and
+// `forbidNonWhitelisted: true` would then reject every field as "should not
+// exist", returning a 400 for every magic-link / refresh request.
+import { MagicLinkRequestDto } from './dto/magic-link-request.dto';
+import { MagicLinkVerifyDto } from './dto/magic-link-verify.dto';
+import { RefreshDto } from './dto/refresh.dto';
 import { SessionsService } from './sessions.service';
 import type { GoogleProfile } from './strategies/google.strategy';
 import type { AuthenticatedUser, TokenPair } from './types';
