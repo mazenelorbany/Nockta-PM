@@ -15,15 +15,13 @@ import { Env } from '../../config/env';
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
-  private readonly client: S3Client;
+  /** Null when S3 env vars are unset — the API still boots, but any
+   *  attachment-related route throws InternalServerErrorException. */
+  private readonly client: S3Client | null;
   readonly bucket: string;
   readonly quarantineBucket: string;
 
   constructor() {
-    // S3 became optional in env validation so the API can boot without
-    // attachments configured. If StorageService is being instantiated we
-    // assume the consumer needs S3 — fail loud at construction time rather
-    // than producing a cryptic AWS error on the first signedPutUrl call.
     if (
       !Env.S3_ENDPOINT ||
       !Env.S3_ACCESS_KEY ||
@@ -31,11 +29,15 @@ export class StorageService {
       !Env.S3_BUCKET ||
       !Env.S3_QUARANTINE_BUCKET
     ) {
-      throw new Error(
-        'StorageService requires S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, ' +
-          'S3_BUCKET, S3_QUARANTINE_BUCKET to be set. Either configure them or ' +
-          'remove StorageService from the module graph.',
+      this.client = null;
+      this.bucket = '';
+      this.quarantineBucket = '';
+      this.logger.warn(
+        'S3 env vars missing — StorageService is in no-op mode. Attachment ' +
+          'routes will return 503 until S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, ' +
+          'S3_BUCKET, S3_QUARANTINE_BUCKET are configured.',
       );
+      return;
     }
     this.client = new S3Client({
       endpoint: Env.S3_ENDPOINT,
@@ -50,19 +52,34 @@ export class StorageService {
     this.quarantineBucket = Env.S3_QUARANTINE_BUCKET;
   }
 
+  /** Asserts S3 is configured. Called by every method that touches the
+   *  client — produces a single, consistent 503 instead of a cryptic
+   *  "Cannot read properties of null" downstream. */
+  private requireClient(): S3Client {
+    if (!this.client) {
+      throw new InternalServerErrorException(
+        'Object storage is not configured on this deployment.',
+      );
+    }
+    return this.client;
+  }
+
   async signedPutUrl(key: string, contentType: string, expiresInSeconds = 300): Promise<string> {
+    const client = this.requireClient();
     const cmd = new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: contentType });
-    return getSignedUrl(this.client, cmd, { expiresIn: expiresInSeconds });
+    return getSignedUrl(client, cmd, { expiresIn: expiresInSeconds });
   }
 
   async signedGetUrl(key: string, expiresInSeconds = 900): Promise<string> {
+    const client = this.requireClient();
     const cmd = new GetObjectCommand({ Bucket: this.bucket, Key: key });
-    return getSignedUrl(this.client, cmd, { expiresIn: expiresInSeconds });
+    return getSignedUrl(client, cmd, { expiresIn: expiresInSeconds });
   }
 
   async exists(key: string): Promise<boolean> {
+    const client = this.requireClient();
     try {
-      await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }));
+      await client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }));
       return true;
     } catch {
       return false;
@@ -70,7 +87,8 @@ export class StorageService {
   }
 
   async getBuffer(key: string): Promise<Buffer> {
-    const result = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+    const client = this.requireClient();
+    const result = await client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
     const body = result.Body as NodeJS.ReadableStream | undefined;
     if (!body) throw new InternalServerErrorException(`No body for object ${key}`);
     const chunks: Buffer[] = [];
@@ -81,7 +99,8 @@ export class StorageService {
   }
 
   async putBuffer(key: string, body: Buffer, contentType: string): Promise<void> {
-    await this.client.send(
+    const client = this.requireClient();
+    await client.send(
       new PutObjectCommand({
         Bucket: this.bucket,
         Key: key,
@@ -92,11 +111,13 @@ export class StorageService {
   }
 
   async deleteObject(key: string): Promise<void> {
-    await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+    const client = this.requireClient();
+    await client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }
 
   async moveToQuarantine(key: string): Promise<void> {
-    await this.client.send(
+    const client = this.requireClient();
+    await client.send(
       new CopyObjectCommand({
         Bucket: this.quarantineBucket,
         Key: key,
