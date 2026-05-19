@@ -303,6 +303,8 @@ model User {
   aiUsageEvents         AiUsageEvent[]            @relation("AiUsageEventUser")
   exportSchedulesCreated ExportSchedule[]         @relation("ExportScheduleCreator")
   exportRunsCreated      ExportRun[]              @relation("ExportRunCreator")
+  // Project invitations the user has sent (intent='project_invite').
+  magicLinksSent        MagicLink[]               @relation("MagicLinkInviter")
   // Pass I (Notifications 8→9) — batched digest queue, one row per user/channel.
   notificationDigests   NotificationDigest[]
   // Pass I (Sprints 8→9) — retro authorship + goal-hit evaluation.
@@ -352,17 +354,28 @@ model RefreshToken {
 }
 
 model MagicLink {
-  id        String          @id @default(uuid()) @db.Uuid
-  email     String          @db.Citext
-  tokenHash String          @unique
-  intent    MagicLinkIntent
-  expiresAt DateTime
-  usedAt    DateTime?
-  ip        String?
-  createdAt DateTime        @default(now())
+  id              String          @id @default(uuid()) @db.Uuid
+  email           String          @db.Citext
+  tokenHash       String          @unique
+  intent          MagicLinkIntent
+  expiresAt       DateTime
+  usedAt          DateTime?
+  ip              String?
+  // Project-invite context — populated only when intent='project_invite'.
+  // ON DELETE SET NULL on both FKs so deleting a project or archiving a
+  // user doesn't cascade-delete the audit trail of who was invited where.
+  // The "pending invitations" admin panel reads these to render
+  // `<Inviter> invited <email> to <Project>` rows.
+  projectId       String?         @db.Uuid
+  invitedByUserId String?         @db.Uuid
+  createdAt       DateTime        @default(now())
+
+  project   Project? @relation("MagicLinkProject", fields: [projectId], references: [id], onDelete: SetNull)
+  invitedBy User?    @relation("MagicLinkInviter", fields: [invitedByUserId], references: [id], onDelete: SetNull)
 
   @@index([email])
   @@index([expiresAt])
+  @@index([intent, projectId, usedAt])
 }
 
 model ChatBinding {
@@ -460,6 +473,8 @@ model Project {
   commentTemplates    CommentTemplate[]
   // Pass I (Analytics 8→9) — saved reports may be project-scoped.
   customReports       CustomReport[]
+  // Outstanding `project_invite` magic links targeting this project.
+  pendingInvites      MagicLink[]   @relation("MagicLinkProject")
 
   @@index([archivedAt])
 }
