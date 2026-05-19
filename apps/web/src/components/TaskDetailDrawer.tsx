@@ -42,7 +42,14 @@ export function TaskDetailDrawer({
   // Mobile detection — drives layout (bottom sheet vs. centered modal),
   // tabs (instead of side-by-side panes), and the swipe-down-to-dismiss
   // gesture. Matches the same breakpoint Tailwind uses for md:.
-  const isMobile = useMediaQuery('(max-width: 768px)');
+  // Use the bottom-sheet pattern only on actual phone widths. Tablet /
+  // narrow-laptop viewports (640–768px) used to flip to the mobile branch
+  // and ended up showing a half-height drawer pinned to the bottom of the
+  // screen, with the rest of the ticket content hidden below the fold.
+  // The centered-modal branch already handles narrow viewports via
+  // `h-full sm:h-[min(92vh,1000px)]`, so we just need to raise the
+  // threshold for the mobile branch.
+  const isMobile = useMediaQuery('(max-width: 640px)');
   const {
     closing,
     requestClose,
