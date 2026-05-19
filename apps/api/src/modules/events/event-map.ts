@@ -60,7 +60,13 @@ export const EVENT_MAP: Record<string, EventMapEntry> = {
   'user.login':           { type: 'UserLogin',       visibility: 'admin_only', entityType: 'User', entityIdKey: 'userId' },
 
   // Auth security
-  'auth.magic_link_sent': { type: 'UserLogin',       visibility: 'admin_only', entityType: 'User', entityIdKey: 'email' },
+  // `auth.magic_link_sent` is INTENTIONALLY not persisted to Event:
+  //   - it fires before the recipient has a User row in the signup case, so
+  //     no userId is available and Event.entityId (UUID) can't be populated;
+  //   - the verified sign-in already emits `user.login` (with userId) plus an
+  //     AuditLog row, which is what admins actually need;
+  //   - keeping the emit as a no-mapping signal lets future subscribers
+  //     (rate-limit, anomaly detection) attach without ceremony.
   'auth.refresh_reuse':   { type: 'WebhookSignatureFailed', visibility: 'admin_only', entityType: 'User', entityIdKey: 'userId' },
 
   // GitHub / Chat / Deployment events — populated later as those modules ship
@@ -68,8 +74,10 @@ export const EVENT_MAP: Record<string, EventMapEntry> = {
   'github.pr_merged':         { type: 'PRMerged',           visibility: 'public', entityType: 'Task',       entityIdKey: 'taskId',       projectIdKey: 'projectId' },
   'github.pr_closed':         { type: 'PRClosed',           visibility: 'public', entityType: 'Task',       entityIdKey: 'taskId',       projectIdKey: 'projectId' },
   'github.commit_linked':     { type: 'CommitLinked',       visibility: 'public', entityType: 'Task',       entityIdKey: 'taskId',       projectIdKey: 'projectId' },
-  'github.app_installed':     { type: 'GitHubAppInstalled', visibility: 'admin_only', entityType: 'Integration', entityIdKey: 'installationId' },
-  'github.app_uninstalled':   { type: 'GitHubAppUninstalled', visibility: 'admin_only', entityType: 'Integration', entityIdKey: 'installationId' },
+  // github.app_installed / uninstalled fire with `installationId` (numeric
+  // string from GitHub, e.g. "12345"), which can't go in Event.entityId (UUID).
+  // Re-enable when we look up the internal GitHubInstallation.id (UUID) and
+  // pass it as entityId at emit time; until then the emits are unmapped.
 
   'chat.bound':               { type: 'ChatBound',          visibility: 'internal', entityType: 'User', entityIdKey: 'userId' },
   'chat.unbound':             { type: 'ChatUnbound',        visibility: 'internal', entityType: 'User', entityIdKey: 'userId' },

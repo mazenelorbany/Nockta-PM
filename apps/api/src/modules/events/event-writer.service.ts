@@ -36,6 +36,19 @@ export class EventWriterService implements OnModuleInit {
       return;
     }
     const entityId = String(entityIdRaw);
+
+    // Defense-in-depth: Event.entityId is a Postgres UUID column. An emit
+    // that puts a non-UUID value into entityIdKey (e.g. an email or numeric
+    // installation id) would otherwise trigger a P2007 at the DB layer on
+    // every fire, polluting logs without affecting the request path. Skip
+    // here so the misconfigured map entry is a one-time debug log instead.
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entityId)) {
+      this.logger.warn(
+        { eventName, entityIdKey: mapping.entityIdKey, entityIdRaw },
+        'event entityId is not a UUID, skipping persistence',
+      );
+      return;
+    }
     const projectId = mapping.projectIdKey
       ? (payload[mapping.projectIdKey] as string | undefined) ?? null
       : null;

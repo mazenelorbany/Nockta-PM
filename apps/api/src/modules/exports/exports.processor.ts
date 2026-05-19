@@ -9,6 +9,7 @@ import type { Job } from 'bullmq';
 import { Env } from '../../config/env';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { MailService } from '../auth/mail.service';
 import type { AuthenticatedUser } from '../auth/types';
 import { PermissionsService } from '../permissions/permissions.service';
 
@@ -55,6 +56,7 @@ export class ExportsProcessor extends WorkerHost {
     private readonly storage: StorageService,
     private readonly events: EventEmitter2,
     private readonly permissions: PermissionsService,
+    private readonly mail: MailService,
   ) {
     super();
   }
@@ -141,18 +143,30 @@ export class ExportsProcessor extends WorkerHost {
         },
       });
 
-      // Email delivery. If the project has an email module we'd call it
-      // here; for now we look for the auth-side MailService at runtime and
-      // fall back to a TODO comment + log.
+      // Email delivery. Sends the signed download URL to the recipient
+      // configured on the schedule. Failures are logged but don't fail the
+      // run — the file is already persisted and reachable via the URL or
+      // the API; an SMTP outage shouldn't roll back a successful export.
       if (schedule?.deliveryKind === 'email' && schedule.deliveryEmailNew) {
-        // TODO(R6): wire to email module. The auth/mail.service exists but
-        // is private to the auth flow; centralising into apps/api/src/
-        // modules/email/ is a separate pass. For now we log the URL so a
-        // dev still has a way to retrieve it.
-        this.logger.log(
-          { runId: run.id, to: schedule.deliveryEmailNew, signedUrl },
-          'export.email_delivery_pending — would email signed URL to recipient',
-        );
+        const expiresHours = Math.round(EXPORT_SIGNED_URL_TTL_SECONDS / 3600);
+        const sizeKb = Math.max(1, Math.round(buffer.byteLength / 1024));
+        try {
+          await this.mail.send({
+            to: schedule.deliveryEmailNew,
+            subject: `Your ${kind.toUpperCase()} export is ready — ${rows.length} rows`,
+            text:
+              `Your scheduled export has finished.\n\n` +
+              `Rows: ${rows.length}\n` +
+              `Size: ${sizeKb} KB\n` +
+              `Download (expires in ${expiresHours}h): ${signedUrl}\n\n` +
+              `If you didn't expect this email you can safely ignore it.`,
+          });
+        } catch (err) {
+          this.logger.error(
+            { runId: run.id, to: schedule.deliveryEmailNew, err },
+            'export.email_delivery_failed — file is persisted but the recipient did not get the link',
+          );
+        }
       }
 
       this.events.emit('export.completed', {

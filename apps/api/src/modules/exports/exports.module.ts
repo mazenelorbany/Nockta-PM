@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 
+import { AuthModule } from '../auth/auth.module';
+
 import { ExportsController } from './exports.controller';
 import { ExportsProcessor } from './exports.processor';
 import { ExportsScheduler } from './exports.scheduler';
@@ -18,7 +20,7 @@ import { EXPORTS_QUEUE, ExportsService } from './exports.service';
 // =============================================================================
 
 @Module({
-  imports: [BullModule.registerQueue({ name: EXPORTS_QUEUE })],
+  imports: [BullModule.registerQueue({ name: EXPORTS_QUEUE }), AuthModule],
   controllers: [ExportsController],
   providers: [ExportsService, ExportsProcessor, ExportsScheduler],
   exports: [ExportsService],
