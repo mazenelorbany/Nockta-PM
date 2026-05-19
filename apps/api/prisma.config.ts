@@ -4,18 +4,27 @@
 try { require('dotenv/config'); } catch {}
 import { defineConfig } from 'prisma/config';
 
-// Prisma 7 moved connection config out of schema.prisma. The CLI (migrate /
-// generate / studio) needs `url` for the migration engine (which uses a direct
-// Postgres connection, not a driver adapter). The `adapter` is used by the
-// runtime PrismaClient given the same adapter directly in prisma.service.ts.
+// Prisma 7 moved connection config out of schema.prisma. Two surfaces need
+// it now:
+//   - `datasource.url`  → consumed by the CLI (migrate deploy / migrate
+//                          dev / db push). The migration engine uses a
+//                          direct Postgres connection, not a driver
+//                          adapter. Without it `prisma migrate deploy`
+//                          errors out with:
+//                            "The datasource.url property is required in
+//                             your Prisma config file when using prisma
+//                             migrate deploy."
+//   - `adapter()`       → consumed by the runtime PrismaClient (via the
+//                          PrismaPg driver). Same connection string,
+//                          different code path.
 export default defineConfig({
   schema: './prisma/schema.prisma',
+  datasource: {
+    url: process.env.DATABASE_URL ?? '',
+  },
   migrations: {
     path: './prisma/migrations',
   },
-  // Required by `prisma migrate deploy` — the migration engine uses a direct
-  // connection, not the driver adapter.
-  url: process.env.DATABASE_URL,
   async adapter() {
     const { PrismaPg } = await import('@prisma/adapter-pg');
     return new PrismaPg({
