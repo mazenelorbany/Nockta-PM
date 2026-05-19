@@ -50,7 +50,7 @@ function buildService(overrides: Partial<Mocks> = {}): {
     listForUser: vi.fn().mockResolvedValue([]),
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const service = new AuthService(
     prisma,
     jwt as never,

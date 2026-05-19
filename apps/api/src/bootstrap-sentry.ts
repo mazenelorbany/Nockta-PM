@@ -15,7 +15,7 @@ export async function maybeInitSentry(): Promise<void> {
     // @sentry/node is an intentionally optional runtime dep — see file header.
     // TS doesn't see types for it, but the dynamic import + try/catch is the
     // contract. Cast the imported namespace to the minimal shape we use.
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+     
     // @ts-expect-error — optional dependency, types not installed
     const Sentry = (await import('@sentry/node')) as {
       init: (opts: {
@@ -44,7 +44,7 @@ export async function maybeInitSentry(): Promise<void> {
     console.log('[sentry] initialized');
   } catch (err) {
     // intentional — boot log
-    // eslint-disable-next-line no-console
+     
     console.warn(`[sentry] not initialized: ${err instanceof Error ? err.message : err}`);
   }
 }

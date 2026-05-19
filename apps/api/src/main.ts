@@ -111,7 +111,7 @@ async function bootstrap(): Promise<void> {
   // production (env.ts gate); this banner is for staging / preview envs.
   if (Env.DEV_AUTH_ENABLED && Env.NODE_ENV !== 'production') {
     // intentional — boot log
-    // eslint-disable-next-line no-console
+     
     console.warn(
       '⚠️  DEV_AUTH_ENABLED=true — dev login endpoints (POST /auth/dev/*) are ' +
         "active. This MUST NOT ship to production. Set DEV_AUTH_ENABLED=false " +

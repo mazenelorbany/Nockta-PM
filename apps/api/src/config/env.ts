@@ -163,7 +163,7 @@ const PLACEHOLDER_VALUES: Record<string, string[]> = {
 
 function bootGuard(env: EnvType): void {
   // intentional — boot log
-  /* eslint-disable no-console */
+   
   if (env.NODE_ENV !== 'production') return;
 
   const violations: { name: string; hint: string }[] = [];
@@ -203,7 +203,7 @@ function bootGuard(env: EnvType): void {
   console.error('   Quick fix:');
   console.error('     pnpm gen:secrets >> apps/api/.env    # appends new JWT secrets');
   console.error('   Then edit apps/api/.env to remove the old placeholder lines.');
-  /* eslint-enable no-console */
+   
   // internal: not reached from an HTTP request — boot guard, process exits.
   throw new Error('Refusing to boot with placeholder secrets in production');
 }
@@ -212,14 +212,14 @@ function parseEnv(): EnvType {
   const result = EnvSchema.safeParse(process.env);
   if (!result.success) {
     // intentional — boot log
-    /* eslint-disable no-console */
+     
     console.error('❌ Environment validation failed:');
     for (const issue of result.error.issues) {
       const path = issue.path.join('.');
       const hint = describeEnvHint(path);
       console.error(`  - ${path}: ${issue.message}${hint ? ` — ${hint}` : ''}`);
     }
-    /* eslint-enable no-console */
+     
     // internal: not reached from an HTTP request — boot guard, process exits.
     throw new Error('Environment validation failed — see logs above');
   }

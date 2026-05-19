@@ -180,7 +180,7 @@ describe('NotificationDigestService.enqueueOrBatch', () => {
     }));
 
     for (let i = 0; i < 10; i++) {
-      // eslint-disable-next-line no-await-in-loop
+       
       await service.enqueueOrBatch(makeInput());
     }
 
@@ -236,7 +236,7 @@ describe('NotificationDigestService.enqueueOrBatch', () => {
     });
 
     for (let i = 0; i < 11; i++) {
-      // eslint-disable-next-line no-await-in-loop
+       
       await service.enqueueOrBatch(makeInput());
     }
 

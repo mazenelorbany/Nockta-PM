@@ -9,7 +9,7 @@
     "./styles.css": "./src/styles.css"
   },
   "scripts": {
-    "lint": "eslint src --ext .ts,.tsx --max-warnings 0",
+    "lint": "eslint src --max-warnings 0",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

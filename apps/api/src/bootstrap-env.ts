@@ -71,7 +71,7 @@ if (process.env.NODE_ENV === 'production') {
   }
   if (missing.length > 0 || placeholders.length > 0 || tooShort.length > 0) {
     // intentional — boot log
-    // eslint-disable-next-line no-console
+     
     console.error(
       `[bootstrap-env] Refusing to boot in production:` +
       (missing.length ? `\n  Missing env vars: ${missing.join(', ')}` : '') +

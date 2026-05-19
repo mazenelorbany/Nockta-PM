@@ -65,16 +65,14 @@ export type ChatReply =
   | { text: string }
   | { cardsV2: Array<{ cardId: string; card: unknown }> };
 
-const KNOWN_COMMANDS = [
-  'assign',
-  'status',
-  'comment',
-  'my-tasks',
-  'standup',
-  'sprint',
-  'help',
-] as const;
-export type KnownCommand = (typeof KNOWN_COMMANDS)[number];
+export type KnownCommand =
+  | 'assign'
+  | 'status'
+  | 'comment'
+  | 'my-tasks'
+  | 'standup'
+  | 'sprint'
+  | 'help';
 
 /** Robust enough for our needs: ENG-42 / API-9 / ABC-100 etc. */
 const TASK_KEY_RE = /^[A-Z][A-Z0-9]{1,9}-\d+$/;

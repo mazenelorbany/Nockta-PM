@@ -24,7 +24,6 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   override componentDidCatch(error: Error, info: ErrorInfo): void {
-    // eslint-disable-next-line no-console
     console.error('[ErrorBoundary]', error, info.componentStack);
     // Forward to Sentry if it's been installed in the page.
     const Sentry = (window as unknown as { Sentry?: { captureException?: (e: unknown) => void } }).Sentry;
