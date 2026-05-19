@@ -6,7 +6,9 @@
     "baseUrl": "./",
     "paths": {
       "@nockta/types": ["../../packages/types/src"]
-    }
+    },
+    "moduleResolution": "Bundler",
+    "ignoreDeprecations": "6.0"
   },
   "_comment": "rootDir is pinned to ./src so dist/ is flat (dist/main.js, dist/app.module.js, ...). Without it, tsc widens rootDir to the common ancestor of all included files and we end up with dist/apps/api/src/main.js, which nest start can't find. The @nockta/types include from the previous version is gone because it triggered the same root-widening; the paths map below is enough — the only api import of @nockta/types is `import type`, which tsc erases.",
   "include": [

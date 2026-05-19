@@ -7,7 +7,8 @@
       "@nockta/types": ["../../packages/types/src"],
       "@nockta/sdk": ["../../packages/sdk/src"],
       "@nockta/ui": ["../../packages/ui/src"]
-    }
+    },
+    "ignoreDeprecations": "6.0"
   },
   "include": ["src", "vite.config.ts"]
 }
