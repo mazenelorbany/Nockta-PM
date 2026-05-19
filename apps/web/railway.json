@@ -5,6 +5,7 @@
     "dockerfilePath": "apps/web/Dockerfile"
   },
   "deploy": {
+    "startCommand": "nginx -g 'daemon off;'",
     "healthcheckPath": "/healthz",
     "healthcheckTimeout": 5,
     "restartPolicyType": "ON_FAILURE",
