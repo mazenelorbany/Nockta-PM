@@ -107,15 +107,18 @@ async function bootstrap(): Promise<void> {
 
   // Loud, scary log if the dev-auth backdoor is open. Visible at every boot
   // so an ops engineer SSHing into a misconfigured instance spots it before
-  // an attacker does. The startup also won't enable dev-auth at all in
-  // production (env.ts gate); this banner is for staging / preview envs.
-  if (Env.DEV_AUTH_ENABLED && Env.NODE_ENV !== 'production') {
+  // an attacker does. The warning fires in EVERY environment — dev-auth in
+  // production is sometimes a deliberate temporary measure (e.g., poking at
+  // a fresh deploy before Google OAuth is wired), and the warning is loudest
+  // exactly when that posture has been forgotten about.
+  if (Env.DEV_AUTH_ENABLED) {
     // intentional — boot log
-     
+    // eslint-disable-next-line no-console
     console.warn(
-      '⚠️  DEV_AUTH_ENABLED=true — dev login endpoints (POST /auth/dev/*) are ' +
-        "active. This MUST NOT ship to production. Set DEV_AUTH_ENABLED=false " +
-        'or unset it before promoting this image.',
+      `⚠️  DEV_AUTH_ENABLED=true (NODE_ENV=${Env.NODE_ENV}) — dev login endpoints ` +
+        '(POST /auth/dev-login) are active and accept arbitrary persona ' +
+        'requests without OAuth. Disable by setting DEV_AUTH_ENABLED=false ' +
+        'or unsetting it.',
     );
   }
   logIntegrationStatus();
