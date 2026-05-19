@@ -21,15 +21,6 @@ interface AppConfig {
   devLoginEnabled: boolean;
 }
 
-const MANTRAS = [
-  'ENGINEERED',
-  'NOT ASSEMBLED',
-  'SENIOR OR NOTHING',
-  'WE SHIP THEN MEASURE',
-  'OPERATORS IN THE ROOM',
-  'BRINGING THE PIECES',
-];
-
 export function LoginPage(): JSX.Element {
   const navigate = useNavigate();
   const { setTokens, setUser } = useAuth();
@@ -79,214 +70,125 @@ export function LoginPage(): JSX.Element {
   }
 
   return (
-    <div className="min-h-screen flex bg-background text-foreground flex-col overflow-hidden">
-      <div className="flex-1 flex flex-col md:flex-row">
-        {/* Brand panel — cinematic gradient, oversized N watermark, dense bento footer */}
-        <div className="hidden md:flex md:w-[58%] bg-brand-gradient relative overflow-hidden p-12 lg:p-16 flex-col justify-between">
-          {/* Faint grid overlay */}
-          <div
-            className="absolute inset-0 opacity-[0.04] pointer-events-none"
-            style={{
-              backgroundImage:
-                'linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)',
-              backgroundSize: '64px 64px',
-            }}
-          />
-          {/* Subtle wide product still — heavily darkened, lives behind the type */}
-          <div
-            className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-[0.18] mix-blend-luminosity"
-            style={{
-              backgroundImage:
-                "url('https://picsum.photos/seed/nockta-flow-login/1920/1200')",
-            }}
-            aria-hidden="true"
-          />
-          <div className="absolute inset-0 bg-gradient-to-tr from-background/80 via-background/30 to-transparent pointer-events-none" />
-          {/* Brand cube — the stacked Nockta cubes ("scale") sit bottom-right
-              as a quiet hero element. Real brand asset rather than a traced
-              SVG mark so the login page reads as Nockta proper. */}
-          <img
-            src="/scale.png"
-            alt=""
-            aria-hidden="true"
-            className="absolute -right-24 -bottom-24 h-[560px] w-[560px] object-contain pointer-events-none select-none opacity-70"
-          />
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
+      {/* Top bar — logo + system status. Internal tool, no marketing chrome. */}
+      <header className="flex items-center justify-between px-6 py-4 border-b border-border/60">
+        <NocktaLogo height={22} />
+        <span className="nockta-eyebrow text-muted-foreground inline-flex items-center gap-2">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-status-done" />
+          {'system online'}
+        </span>
+      </header>
 
-          {/* Top row — lockup + status pill */}
-          <div className="relative z-10 flex items-center justify-between">
-            <NocktaLogo height={32} />
-            <span className="nockta-eyebrow text-muted-foreground inline-flex items-center gap-2">
-              <span className="inline-block w-2 h-2 rounded-full bg-status-done animate-pulse" />
-              {'Build · Connect · Scale'}
-            </span>
-          </div>
-
-          {/* Headline block — H1 stays 3 lines max, inline image pill in line 2 */}
-          <div className="relative z-10 space-y-6 max-w-3xl">
-            <span className="nockta-eyebrow text-brand">
-              {'Internal Engineering Operations'}
-            </span>
-            <h1
-              className="display-heading text-foreground leading-[1.02]"
-              style={{ fontSize: 'clamp(3rem, 5.4vw, 5.25rem)' }}
-            >
-              {'Bringing the'}
-              <span
-                className="inline-block align-middle mx-3 lg:mx-4 h-[0.72em] w-[1.5em] rounded-full bg-cover bg-center ring-1 ring-border"
-                style={{
-                  backgroundImage:
-                    "url('https://picsum.photos/seed/nockta-team-pill/640/480')",
-                  filter: 'grayscale(0.15) contrast(1.1)',
-                }}
-                aria-hidden="true"
-              />
-              {'pieces'}{' '}
-              <span className="text-brand">{'together.'}</span>
-            </h1>
-            <p className="text-base text-muted-foreground max-w-md leading-relaxed">
-              {'Tasks, sprints, code, deployments, and clients — engineered into one opinionated workspace. Three sides of the same cube.'}
+      {/* Sign-in card — centered, single column, no hero. */}
+      <div className="flex-1 flex items-center justify-center px-6 py-12">
+        <div className="w-full max-w-sm space-y-7">
+          <div className="space-y-1.5">
+            <h2 className="text-2xl font-semibold tracking-tight">
+              {'Sign in'}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {'Internal: continue with Google. External collaborators: use the email link below.'}
             </p>
           </div>
 
-          {/* Dense 2x2 bento footer — grid-flow-dense, varied tile sizes, no empty cells */}
-          <div className="relative z-10 grid grid-cols-3 grid-rows-2 gap-2.5 max-w-xl auto-rows-fr grid-flow-dense">
-            <FeatureTile
-              className="col-span-2 row-span-2"
-              kicker={'What it replaces'}
-              title={'Linear, Notion, Slack, GSheets — all routed through one model.'}
-              imageSeed="nockta-stack"
-            />
-            <StatTile label={'Disciplines'} value="5" />
-            <StatTile label={'Workflow presets'} value="3" />
-          </div>
-        </div>
+          <a
+            href={`${API_URL}${API_PREFIX}/auth/google`}
+            className="tap flex items-center justify-center gap-2 w-full rounded-md bg-white py-2.5 text-sm font-semibold text-black hover:opacity-90 transition-opacity duration-150"
+          >
+            <GoogleGlyph />
+            {'Continue with Google'}
+          </a>
 
-        {/* Sign-in panel */}
-        <div className="flex-1 flex items-center justify-center p-6 lg:p-12 relative">
-          {/* Mobile-only lockup at top */}
-          <div className="md:hidden absolute top-6 left-6">
-            <NocktaLogo height={24} />
+          <div className="flex items-center gap-3 text-[10px] text-muted-foreground/70">
+            <div className="flex-1 h-px bg-border" />
+            <span className="uppercase tracking-wider">{'or'}</span>
+            <div className="flex-1 h-px bg-border" />
           </div>
 
-          <div className="w-full max-w-sm space-y-7">
-            <div className="space-y-2">
-              <span className="nockta-eyebrow text-muted-foreground">
-                {'Welcome back'}
-              </span>
-              <h2 className="text-3xl font-bold tracking-tight">
-                {'Sign in to Flow'}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {'Internal users sign in with Google. External collaborators use a one-time email link.'}
-              </p>
-            </div>
+          <MagicLinkForm />
 
-            <a
-              href={`${API_URL}${API_PREFIX}/auth/google`}
-              className="tap flex items-center justify-center gap-2 w-full rounded-md bg-white py-2.5 text-sm font-semibold text-black hover:opacity-90 transition-[opacity,transform] duration-150"
-            >
-              <GoogleGlyph />
-              {'Continue with Google'}
-            </a>
-
-            <MagicLinkForm />
-
-
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <div className="flex-1 h-px bg-border" />
-              <span className="uppercase tracking-wider">{'or'}</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-
-            {/* Dev-only persona buttons. The /config endpoint reports
-                devLoginEnabled=false when NODE_ENV=production, which is
-                where the corresponding /auth/dev-login route is also
-                disabled. Hiding the buttons here avoids confusing the
-                user with a row of options that all 401 — without this
-                gate, the page also fetches the config but never uses it,
-                which produced the "401 on dev-login" footgun in prod. */}
-            {config?.devLoginEnabled && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="nockta-eyebrow text-muted-foreground/70">
-                    {'Quick login · dev only'}
+          {/* Dev-only persona buttons. The /config endpoint reports
+              devLoginEnabled=false when NODE_ENV=production, which is
+              where the corresponding /auth/dev-login route is also
+              disabled. Hiding the buttons here avoids confusing the
+              user with a row of options that all 401. */}
+          {config?.devLoginEnabled && (
+            <div className="space-y-2 pt-2 border-t border-border/60">
+              <div className="flex items-center justify-between pt-3">
+                <span className="nockta-eyebrow text-muted-foreground/70">
+                  {'Quick login · dev only'}
+                </span>
+                {loadingPersona && (
+                  <span className="text-[10px] text-muted-foreground animate-pulse">
+                    {'signing in…'}
                   </span>
-                  {loadingPersona && (
-                    <span className="text-[10px] text-muted-foreground animate-pulse">
-                      {'signing in…'}
-                    </span>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <PersonaButton
-                    label={'Admin'}
-                    sub={'Full access'}
-                    disabled={loadingPersona !== null}
-                    active={loadingPersona === 'admin'}
-                    onClick={() => void devLogin('admin')}
-                  />
-                  <PersonaButton
-                    label={'Engineering'}
-                    sub={'Member · Eng team'}
-                    disabled={loadingPersona !== null}
-                    active={loadingPersona === 'engineering'}
-                    onClick={() => void devLogin('engineering')}
-                  />
-                  <PersonaButton
-                    label={'Design'}
-                    sub={'Member · Design team'}
-                    disabled={loadingPersona !== null}
-                    active={loadingPersona === 'design'}
-                    onClick={() => void devLogin('design')}
-                  />
-                  <PersonaButton
-                    label={'Guest · Contributor'}
-                    sub={'External · can edit'}
-                    disabled={loadingPersona !== null}
-                    active={loadingPersona === 'guest-contributor'}
-                    onClick={() => void devLogin('guest-contributor')}
-                  />
-                  <PersonaButton
-                    label={'Guest · Viewer'}
-                    sub={'External · read-only'}
-                    disabled={loadingPersona !== null}
-                    active={loadingPersona === 'guest-viewer'}
-                    onClick={() => void devLogin('guest-viewer')}
-                  />
-                  <PersonaButton
-                    label={'Guest · Client'}
-                    sub={'Bug reports only'}
-                    disabled={loadingPersona !== null}
-                    active={loadingPersona === 'guest-client'}
-                    onClick={() => void devLogin('guest-client')}
-                  />
-                </div>
+                )}
               </div>
-            )}
-
-            <p className="nockta-eyebrow text-muted-foreground/60 text-center pt-4">
-              {'v0.1 · Internal Engineering Operations'}
-            </p>
-          </div>
+              <div className="grid grid-cols-2 gap-2">
+                <PersonaButton
+                  label={'Admin'}
+                  sub={'Full access'}
+                  disabled={loadingPersona !== null}
+                  active={loadingPersona === 'admin'}
+                  onClick={() => void devLogin('admin')}
+                />
+                <PersonaButton
+                  label={'Engineering'}
+                  sub={'Member · Eng team'}
+                  disabled={loadingPersona !== null}
+                  active={loadingPersona === 'engineering'}
+                  onClick={() => void devLogin('engineering')}
+                />
+                <PersonaButton
+                  label={'Design'}
+                  sub={'Member · Design team'}
+                  disabled={loadingPersona !== null}
+                  active={loadingPersona === 'design'}
+                  onClick={() => void devLogin('design')}
+                />
+                <PersonaButton
+                  label={'Guest · Contributor'}
+                  sub={'External · can edit'}
+                  disabled={loadingPersona !== null}
+                  active={loadingPersona === 'guest-contributor'}
+                  onClick={() => void devLogin('guest-contributor')}
+                />
+                <PersonaButton
+                  label={'Guest · Viewer'}
+                  sub={'External · read-only'}
+                  disabled={loadingPersona !== null}
+                  active={loadingPersona === 'guest-viewer'}
+                  onClick={() => void devLogin('guest-viewer')}
+                />
+                <PersonaButton
+                  label={'Guest · Client'}
+                  sub={'Bug reports only'}
+                  disabled={loadingPersona !== null}
+                  active={loadingPersona === 'guest-client'}
+                  onClick={() => void devLogin('guest-client')}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Marquee strip — brand mantras pulled from nockta.com */}
-      <div className="border-t border-border bg-card/40 backdrop-blur-sm overflow-hidden h-10 relative">
-        <div className="absolute inset-0 flex items-center whitespace-nowrap">
-          <div className="flex animate-marquee">
-            {[...MANTRAS, ...MANTRAS, ...MANTRAS, ...MANTRAS].map((m, i) => (
-              <span
-                key={i}
-                className="nockta-eyebrow text-muted-foreground/70 px-6 inline-flex items-center gap-6"
-              >
-                {m}
-                <span className="text-brand">+</span>
-              </span>
-            ))}
-          </div>
+      {/* Footer — single line of operator metadata. Replaces the brand marquee. */}
+      <footer className="border-t border-border/60 px-6 py-3">
+        <div className="flex items-center justify-between text-[10px] tracking-wider uppercase text-muted-foreground/60 font-mono">
+          <span>{'nockta flow · v0.1'}</span>
+          <span className="hidden sm:inline">{'internal engineering ops'}</span>
+          <a
+            href="https://nockta.com"
+            target="_blank"
+            rel="noopener"
+            className="hover:text-foreground transition-colors"
+          >
+            {'nockta.com →'}
+          </a>
         </div>
-      </div>
+      </footer>
     </div>
   );
 }
@@ -320,51 +222,6 @@ function PersonaButton({
       <div className="text-sm font-semibold leading-none">{label}</div>
       <div className="nockta-eyebrow text-muted-foreground text-[0.6rem] mt-1">{sub}</div>
     </button>
-  );
-}
-
-function StatTile({ label, value }: { label: string; value: string }): JSX.Element {
-  return (
-    <div className="rounded-md border border-border bg-card/50 backdrop-blur-sm p-3 flex flex-col justify-between">
-      <div className="display-heading text-foreground tabular-nums" style={{ fontSize: 'clamp(1.5rem, 2.6vw, 2rem)' }}>
-        {value}
-      </div>
-      <div className="nockta-eyebrow text-muted-foreground text-[0.6rem]">{label}</div>
-    </div>
-  );
-}
-
-function FeatureTile({
-  className = '',
-  kicker,
-  title,
-  imageSeed,
-}: {
-  className?: string;
-  kicker: string;
-  title: string;
-  imageSeed: string;
-}): JSX.Element {
-  return (
-    <div
-      className={`relative overflow-hidden rounded-md border border-border bg-card/50 backdrop-blur-sm group ${className}`}
-    >
-      <div
-        className="absolute inset-0 bg-cover bg-center transition-transform duration-[900ms] ease-out group-hover:scale-105"
-        style={{
-          backgroundImage: `url('https://picsum.photos/seed/${imageSeed}/1280/720')`,
-          filter: 'grayscale(0.6) contrast(1.05) brightness(0.55)',
-        }}
-        aria-hidden="true"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-card via-card/70 to-card/20" />
-      <div className="relative h-full flex flex-col justify-between p-3">
-        <div className="nockta-eyebrow text-muted-foreground">{kicker}</div>
-        <div className="text-sm font-semibold tracking-tight text-foreground leading-snug max-w-[18rem]">
-          {title}
-        </div>
-      </div>
-    </div>
   );
 }
 

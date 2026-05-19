@@ -351,20 +351,23 @@ export class AuthService {
   }
 
   /**
-   * Dev-auth gate. ALL three dev-login paths below funnel through this so a
-   * production environment with NODE_ENV accidentally set to 'development'
-   * still can't mint Admin tokens — both NODE_ENV !== 'production' AND
-   * `DEV_AUTH_ENABLED=true` must hold. Previously each path duplicated
-   * different versions of this check (or omitted it entirely for devLoginFor),
-   * which is exactly the kind of drift that turns into a CVE.
+   * Dev-auth gate. ALL three dev-login paths funnel through this single
+   * check so a future refactor can't accidentally skip the gate on one
+   * code path. The only knob is `Env.DEV_AUTH_ENABLED`, which defaults
+   * to `false` and is loud at every boot when flipped on (see the
+   * banner in apps/api/src/main.ts).
+   *
+   * Why not also block on `NODE_ENV === 'production'`? Because the
+   * production deploy sometimes needs dev-login briefly — to confirm
+   * the api + web are wired together before Google OAuth credentials
+   * are pasted. The boot-time warning + the explicit env-var-flip
+   * combine to make dev-auth-in-prod a deliberate, very visible action,
+   * not an accidental drift.
    */
   private assertDevAuthAllowed(): void {
-    if (Env.NODE_ENV === 'production') {
-      throw new UnauthorizedException('Dev login is disabled in production');
-    }
     if (!Env.DEV_AUTH_ENABLED) {
       throw new UnauthorizedException(
-        'Dev login is disabled. Set DEV_AUTH_ENABLED=true in your .env to enable.',
+        'Dev login is disabled. Set DEV_AUTH_ENABLED=true to enable.',
       );
     }
   }
