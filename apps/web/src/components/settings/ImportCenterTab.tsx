@@ -2,10 +2,11 @@ import { useState } from 'react';
 import {
   FileSpreadsheet,
   GitBranch,
-  Github,
   Zap,
 } from 'lucide-react';
 import { cn } from '@nockta/ui';
+
+import { GithubIcon } from '../icons/GithubIcon';
 
 import { AdminGate, SectionTitle } from './primitives';
 import { CsvImporter } from './import-center/CsvImporter';
@@ -43,7 +44,7 @@ export function ImportCenterTab({ isAdmin }: { isAdmin: boolean }): JSX.Element 
   const tabs: { key: ImportTabKey; label: string; icon: JSX.Element }[] = [
     { key: 'csv', label: 'CSV', icon: <FileSpreadsheet className="h-3.5 w-3.5" /> },
     { key: 'linear', label: 'Linear', icon: <Zap className="h-3.5 w-3.5" /> },
-    { key: 'github', label: 'GitHub Issues', icon: <Github className="h-3.5 w-3.5" /> },
+    { key: 'github', label: 'GitHub Issues', icon: <GithubIcon className="h-3.5 w-3.5" /> },
     { key: 'jira', label: 'Jira (API)', icon: <GitBranch className="h-3.5 w-3.5" /> },
     { key: 'jira-csv', label: 'Jira (CSV)', icon: <FileSpreadsheet className="h-3.5 w-3.5" /> },
   ];

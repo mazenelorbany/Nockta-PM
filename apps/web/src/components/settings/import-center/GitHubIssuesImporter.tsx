@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Github } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import { api } from '../../../lib/api';
+import { GithubIcon } from '../../icons/GithubIcon';
 import { apiErrorMessage } from '../primitives';
 import { queryKeys } from '../../../lib/query-keys';
 
@@ -119,7 +119,7 @@ export function GitHubIssuesImporter({ rerunSnapshot }: { rerunSnapshot?: unknow
   return (
     <div className="rounded-lg border border-border bg-card/40 p-5 space-y-5">
       <SourceHeader
-        icon={<Github className="h-5 w-5" />}
+        icon={<GithubIcon className="h-5 w-5" />}
         title="GitHub Issues import"
         subtitle="Bring issues from a GitHub repo into an existing Nockta project. Pull requests are skipped."
       />

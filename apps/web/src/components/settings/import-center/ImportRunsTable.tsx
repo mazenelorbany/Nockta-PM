@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileSpreadsheet, GitBranch, Github, RefreshCw, Zap } from 'lucide-react';
+import { FileSpreadsheet, GitBranch, RefreshCw, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cn } from '@nockta/ui';
 
 import { api } from '../../../lib/api';
+import { GithubIcon } from '../../icons/GithubIcon';
 import { apiErrorMessage } from '../primitives';
 
 import { StatusBadge } from './shared';
@@ -89,7 +90,7 @@ export function ImportRunsTable({
                     {r.source === 'csv' && <FileSpreadsheet className="h-3 w-3" />}
                     {r.source === 'linear' && <Zap className="h-3 w-3" />}
                     {r.source === 'jira' && <GitBranch className="h-3 w-3" />}
-                    {r.source === 'github_issues' && <Github className="h-3 w-3" />}
+                    {r.source === 'github_issues' && <GithubIcon className="h-3 w-3" />}
                     {r.source === 'github_issues' ? 'GitHub' : r.source}
                   </span>
                 </td>
