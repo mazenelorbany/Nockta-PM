@@ -617,9 +617,17 @@
   .page-fade {
     animation: nockta-page-in 240ms var(--ease-out) both;
   }
+  /* Opacity-only fade. We DELIBERATELY removed the `transform: translateY`
+   * that used to be on the keyframe — keeping `animation-fill-mode: both`
+   * meant the final transform stayed applied to the element, and an
+   * element with a non-`none` transform becomes the containing block for
+   * every `position: fixed` descendant. Result: modals like the
+   * TaskDetailDrawer mounted under PageTransition got positioned relative
+   * to the routed page instead of the viewport, so they rendered far
+   * below the fold whenever the user had scrolled inside the page. */
   @keyframes nockta-page-in {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; }
+    to   { opacity: 1; }
   }
 
   /* Command-palette entry — CSS-only replacement for the framer-motion
