@@ -33,7 +33,14 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     SessionService,
     SessionsService,
     AuditLogService,
-    GoogleStrategy,
+    // GoogleStrategy is only registered when the OAuth env vars are all
+    // present — otherwise its constructor guard would crash the whole
+    // process on boot. Magic-link auth keeps working without SSO.
+    ...(Env.GOOGLE_OAUTH_CLIENT_ID &&
+    Env.GOOGLE_OAUTH_CLIENT_SECRET &&
+    Env.GOOGLE_OAUTH_REDIRECT_URI
+      ? [GoogleStrategy]
+      : []),
     JwtStrategy,
     // Register JwtAuthGuard globally — opt out per route with @Public().
     { provide: APP_GUARD, useClass: JwtAuthGuard },
