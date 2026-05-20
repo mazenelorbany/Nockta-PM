@@ -138,12 +138,19 @@ export function PopoverShell({
               type="button"
               aria-label="Close"
               onClick={onClose}
-              className="fixed inset-0 z-[60] cursor-default bg-transparent"
+              // Picker layers must sit ABOVE the task drawer (z-[70]),
+              // otherwise the popover renders behind the drawer overlay
+              // and clicks land on the scrim that closes it — exactly the
+              // "dropdowns not working" symptom. The earlier drawer bump
+              // moved the drawer from z-[50] to z-[70] but left the
+              // pickers at 60/61; this restores the ordering invariant
+              // (popover content > popover scrim > drawer overlay).
+              className="fixed inset-0 z-[80] cursor-default bg-transparent"
             />
             <div
               ref={popoverRef}
               className={cn(
-                'animate-popover-in fixed z-[61] min-w-[200px] rounded-md border border-border bg-popover shadow-xl shadow-black/40 overflow-auto',
+                'animate-popover-in fixed z-[81] min-w-[200px] rounded-md border border-border bg-popover shadow-xl shadow-black/40 overflow-auto',
                 className,
               )}
               style={{
