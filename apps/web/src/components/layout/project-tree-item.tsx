@@ -1,6 +1,7 @@
 import { cn } from '@nockta/ui';
 import { Link, useParams } from 'react-router-dom';
 
+import { ProjectTreeMenu } from './project-tree-menu';
 import type { ProjectSummary } from './types';
 
 // -----------------------------------------------------------------------------
@@ -31,10 +32,12 @@ export function ProjectTreeItem({
     activeProjectParam === project.id || activeProjectParam === project.key;
   const accent = projectAccent(project.key);
 
+  // The row is wrapped in a `.group` div (not <Link>) so the actions menu can
+  // sit inside it without being part of the Link's clickable surface — the
+  // menu button calls preventDefault() but using a separate parent also keeps
+  // the link semantics tidy and lets the menu icon use group-hover to fade in.
   return (
-    <Link
-      // Slug URL — falls back to UUID if a project somehow has no key.
-      to={`/projects/${project.key || project.id}`}
+    <div
       className={cn(
         'group flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors',
         isActive
@@ -42,18 +45,25 @@ export function ProjectTreeItem({
           : 'text-muted-foreground hover:bg-accent/40 hover:text-foreground',
       )}
     >
-      <span
-        className="shrink-0 h-5 w-5 rounded-md inline-flex items-center justify-center text-[10px] font-mono font-bold tracking-tight"
-        style={{
-          background: `linear-gradient(135deg, ${accent.from}, ${accent.to})`,
-          color: accent.fg,
-        }}
-        title={project.workflowPreset}
+      <Link
+        // Slug URL — falls back to UUID if a project somehow has no key.
+        to={`/projects/${project.key || project.id}`}
+        className="flex items-center gap-2 min-w-0 flex-1"
       >
-        {project.key.slice(0, 2)}
-      </span>
-      <span className="truncate flex-1 text-start">{project.name}</span>
-    </Link>
+        <span
+          className="shrink-0 h-5 w-5 rounded-md inline-flex items-center justify-center text-[10px] font-mono font-bold tracking-tight"
+          style={{
+            background: `linear-gradient(135deg, ${accent.from}, ${accent.to})`,
+            color: accent.fg,
+          }}
+          title={project.workflowPreset}
+        >
+          {project.key.slice(0, 2)}
+        </span>
+        <span className="truncate flex-1 text-start">{project.name}</span>
+      </Link>
+      <ProjectTreeMenu project={project} />
+    </div>
   );
 }
 
