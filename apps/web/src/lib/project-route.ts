@@ -137,28 +137,9 @@ export function useResolvedProject(): {
   };
 }
 
-/**
- * Build a path under `/projects/<slug>/...`. Pass the project (so we have
- * `.key`) or just the key/id; the helper picks `.key` first and falls back
- * to `.id` if a key isn't available (e.g. transitional rendering before the
- * project list has loaded).
- *
- * `subpath` is the segment AFTER the project — pass it WITHOUT a leading
- * slash (the function adds one) so call sites don't have to remember.
- */
-export function projectPath(
-  projectOrSlug:
-    | { id: string; key?: string | null }
-    | string
-    | null
-    | undefined,
-  subpath = '',
-): string {
-  const slug =
-    typeof projectOrSlug === 'string'
-      ? projectOrSlug
-      : projectOrSlug?.key ?? projectOrSlug?.id ?? '';
-  if (!slug) return '/projects';
-  const tail = subpath ? `/${subpath.replace(/^\/+/, '')}` : '';
-  return `/projects/${slug}${tail}`;
-}
+// `projectPath()` once lived here as a URL-builder helper, but it was an
+// unused export — every callsite still uses the inline template
+// `\`/projects/${project.key || project.id}/...\``. The hygiene check
+// (apps/web's "no unused export" rule) flagged it, and the simpler
+// inline pattern is fine in practice. Drop the helper; bring it back
+// the day a third call site repeats the same fallback.
