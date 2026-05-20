@@ -39,7 +39,7 @@ export function ProjectTreeItem({
   return (
     <div
       className={cn(
-        'group flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors',
+        'group flex items-center gap-2 px-2 py-1.5 rounded-md text-sm',
         isActive
           ? 'bg-accent/70 text-foreground font-medium'
           : 'text-muted-foreground hover:bg-accent/40 hover:text-foreground',

@@ -248,7 +248,7 @@ export function Sidebar({
                 end={end}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors',
+                    'flex items-center gap-2 px-2 py-1.5 rounded-md text-sm',
                     isActive
                       ? 'bg-accent text-foreground font-medium'
                       : 'text-muted-foreground hover:bg-accent/40 hover:text-foreground',
@@ -270,7 +270,7 @@ export function Sidebar({
               <Link
                 to="/projects"
                 aria-label={'All projects'}
-                className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
               >
                 <FolderKanban className="h-3 w-3" />
               </Link>
@@ -287,7 +287,7 @@ export function Sidebar({
               ) : projects.length === 0 ? (
                 <Link
                   to="/projects"
-                  className="block text-xs px-2 py-1.5 rounded text-muted-foreground hover:bg-accent/40 hover:text-foreground transition-colors"
+                  className="block text-xs px-2 py-1.5 rounded text-muted-foreground hover:bg-accent/40 hover:text-foreground"
                 >
                   {'+ Create a project'}
                 </Link>
@@ -320,7 +320,7 @@ export function Sidebar({
             data-tour="settings-link"
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors',
+                'flex items-center gap-2 px-2 py-1.5 rounded-md text-sm',
                 isActive
                   ? 'bg-accent text-foreground font-medium'
                   : 'text-muted-foreground hover:bg-accent/40 hover:text-foreground',
@@ -370,7 +370,7 @@ export function Sidebar({
                 logout();
                 navigate('/login');
               }}
-              className="tap p-1.5 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="tap p-1.5 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               aria-label={'Sign out'}
             >
               <LogOut className="h-4 w-4" aria-hidden="true" />
@@ -404,15 +404,15 @@ function WorkspacePill(): JSX.Element {
   const initial = name.charAt(0).toUpperCase();
   return (
     <div className="px-3 pt-3">
-      <div className="group rounded-lg border border-border/60 bg-gradient-to-br from-brand/5 via-card/60 to-card/30 px-2.5 py-2 flex items-center gap-2 hover:border-brand/30 transition-colors cursor-default">
-        <span className="h-7 w-7 rounded-md bg-gradient-to-br from-brand to-brand/70 text-brand-foreground flex items-center justify-center text-[10px] font-bold flex-shrink-0 shadow-sm shadow-brand/30">
+      <div className="group rounded-lg border border-border/60 bg-card/60 px-2.5 py-2 flex items-center gap-2 hover:border-brand/30 cursor-default">
+        <span className="h-7 w-7 rounded-md bg-brand text-brand-foreground flex items-center justify-center text-[10px] font-bold flex-shrink-0">
           {initial}
         </span>
         <div className="flex-1 min-w-0">
           <div className="text-xs font-semibold truncate">{name}</div>
           <div className="nockta-eyebrow text-muted-foreground truncate">Workspace</div>
         </div>
-        <span className="h-1.5 w-1.5 rounded-full bg-status-done animate-pulse" />
+        <span className="h-1.5 w-1.5 rounded-full bg-status-done" />
       </div>
     </div>
   );

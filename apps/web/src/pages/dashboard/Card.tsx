@@ -16,7 +16,7 @@ export function Card({
   return (
     <section
       className={cn(
-        'relative rounded-lg border bg-card p-5 md:p-6',
+        'relative rounded-lg border bg-card p-5 md:p-6 [contain:layout_paint]',
         tone === 'destructive' ? 'border-status-blocked/30 shadow-[0_0_0_1px_hsl(var(--status-blocked)/0.08)_inset]' :
         tone === 'warning'     ? 'border-priority-high/30' :
                                  'border-border',

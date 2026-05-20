@@ -686,6 +686,17 @@
     contain-intrinsic-size: auto 110px;
   }
 
+  /* Override Tailwind's `.animate-pulse`. The default opacity-infinite keyframe
+   * is cheap per element but at any moment the route-fallback skeleton has
+   * 6-8 of these pulsing simultaneously, which on a Linux compositor without
+   * GPU accel means 6-8 separate per-frame opacity recomposites. Slowing the
+   * duration cuts wake-ups; `will-change: opacity` hints the browser to keep
+   * them composited together. */
+  .animate-pulse {
+    animation: pulse 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    will-change: opacity;
+  }
+
   /* Kbd — keyboard shortcut hint. Used in command palette + tooltips. */
   .kbd {
     display: inline-flex;
