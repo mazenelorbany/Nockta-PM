@@ -61,6 +61,14 @@ function assertTypeHierarchy(args: {
   }
 }
 
+/**
+ * Hard cap on the unbounded board fetch. See listByProject — anything beyond
+ * this is silently truncated with a `logger.warn`, so an operator can see in
+ * Sentry/pino when a real project crosses the line and we need to ship the
+ * per-column cursor pagination follow-up.
+ */
+const LIST_HARD_CAP = 5000;
+
 @Injectable()
 export class TasksService {
   private readonly logger = new Logger(TasksService.name);
@@ -202,9 +210,21 @@ export class TasksService {
       where.parentTaskId = filters.parentTaskId;
     }
     if (filters.type) where.type = filters.type;
+    // Hard cap on the unbounded board fetch. Pre-cap this endpoint returned
+    // every task in the project, which is fine for typical projects (under
+    // a thousand active tasks) but melts the browser at 10K+ — we saw the
+    // payload exceed 5 MB on a 5K-task project with custom fields, and the
+    // board canvas chokes long before that on DOM count.
+    //
+    // The cap is intentionally generous (LIST_HARD_CAP, currently 5000) so
+    // no real project today is silently truncated. When the cap is hit we
+    // log a warning so the operator can see it in Sentry/pino; the proper
+    // follow-up is per-column cursor pagination, which is a much bigger
+    // board refactor.
     const tasks = await this.prisma.task.findMany({
       where,
       orderBy: [{ status: 'asc' }, { boardPosition: 'asc' }],
+      take: LIST_HARD_CAP + 1, // +1 so we can detect "exactly at the cap" vs truncation
       include: {
         assignee: { select: { id: true, name: true, avatarUrl: true } },
         // Labels are surfaced on every list endpoint so the board toolbar's
@@ -228,6 +248,14 @@ export class TasksService {
         },
       },
     });
+    if (tasks.length > LIST_HARD_CAP) {
+      this.logger.warn(
+        { projectId, projectKey: project.key, cap: LIST_HARD_CAP, filters },
+        `listByProject truncated at ${LIST_HARD_CAP} tasks — project has more rows than the board cap. ` +
+          'Consider migrating this project to per-column pagination.',
+      );
+      tasks.length = LIST_HARD_CAP;
+    }
     return tasks.map((t) => this.hydrateKey(t, project.key));
   }
 

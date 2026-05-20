@@ -700,6 +700,11 @@ model Task {
   @@index([parentTaskId])
   @@index([projectId, boardPosition])
   @@index([isBlocked])
+  /// Sprint + project PDF reports filter by completion window
+  /// (`WHERE projectId AND completedAt >= from AND completedAt < to`).
+  /// Without this index Postgres falls back to a full scan over the
+  /// project's tasks — fine for a 50-task project, painful at 5K.
+  @@index([projectId, completedAt(sort: Desc)])
 }
 
 model TaskLink {
