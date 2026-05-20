@@ -65,8 +65,13 @@ export function WorkflowStatusesEditor({ projectId }: { projectId: string }): JS
     queryFn: () => api.get<Snapshot>(`/projects/${projectId}/workflow`),
   });
 
-  const columns = snapshotQuery.data?.columns ?? [];
-  const statuses = snapshotQuery.data?.statuses ?? [];
+  // Wrap the fallback in useMemo so the dependency arrays of the memos
+  // below see a stable reference between renders. Without this, the
+  // `?? []` allocates a fresh empty array on every render, which would
+  // invalidate `statusesInSelectedColumn` every paint and trip the
+  // `react-hooks/exhaustive-deps` lint warning.
+  const columns = useMemo(() => snapshotQuery.data?.columns ?? [], [snapshotQuery.data]);
+  const statuses = useMemo(() => snapshotQuery.data?.statuses ?? [], [snapshotQuery.data]);
 
   // Auto-select the first column when data first arrives so the right pane
   // isn't empty on initial render.
