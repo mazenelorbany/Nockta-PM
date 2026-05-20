@@ -333,7 +333,7 @@ function ReportEditorModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-background/90 flex items-center justify-center p-4">
       <div className="w-full max-w-3xl bg-card rounded-lg border border-border shadow-xl max-h-[90vh] overflow-auto">
         <header className="px-6 py-4 border-b border-border flex items-center justify-between">
           <h2 className="text-lg font-semibold">New report</h2>

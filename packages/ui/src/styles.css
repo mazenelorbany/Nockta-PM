@@ -342,24 +342,20 @@
     animation: nockta-dialog-in 200ms var(--ease-out) forwards;
   }
 
-  /* Overlay (the dim/blur backdrop behind modals). Fade opacity AND the
-   * backdrop blur together so the page softens rather than just dimming.
-   * Keep it fast so the modal doesn't feel delayed. */
+  /* Overlay (the dim backdrop behind modals). Opacity-only fade — animating
+   * backdrop-filter forced a per-frame re-rasterisation of everything under
+   * the overlay, which crushed Linux compositor perf. The static blur on the
+   * final state still gives the soft scrim. */
   @keyframes nockta-overlay-in {
-    from { opacity: 0; backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
-    to   { opacity: 1; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+    from { opacity: 0; }
+    to   { opacity: 1; }
   }
   .animate-overlay-in {
     animation: nockta-overlay-in 200ms var(--ease-out) forwards;
-    transition:
-      opacity var(--dur-base) var(--ease-out),
-      backdrop-filter var(--dur-base) var(--ease-out),
-      -webkit-backdrop-filter var(--dur-base) var(--ease-out);
+    transition: opacity var(--dur-base) var(--ease-out);
   }
   .animate-overlay-in[data-state='closed'] {
     opacity: 0;
-    backdrop-filter: blur(0);
-    -webkit-backdrop-filter: blur(0);
   }
 
   /* Drawer (desktop) — the TaskDetailDrawer is rendered as a CENTERED modal
@@ -486,9 +482,10 @@
       box-shadow var(--dur-base) var(--ease-out),
       border-color var(--dur-fast) ease,
       opacity var(--dur-fast) ease;
-    will-change: transform;
+    contain: layout paint;
   }
   .board-card[data-dragging='true'] {
+    will-change: transform;
     transform: scale(1.025) rotate(-0.4deg);
     box-shadow:
       0 16px 32px -12px hsl(0 0% 0% / 0.55),
@@ -532,13 +529,12 @@
    * counters, scrim treatments. All composable; pair with existing motion.
    * ========================================================================= */
 
-  /* Glass surface — frosted dark with a subtle inner highlight. Use on
-   * popovers, command palette, drawer overlays. The double-shadow gives a
-   * "raised glass" feel without being heavy. */
+  /* Glass surface — formerly used backdrop-filter, but a viewport-sized blur
+   * tanked compositor perf on Linux (every scroll inside the drawer forced
+   * a re-rasterise). Now: opaque-enough card surface + the inner-highlight
+   * shadow stack. Reads as "raised dark glass" without the GPU cost. */
   .glass {
-    background-color: hsl(var(--card) / 0.65);
-    backdrop-filter: blur(18px) saturate(1.4);
-    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    background-color: hsl(var(--card) / 0.94);
     border: 1px solid hsl(var(--border) / 0.8);
     box-shadow:
       0 1px 0 hsl(0 0% 100% / 0.04) inset,
@@ -546,23 +542,23 @@
       0 8px 24px -12px hsl(0 0% 0% / 0.35);
   }
   .glass-strong {
-    background-color: hsl(var(--card) / 0.85);
-    backdrop-filter: blur(28px) saturate(1.6);
-    -webkit-backdrop-filter: blur(28px) saturate(1.6);
+    background-color: hsl(var(--card) / 0.97);
     border: 1px solid hsl(var(--border) / 0.9);
     box-shadow:
       0 1px 0 hsl(0 0% 100% / 0.06) inset,
       0 32px 80px -24px hsl(0 0% 0% / 0.65);
   }
-  /* Glass scrim — for modal backdrops. Replaces flat black/50. */
+  /* Modal backdrop — solid scrim. */
   .glass-scrim {
-    background-color: hsl(240 8% 5% / 0.62);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background-color: hsl(240 8% 5% / 0.78);
   }
 
-  /* Gradient mesh — animated multi-radial backdrop. Subtle on dark surfaces.
-   * Apply to a container with `position: relative; overflow: hidden`. */
+  /* Gradient mesh — static multi-radial backdrop. Subtle on dark surfaces.
+   * Apply to a container with `position: relative; overflow: hidden`.
+   * The previous version drifted every 24s under a 40px blur filter; on
+   * Linux this re-rasterised the whole pseudo every frame, so we kept the
+   * gradient and dropped both the animation and the giant filter blur. The
+   * gradient stops already feather softly without any GPU filter. */
   .gradient-mesh {
     position: relative;
     isolation: isolate;
@@ -570,19 +566,13 @@
   .gradient-mesh::before {
     content: '';
     position: absolute;
-    inset: -20%;
+    inset: 0;
     z-index: -1;
     background:
-      radial-gradient(circle at 20% 30%, hsl(262 84% 35% / 0.35), transparent 40%),
-      radial-gradient(circle at 80% 20%, hsl(170 50% 30% / 0.25), transparent 45%),
-      radial-gradient(circle at 50% 80%, hsl(262 60% 25% / 0.3), transparent 50%);
-    animation: nockta-mesh-drift 24s ease-in-out infinite alternate;
-    filter: blur(40px);
-  }
-  @keyframes nockta-mesh-drift {
-    0%   { transform: translate(0, 0) rotate(0deg); }
-    50%  { transform: translate(-3%, 2%) rotate(3deg); }
-    100% { transform: translate(2%, -2%) rotate(-2deg); }
+      radial-gradient(circle at 20% 30%, hsl(262 84% 35% / 0.28), transparent 55%),
+      radial-gradient(circle at 80% 20%, hsl(170 50% 30% / 0.2), transparent 60%),
+      radial-gradient(circle at 50% 80%, hsl(262 60% 25% / 0.24), transparent 65%);
+    pointer-events: none;
   }
 
   /* Subtle gradient mesh — same idea but quieter, for headers/sections. */
@@ -593,12 +583,11 @@
   .gradient-mesh-subtle::before {
     content: '';
     position: absolute;
-    inset: -10%;
+    inset: 0;
     z-index: -1;
     background:
-      radial-gradient(ellipse at top left, hsl(262 84% 30% / 0.18), transparent 55%),
-      radial-gradient(ellipse at bottom right, hsl(170 50% 25% / 0.12), transparent 50%);
-    filter: blur(30px);
+      radial-gradient(ellipse at top left, hsl(262 84% 30% / 0.14), transparent 70%),
+      radial-gradient(ellipse at bottom right, hsl(170 50% 25% / 0.1), transparent 65%);
     pointer-events: none;
   }
 
@@ -666,6 +655,37 @@
     border-color: hsl(var(--border) / 0.5);
   }
 
+  /* ============================================================================
+   * Content-visibility utilities — skip paint + layout for off-screen list
+   * items. The browser still reserves space (intrinsic-size) so the scrollbar
+   * stays accurate, but rasterising the item is deferred until it scrolls
+   * close to the viewport. Big win on long, paint-heavy lists.
+   *
+   * Pair with an `intrinsic-size: auto <px>` value so modern browsers remember
+   * the real height after first render; Firefox ignores the `auto` keyword and
+   * uses the static value, which is fine (minor scrollbar drift only).
+   *
+   * Do NOT apply to elements inside a dnd-kit SortableContext — when an item
+   * is off-screen, content-visibility makes its bounding box go to 0 which
+   * breaks collision detection during drag.
+   * ========================================================================= */
+  .cv-row {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 48px;
+  }
+  .cv-comment {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 96px;
+  }
+  .cv-tile {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 160px;
+  }
+  .cv-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 110px;
+  }
+
   /* Kbd — keyboard shortcut hint. Used in command palette + tooltips. */
   .kbd {
     display: inline-flex;
@@ -700,8 +720,6 @@
   .board-card[data-dragging='true'] {
     transform: none !important;
   }
-  .gradient-mesh::before,
-  .gradient-mesh-subtle::before { animation: none !important; }
   .magnetic:hover { transform: none !important; }
 }
 

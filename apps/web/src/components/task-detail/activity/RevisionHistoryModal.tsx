@@ -26,7 +26,7 @@ export function RevisionHistoryModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[70] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-[70] bg-background/90 flex items-center justify-center p-4"
       onClick={onClose}
       role="presentation"
     >

@@ -470,7 +470,7 @@ function TaskRow({
       role="button"
       tabIndex={0}
       className={cn(
-        'grid grid-cols-[24px_24px_1.5fr_120px_60px_140px_120px_60px] gap-3 items-center px-3 py-2 border-b border-border last:border-b-0 hover:bg-accent/30 transition-colors cursor-pointer group',
+        'cv-row grid grid-cols-[24px_24px_1.5fr_120px_60px_140px_120px_60px] gap-3 items-center px-3 py-2 border-b border-border last:border-b-0 hover:bg-accent/30 transition-colors cursor-pointer group',
         selected && 'bg-primary/10 hover:bg-primary/15'
       )}
     >

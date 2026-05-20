@@ -49,7 +49,7 @@ export function WorkloadDetailModal({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4"
       onClick={onClose}
     >
       <div

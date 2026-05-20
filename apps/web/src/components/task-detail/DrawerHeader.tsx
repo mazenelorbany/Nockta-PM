@@ -40,7 +40,7 @@ export function DrawerHeader({
   // so we offer both Watch / Unwatch and let the user pick. The endpoints
   // are idempotent.
   return (
-    <header className="sticky top-0 z-10 bg-card/95 backdrop-blur border-b border-border px-6 py-3 flex items-center justify-between gap-3">
+    <header className="sticky top-0 z-10 bg-card border-b border-border px-6 py-3 flex items-center justify-between gap-3">
       <div className="flex flex-col gap-1 min-w-0">
         {task.parent && (
           <button

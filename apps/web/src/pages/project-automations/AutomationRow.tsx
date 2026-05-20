@@ -26,7 +26,7 @@ export function AutomationRow({
   return (
     <li
       className={cn(
-        'group relative overflow-hidden rounded-xl border bg-card/60 px-4 sm:px-5 py-4 transition-all hover:border-primary/40',
+        'cv-comment group relative overflow-hidden rounded-xl border bg-card/60 px-4 sm:px-5 py-4 transition-all hover:border-primary/40',
         !automation.enabled && 'opacity-60'
       )}
     >

@@ -86,7 +86,7 @@ export function KeyboardShortcuts(): JSX.Element | null {
   if (!helpOpen) return null;
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65"
       onClick={() => setHelpOpen(false)}
     >
       <div

@@ -103,7 +103,7 @@ export function ProjectDeploymentsPage(): JSX.Element {
               {rows.map((d) => (
                 <li
                   key={d.id}
-                  className="rounded-lg border border-border bg-card/40 p-3 space-y-2"
+                  className="cv-card rounded-lg border border-border bg-card/40 p-3 space-y-2"
                 >
                   <div className="flex items-center gap-2 flex-wrap">
                     <StatusPill status={d.status} />

@@ -293,7 +293,7 @@ function BoardView({
               key={t.id}
               type="button"
               onClick={() => onOpen(t)}
-              className="w-full text-left rounded-md border border-border bg-card p-3 hover:border-ring transition-colors group"
+              className="cv-card w-full text-left rounded-md border border-border bg-card p-3 hover:border-ring transition-colors group"
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-1.5 min-w-0">
@@ -472,7 +472,7 @@ function ListView({ tasks, onOpen }: { tasks: Task[]; onOpen: (t: Task) => void 
                   key={t.id}
                   type="button"
                   onClick={() => onOpen(t)}
-                  className="w-full text-left flex flex-col md:grid md:grid-cols-[24px_1.5fr_120px_60px_140px_120px] gap-2 md:gap-3 md:items-center px-3 py-2.5 border-b border-border last:border-b-0 hover:bg-accent/30 transition-colors"
+                  className="cv-row w-full text-left flex flex-col md:grid md:grid-cols-[24px_1.5fr_120px_60px_140px_120px] gap-2 md:gap-3 md:items-center px-3 py-2.5 border-b border-border last:border-b-0 hover:bg-accent/30 transition-colors"
                 >
                   <span className="hidden md:inline text-muted-foreground/40 text-xs">·</span>
                   <div className="flex flex-wrap items-center gap-2 min-w-0">

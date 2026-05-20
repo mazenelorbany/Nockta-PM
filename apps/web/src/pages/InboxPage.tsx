@@ -349,7 +349,7 @@ function NotificationRow({
       : prettyType(n.type);
 
   return (
-    <li className="flex items-start gap-3 px-3 py-3 hover:bg-accent/30 transition-colors">
+    <li className="cv-comment flex items-start gap-3 px-3 py-3 hover:bg-accent/30 transition-colors">
       <input
         type="checkbox"
         checked={selected}

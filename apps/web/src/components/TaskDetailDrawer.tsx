@@ -299,7 +299,7 @@ export function TaskDetailDrawer({
           role="dialog"
           aria-modal="true"
           aria-label={task ? `Task ${task.key}: ${task.title}` : 'Task detail'}
-          className="animate-drawer-in-bottom w-full h-[92vh] bg-card border-t border-border rounded-t-2xl shadow-2xl overflow-hidden flex flex-col will-change-transform"
+          className="animate-drawer-in-bottom w-full h-[92vh] bg-card border-t border-border rounded-t-2xl shadow-2xl overflow-hidden flex flex-col"
           data-state={closing ? 'closed' : 'open'}
           onClick={(e) => e.stopPropagation()}
           style={
@@ -332,7 +332,7 @@ export function TaskDetailDrawer({
             <div
               role="tablist"
               aria-label="Task sections"
-              className="flex border-b border-border bg-card/80 backdrop-blur-sm shrink-0"
+              className="flex border-b border-border bg-card shrink-0"
             >
               {(
                 [
@@ -454,7 +454,7 @@ export function TaskDetailDrawer({
               most likely to want: reassign, change status, comment. The full
               field-level pickers still live in the Details tab. */}
           {task && (
-            <div className="sticky bottom-0 inset-x-0 border-t border-border bg-card/95 backdrop-blur-sm flex items-center gap-2 px-3 py-2 shrink-0 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+            <div className="sticky bottom-0 inset-x-0 border-t border-border bg-card flex items-center gap-2 px-3 py-2 shrink-0 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
               <button
                 type="button"
                 onClick={quickAssign}
@@ -505,7 +505,7 @@ export function TaskDetailDrawer({
         role="dialog"
         aria-modal="true"
         aria-label={task ? `Task ${task.key}: ${task.title}` : 'Task detail'}
-        className="animate-drawer-in-right w-full max-w-7xl bg-card border-0 sm:border border-border rounded-none sm:rounded-xl shadow-2xl overflow-hidden flex flex-col will-change-transform h-full sm:h-[min(92vh,1000px)]"
+        className="animate-drawer-in-right w-full max-w-7xl bg-card border-0 sm:border border-border rounded-none sm:rounded-xl shadow-2xl overflow-hidden flex flex-col h-full sm:h-[min(92vh,1000px)]"
         data-state={closing ? 'closed' : 'open'}
         onClick={(e) => e.stopPropagation()}
       >
@@ -572,7 +572,7 @@ export function TaskDetailDrawer({
 
               {/* Activity pane — tabbed Comments | Activity, sticky tabs */}
               <aside className="flex flex-col min-h-0 bg-card/60">
-                <div className="flex border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-10">
+                <div className="flex border-b border-border bg-card sticky top-0 z-10">
                   <ActivityTab
                     active={activityTab === 'comments'}
                     onClick={() => setActivityTab('comments')}

@@ -151,7 +151,7 @@ export function BoardToolbar({
     : null;
 
   return (
-    <div className="px-4 sm:px-6 md:px-8 py-3 border-b border-border flex items-center justify-between gap-3 flex-wrap md:static sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <div className="px-4 sm:px-6 md:px-8 py-3 border-b border-border flex items-center justify-between gap-3 flex-wrap md:static sticky top-0 z-30 bg-background">
       {/* View tabs */}
       <div className="flex items-center gap-1 rounded-md bg-secondary/60 p-1">
         <ViewTab active={view === 'board'} onClick={() => onViewChange('board')} icon={<LayoutGrid className="h-3.5 w-3.5" />} label="Board" />

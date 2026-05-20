@@ -43,7 +43,7 @@ export function Layout(): JSX.Element {
       />
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <header className="h-12 border-b border-border flex items-center justify-between gap-2 px-3 md:px-4 bg-background/95 backdrop-blur-sm">
+        <header className="h-12 border-b border-border flex items-center justify-between gap-2 px-3 md:px-4 bg-background">
           {/* Hamburger toggle — only visible <md, where the sidebar is hidden. */}
           <button
             ref={hamburgerRef}

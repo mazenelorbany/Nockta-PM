@@ -255,7 +255,7 @@ export function CommentsThread({
           {comments.map((c) => (
             <li
               key={c.id}
-              className="group rounded-md border border-border bg-background/50 p-3 text-sm"
+              className="cv-comment group rounded-md border border-border bg-background/50 p-3 text-sm"
             >
               <div className="flex items-baseline justify-between gap-2 mb-1">
                 <div className="flex items-center gap-2">

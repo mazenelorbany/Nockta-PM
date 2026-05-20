@@ -29,7 +29,7 @@ export function ActivitySection({ taskId, projectId }: { taskId: string; project
       ) : (
         <ul className="space-y-2.5">
           {events.map((ev) => (
-            <li key={ev.id} className="flex items-start gap-2.5 text-xs">
+            <li key={ev.id} className="cv-row flex items-start gap-2.5 text-xs">
               <span className="mt-1 h-1.5 w-1.5 rounded-full bg-brand/70 shrink-0" />
               <div className="flex-1 min-w-0">
                 <span className="text-foreground">

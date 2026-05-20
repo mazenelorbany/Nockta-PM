@@ -506,7 +506,7 @@ function Column({
                 key={t.id}
                 type="button"
                 onClick={() => onOpen(t.id)}
-                className="board-card group w-full text-left rounded-md border border-border bg-card hover:bg-secondary/60 transition-colors px-3 py-2.5"
+                className="cv-card board-card group w-full text-left rounded-md border border-border bg-card hover:bg-secondary/60 transition-colors px-3 py-2.5"
               >
                 <div className="flex items-center gap-2 mb-1.5 min-w-0">
                   <TypeBadge type={t.type ?? 'Task'} />
@@ -579,7 +579,7 @@ function ListView({
             key={t.id}
             type="button"
             onClick={() => onOpen(t.id)}
-            className="w-full flex flex-col md:grid md:grid-cols-[80px_1.5fr_100px_120px_60px_140px_120px] gap-2 md:gap-3 md:items-center px-3 py-2.5 border-b border-border last:border-b-0 hover:bg-accent/30 transition text-left"
+            className="cv-row w-full flex flex-col md:grid md:grid-cols-[80px_1.5fr_100px_120px_60px_140px_120px] gap-2 md:gap-3 md:items-center px-3 py-2.5 border-b border-border last:border-b-0 hover:bg-accent/30 transition text-left"
           >
             <div className="flex items-center gap-2 min-w-0 flex-wrap md:contents">
               <span className="text-[10px] font-mono text-muted-foreground truncate">{proj?.key}</span>

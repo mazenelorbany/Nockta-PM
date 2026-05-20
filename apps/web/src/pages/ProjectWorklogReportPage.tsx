@@ -187,7 +187,7 @@ export function ProjectWorklogReportPage(): JSX.Element {
               <tbody>
                 {data.rows.map((r) => (
                   <tr key={r.user.id} className="border-b border-border/60 last:border-b-0">
-                    <td className="px-3 py-2 sticky left-0 bg-card/40 backdrop-blur-sm z-10">
+                    <td className="px-3 py-2 sticky left-0 bg-card z-10">
                       <div className="flex items-center gap-2 min-w-[180px]">
                         <AvatarCircle user={r.user} size={24} />
                         <div className="min-w-0">

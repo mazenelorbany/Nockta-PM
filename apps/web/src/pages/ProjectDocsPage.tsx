@@ -404,7 +404,7 @@ function RevisionHistory({
         className="w-full max-w-md bg-card border-l border-border h-full overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="px-5 py-3 border-b border-border flex items-center justify-between sticky top-0 bg-card/95 backdrop-blur">
+        <header className="px-5 py-3 border-b border-border flex items-center justify-between sticky top-0 bg-card">
           <h2 className="text-sm font-semibold tracking-tight">Revision history</h2>
           <button
             type="button"

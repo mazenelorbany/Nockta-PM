@@ -35,7 +35,7 @@ export function WorkloadRowItem({
           onOpen();
         }
       }}
-      className="grid grid-cols-[200px_1fr_220px] gap-4 items-center rounded-lg border border-border bg-card/40 px-4 py-3 cursor-pointer hover:bg-card/70 hover:border-brand/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 transition-colors"
+      className="cv-comment grid grid-cols-[200px_1fr_220px] gap-4 items-center rounded-lg border border-border bg-card/40 px-4 py-3 cursor-pointer hover:bg-card/70 hover:border-brand/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 transition-colors"
     >
       <div className="flex items-center gap-2 min-w-0">
         {row.user ? (

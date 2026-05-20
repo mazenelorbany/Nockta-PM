@@ -183,7 +183,7 @@ function ProjectTile({
       to={`/projects/${project.key || project.id}/board`}
       style={{ animationDelay: `${Math.min(index, 8) * 30}ms` }}
       className={cn(
-        'stagger-item magnetic relative overflow-hidden rounded-xl border border-border bg-card group transition-colors hover:border-ring',
+        'cv-tile stagger-item magnetic relative overflow-hidden rounded-xl border border-border bg-card group transition-colors hover:border-ring',
         span,
       )}
     >

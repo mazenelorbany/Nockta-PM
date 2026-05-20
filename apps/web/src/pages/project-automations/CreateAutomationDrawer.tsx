@@ -69,10 +69,10 @@ export function CreateAutomationDrawer({
         type="button"
         aria-label="Close"
         onClick={onClose}
-        className="flex-1 bg-black/40 backdrop-blur-sm"
+        className="flex-1 bg-black/60"
       />
       <div className="flex h-full w-full max-w-xl flex-col overflow-y-auto border-l border-border bg-background shadow-2xl">
-        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background/95 px-4 sm:px-6 py-3 sm:py-4 backdrop-blur">
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background px-4 sm:px-6 py-3 sm:py-4">
           <div>
             <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">New automation</p>
             <h2 className="mt-0.5 text-base font-semibold">When this, do that</h2>
@@ -164,7 +164,7 @@ export function CreateAutomationDrawer({
           </section>
         </div>
 
-        <footer className="sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t border-border bg-background/95 px-4 sm:px-6 py-3 sm:py-4 backdrop-blur">
+        <footer className="sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t border-border bg-background px-4 sm:px-6 py-3 sm:py-4">
           <button
             type="button"
             onClick={onClose}

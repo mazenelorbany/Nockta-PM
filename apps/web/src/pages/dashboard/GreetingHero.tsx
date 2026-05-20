@@ -44,7 +44,7 @@ export function GreetingHero({ firstName }: { firstName: string }): JSX.Element 
         {/* Wrap the date + new-task controls in their own solid card so they
             stay readable even when the brand cube watermark crosses
             underneath. */}
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-card/85 backdrop-blur-sm px-2.5 py-1.5 shadow-sm">
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-1.5 shadow-sm">
           <span className="nockta-eyebrow text-foreground/80">
             {todayLabel(undefined)}
           </span>

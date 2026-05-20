@@ -66,7 +66,7 @@ export function ConfirmDialog({
         type="button"
         aria-label="Close"
         onClick={onCancel}
-        className="absolute inset-0 cursor-default bg-background/70 backdrop-blur-sm"
+        className="absolute inset-0 cursor-default bg-background/85"
       />
       <div className="animate-popover-in relative z-[91] w-full max-w-sm rounded-xl border border-border bg-popover shadow-2xl shadow-black/50">
         <header className="px-4 pt-4 pb-2">
@@ -158,7 +158,7 @@ export function PromptDialog({
         type="button"
         aria-label="Close"
         onClick={onCancel}
-        className="absolute inset-0 cursor-default bg-background/70 backdrop-blur-sm"
+        className="absolute inset-0 cursor-default bg-background/85"
       />
       <form
         onSubmit={(e) => {

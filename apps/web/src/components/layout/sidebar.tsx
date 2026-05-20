@@ -199,7 +199,7 @@ export function Sidebar({
         aria-modal={mobileOpen ? true : undefined}
         aria-label={mobileOpen ? 'Navigation' : undefined}
         className={cn(
-          'border-e border-border bg-card/95 md:bg-card/40 backdrop-blur-sm flex flex-col',
+          'border-e border-border bg-card flex flex-col',
           // Default mobile: drawer (off-screen left until toggled).
           // Desktop: sticky to viewport so the user pill + System nav stay
           // in view regardless of how tall the main content is.

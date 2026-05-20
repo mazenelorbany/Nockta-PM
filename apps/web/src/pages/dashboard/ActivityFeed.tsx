@@ -39,7 +39,7 @@ export function ActivityFeed({
       ) : (
         <ul className="space-y-3.5 stagger-list">
           {list.map((ev) => (
-            <li key={ev.id} className="stagger-item flex items-start gap-2.5">
+            <li key={ev.id} className="cv-row stagger-item flex items-start gap-2.5">
               <AvatarCircle
                 user={ev.actor ?? null}
                 size={20}

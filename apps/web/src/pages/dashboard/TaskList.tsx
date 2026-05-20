@@ -10,7 +10,7 @@ export function TaskList({ tasks }: { tasks: MyTask[] }): JSX.Element {
   return (
     <ul className="space-y-1.5 stagger-list">
       {tasks.map((t) => (
-        <li key={t.id} className="stagger-item">
+        <li key={t.id} className="cv-row stagger-item">
           <Link
             // Prefer the project key in the URL when available so dashboard
             // deep-links produce `/projects/ACME/board?task=…` instead of
