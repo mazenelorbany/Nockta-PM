@@ -95,8 +95,8 @@ export function ProjectBacklogPage(): JSX.Element {
   });
 
   const project = projectQuery.data;
-  const sprints = sprintsQuery.data ?? [];
-  const backlog = backlogQuery.data ?? [];
+  const sprints = useMemo(() => sprintsQuery.data ?? [], [sprintsQuery.data]);
+  const backlog = useMemo(() => backlogQuery.data ?? [], [backlogQuery.data]);
 
   // Active sprint first, then planned sprints (oldest first), then backlog at the bottom.
   // Completed sprints are hidden by default — toggle reveals them.
@@ -210,17 +210,28 @@ export function ProjectBacklogPage(): JSX.Element {
   // move accepted tasks into.
   const [planWithAiFor, setPlanWithAiFor] = useState<Sprint | null>(null);
 
+  // Pull the per-sprint task data out into its own memo so the deps array
+  // below isn't a complex inline expression (eslint can't statically check
+  // those, and the join('|') trick made the dep array a literal string —
+  // worse for cache behaviour than a stable array reference).
+  const sprintTasksData = useMemo(
+    () => sprintTasksQueries.map((q) => q.data),
+    // sprintTasksQueries is a fresh array per render from useQueries, but
+    // its elements (q.data) are stable; iterate length + each data ref.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sprintTasksQueries.length, ...sprintTasksQueries.map((q) => q.data)],
+  );
   // Collect unique assignees across every visible list for the filter dropdown.
   const assigneeOptions = useMemo(() => {
     const m = new Map<string, { id: string; name: string }>();
     for (const t of backlog) if (t.assignee) m.set(t.assignee.id, { id: t.assignee.id, name: t.assignee.name });
-    for (const q of sprintTasksQueries) {
-      for (const t of q.data ?? []) {
+    for (const list of sprintTasksData) {
+      for (const t of list ?? []) {
         if (t.assignee) m.set(t.assignee.id, { id: t.assignee.id, name: t.assignee.name });
       }
     }
     return Array.from(m.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [backlog, sprintTasksQueries.map((q) => q.data).join('|')]);
+  }, [backlog, sprintTasksData]);
 
   function filterFor(rows: PlannerTask[]): PlannerTask[] {
     return applyFilters(rows, search, assigneeFilter, priorityFilter);

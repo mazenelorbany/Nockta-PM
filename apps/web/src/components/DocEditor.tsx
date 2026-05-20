@@ -53,9 +53,12 @@ export function DocEditor(props: DocEditorProps): JSX.Element {
   const { contentJson, markdown, onChange, readOnly, docId } = props;
   const { otherUserCount } = useDocPresence(docId);
 
-  // Resolve initial doc content. Priority: provided JSON > markdown parse >
-  // empty doc. We freeze this at mount so subsequent prop churn doesn't blow
-  // away the user's in-flight edits.
+  // Resolve initial doc content ONCE at mount. Priority: provided JSON >
+  // markdown parse > empty doc. We freeze with an empty dep array so
+  // subsequent prop churn from the parent's cache invalidations doesn't
+  // overwrite the user's in-flight edits — the editor itself owns the doc
+  // state from this point on. Empty deps here is intentional; lint can't
+  // tell that `contentJson` and `markdown` are read-once-at-mount inputs.
   const initial = useMemo<PMDoc>(() => {
     if (contentJson && typeof contentJson === 'object') {
       const candidate = contentJson as PMNode;

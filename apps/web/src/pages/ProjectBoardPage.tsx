@@ -117,8 +117,7 @@ export function ProjectBoardPage(): JSX.Element {
       else sp.delete('view');
       return sp;
     }, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view]);
+  }, [view, setSearchParams]);
 
   // Apply a saved view from the sidebar via ?savedView=ID. Fetches /saved-views,
   // looks up the matching id, applies its filters + view, then strips the param
@@ -157,8 +156,7 @@ export function ProjectBoardPage(): JSX.Element {
       sp.delete('savedView');
       return sp;
     }, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [savedViewParam, savedViewsQuery.data]);
+  }, [savedViewParam, savedViewsQuery.data, setFilters, setView, setSearchParams]);
 
   function toggleSelect(id: string): void {
     setSelectedIds((prev) => {

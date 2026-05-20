@@ -172,12 +172,17 @@ export function Sidebar({
       }
     }
     window.addEventListener('keydown', onKey);
+    // Snapshot the ref's current node so the cleanup function refers to the
+    // same DOM element it observed at mount time — without this, lint warns
+    // that hamburgerRef.current may have moved between effect-run and
+    // effect-cleanup (e.g. if the parent unmounted the hamburger).
+    const hamburgerNode = hamburgerRef.current;
     return () => {
       window.cancelAnimationFrame(raf);
       window.removeEventListener('keydown', onKey);
       // Restore focus to the hamburger so keyboard users return to a sensible
       // anchor point after closing the drawer.
-      hamburgerRef.current?.focus();
+      hamburgerNode?.focus();
     };
   }, [mobileOpen, hamburgerRef]);
 

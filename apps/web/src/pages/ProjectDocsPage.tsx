@@ -212,7 +212,9 @@ function DocEditorPane({ docId, projectId }: { docId: string; projectId: string 
       setContentJson(docQuery.data.contentJson ?? null);
     }
     // Reset only when the loaded doc id changes — otherwise we'd clobber
-    // unsaved edits every time the parent invalidated the cache.
+    // unsaved edits every time the parent invalidated the cache (including
+    // invalidations caused by our own debounced save below).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docQuery.data?.id]);
 
   const update = useMutation({
@@ -257,6 +259,11 @@ function DocEditorPane({ docId, projectId }: { docId: string; projectId: string 
       update.mutate({ body, contentJson });
     }, 800);
     return () => window.clearTimeout(id);
+    // Lint asks for `docQuery.data` and `update` in deps. Adding
+    // `docQuery.data` would re-fire the debounce on every cache
+    // invalidation (including ones triggered BY this same save), causing a
+    // write loop. `update.mutate` is stable across renders. The deps as
+    // written are intentional — debounce on local edits + on doc-id swap.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [body, contentJson, docQuery.data?.id]);
 

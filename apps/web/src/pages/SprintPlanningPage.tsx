@@ -65,8 +65,8 @@ export function SprintPlanningPage(): JSX.Element {
 
   const project = projectQuery.data;
   const sprint = (sprintsQuery.data ?? []).find((s) => s.id === sprintId) ?? null;
-  const backlog = backlogQuery.data ?? [];
-  const sprintTasks = sprintTasksQuery.data ?? [];
+  const backlog = useMemo(() => backlogQuery.data ?? [], [backlogQuery.data]);
+  const sprintTasks = useMemo(() => sprintTasksQuery.data ?? [], [sprintTasksQuery.data]);
 
   // Filter state — applied to BOTH panes so the planner can focus by assignee
   // or label without losing visibility of what's already in the sprint.

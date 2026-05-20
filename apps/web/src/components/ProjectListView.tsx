@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronRight, Plus } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { ApiError } from '@nockta/sdk';
 import { cn } from '@nockta/ui';
@@ -132,16 +132,22 @@ export function ProjectListView({
     return m;
   }, [tasks]);
 
-  function findEpicAncestor(t: Task): string | null {
-    let cur: Task | undefined = t;
-    const seen = new Set<string>();
-    while (cur && !seen.has(cur.id)) {
-      seen.add(cur.id);
-      if (cur.type === 'Epic') return cur.id;
-      cur = cur.parentTaskId ? taskById.get(cur.parentTaskId) : undefined;
-    }
-    return null;
-  }
+  // Memoised so the parent useMemo's deps array stays stable across renders.
+  // The closure only touches `taskById`, so the only invalidation reason is
+  // a fresh task map — which is itself memoised above.
+  const findEpicAncestor = useCallback(
+    (t: Task): string | null => {
+      let cur: Task | undefined = t;
+      const seen = new Set<string>();
+      while (cur && !seen.has(cur.id)) {
+        seen.add(cur.id);
+        if (cur.type === 'Epic') return cur.id;
+        cur = cur.parentTaskId ? taskById.get(cur.parentTaskId) : undefined;
+      }
+      return null;
+    },
+    [taskById],
+  );
 
   const groups = useMemo(() => {
     // epicId → list of top-level rows under that Epic. "Top level under Epic"
@@ -187,7 +193,7 @@ export function ProjectListView({
     });
     const noEpicChildren = byEpic.get(null) ?? [];
     return { epics: epicEntries, byEpic, noEpicChildren };
-  }, [filtered, taskById]);
+  }, [filtered, taskById, findEpicAncestor]);
 
   // Parents (Epics + non-Epic rows with subtasks) start collapsed.
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());

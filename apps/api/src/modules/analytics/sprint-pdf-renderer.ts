@@ -1,4 +1,5 @@
 import { InternalServerErrorException } from '@nestjs/common';
+import PDFDocument from 'pdfkit';
 
 import type {
   ProjectReportPayload,
@@ -39,21 +40,25 @@ const PAGE_MARGIN = 48;
 export async function renderSprintReportPdf(
   payload: SprintReportPayload | ProjectReportPayload,
 ): Promise<Buffer> {
-  // pdfkit's default export is the PDFDocument constructor.
-  let PdfModule: unknown;
+  // pdfkit is a real dependency now (@types/pdfkit is installed too), so we
+  // get the constructor as a normal default import. We narrow the resulting
+  // doc to our locally-typed `PdfDoc` interface — pdfkit's surface area is
+  // huge and we only touch ~15 methods, so the local interface keeps the
+  // helper-function signatures tight without dragging in the full type
+  // surface. The `as unknown` step makes the narrowing explicit; without it
+  // TS would (rightly) reject a direct downcast between unrelated types.
+  let doc: PdfDoc;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    PdfModule = require('pdfkit');
+    doc = new PDFDocument({
+      size: 'A4',
+      margin: PAGE_MARGIN,
+      info: { Title: pdfTitle(payload) },
+    }) as unknown as PdfDoc;
   } catch (err) {
     throw new InternalServerErrorException(
-      `Failed to load pdfkit: ${err instanceof Error ? err.message : String(err)}`,
+      `Failed to construct PDF document: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
-  const PDFDocument = (PdfModule as { default?: unknown }).default ?? PdfModule;
-  const DocCtor = PDFDocument as unknown as new (
-    options?: Record<string, unknown>,
-  ) => PdfDoc;
-  const doc = new DocCtor({ size: 'A4', margin: PAGE_MARGIN, info: { Title: pdfTitle(payload) } });
 
   return new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = [];

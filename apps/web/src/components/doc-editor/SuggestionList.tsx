@@ -21,35 +21,40 @@ const SuggestionListInner: ForwardRefRenderFunction<
   SuggestionListHandle,
   SuggestionListProps<SuggestionItemBase>
 > = (props, ref) => {
+  // Destructure outside the imperative-handle factory so the dep list
+  // narrows to the specific props we touch (lint flagged a missing
+  // `props` dep otherwise — including the whole props object would
+  // re-create the handle on every render).
+  const { items, command, renderItem } = props;
   const [selected, setSelected] = useState(0);
-  useEffect(() => setSelected(0), [props.items]);
+  useEffect(() => setSelected(0), [items]);
 
   useImperativeHandle(
     ref,
     (): SuggestionListHandle => ({
       onKeyDown: (event: KeyboardEvent): boolean => {
         if (event.key === 'ArrowDown') {
-          setSelected((s) => (s + 1) % Math.max(1, props.items.length));
+          setSelected((s) => (s + 1) % Math.max(1, items.length));
           return true;
         }
         if (event.key === 'ArrowUp') {
           setSelected(
-            (s) => (s - 1 + props.items.length) % Math.max(1, props.items.length),
+            (s) => (s - 1 + items.length) % Math.max(1, items.length),
           );
           return true;
         }
         if (event.key === 'Enter') {
-          const item = props.items[selected];
-          if (item) props.command(item);
+          const item = items[selected];
+          if (item) command(item);
           return true;
         }
         return false;
       },
     }),
-    [props.items, props.command, selected],
+    [items, command, selected],
   );
 
-  if (props.items.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="rounded-md border border-border bg-popover shadow-md text-xs text-muted-foreground px-3 py-2">
         No matches
@@ -58,15 +63,15 @@ const SuggestionListInner: ForwardRefRenderFunction<
   }
   return (
     <div className="rounded-md border border-border bg-popover shadow-md overflow-hidden text-sm min-w-[12rem]">
-      {props.items.map((it, idx) => {
-        const r = props.renderItem(it);
+      {items.map((it, idx) => {
+        const r = renderItem(it);
         return (
           <button
             type="button"
             key={idx}
             onMouseDown={(e) => {
               e.preventDefault();
-              props.command(it);
+              command(it);
             }}
             onMouseEnter={() => setSelected(idx)}
             className={cn(

@@ -162,8 +162,7 @@ export function AllTasksBoardPage(): JSX.Element {
       sp.delete('savedView');
       return sp;
     }, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [savedViewParam, savedViewsQuery.data]);
+  }, [savedViewParam, savedViewsQuery.data, setFilters, setView, setSearchParams]);
 
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects(),
@@ -194,7 +193,7 @@ export function AllTasksBoardPage(): JSX.Element {
   });
 
   const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
-  const allTasks = tasksQuery.data ?? [];
+  const allTasks = useMemo(() => tasksQuery.data ?? [], [tasksQuery.data]);
 
   // Hide children — they belong nested under their parent in the drawer.
   // Skipping them keeps the cross-project board from showing the same story

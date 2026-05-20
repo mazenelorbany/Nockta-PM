@@ -100,8 +100,8 @@ export function ProjectDashboardPage(): JSX.Element {
   });
 
   const project = projectQuery.data;
-  const stats = statsQuery.data ?? [];
-  const allTasks = tasksQuery.data ?? [];
+  const stats = useMemo(() => statsQuery.data ?? [], [statsQuery.data]);
+  const allTasks = useMemo(() => tasksQuery.data ?? [], [tasksQuery.data]);
 
   // Open tasks = anything not Done/Approved. Subtasks are intentionally
   // INCLUDED here — the dashboard's job is to surface every loose end, not

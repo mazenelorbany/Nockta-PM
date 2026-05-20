@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileSpreadsheet, Upload } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { cn } from '@nockta/ui';
 
@@ -71,7 +71,7 @@ export function JiraCsvImporter(): JSX.Element {
         '/import/source-fields?source=jira-csv',
       ),
   });
-  const sourceFields = fieldsQuery.data?.fields ?? [];
+  const sourceFields = useMemo(() => fieldsQuery.data?.fields ?? [], [fieldsQuery.data]);
 
   // Auto-suggest: pre-fill columnMap from each descriptor's defaultTargetField
   // so the user sees a sensible starting point and only needs to touch the

@@ -154,7 +154,10 @@ export function NotificationsBell(): JSX.Element {
   const [snoozeOpen, setSnoozeOpen] = useState(false);
 
   const unread = unreadQuery.data?.count ?? 0;
-  const rawItems = listQuery.data?.items ?? [];
+  // Wrap the `?? []` in its own memo so the items memo below sees a stable
+  // reference between renders (without this, `rawItems` allocates a fresh
+  // empty array each render and `items` re-runs every paint).
+  const rawItems = useMemo(() => listQuery.data?.items ?? [], [listQuery.data]);
   // Client-side filters for read/since/multi-project. Server can only narrow
   // by one projectId + a comma-joined type list; the rest happens here.
   const items = useMemo(() => {

@@ -8,7 +8,7 @@
     "build": "NODE_OPTIONS='--max-old-space-size=4096' tsc --noEmit && NODE_OPTIONS='--max-old-space-size=4096' vite build",
     "build:analyze": "ANALYZE=true vite build",
     "preview": "vite preview --port 5173",
-    "lint": "eslint src --max-warnings 21",
+    "lint": "eslint src --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

@@ -76,7 +76,7 @@ export function useBoardData({
   });
 
   const activeSprint = (sprintsQuery.data ?? []).find((s) => s.state === 'active') ?? null;
-  const tasks = tasksQuery.data ?? [];
+  const tasks = useMemo(() => tasksQuery.data ?? [], [tasksQuery.data]);
   const project = projectQuery.data;
 
   // Columns on the board are the project's ProjectStatus names, ordered by

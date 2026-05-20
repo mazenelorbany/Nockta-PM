@@ -86,7 +86,7 @@ export function MyTasksPage(): JSX.Element {
     enabled: Boolean(user?.id),
   });
 
-  const rawTasks = tasksQuery.data?.items ?? [];
+  const rawTasks = useMemo(() => tasksQuery.data?.items ?? [], [tasksQuery.data]);
   const tasks = useMemo(() => {
     let t = rawTasks;
     if (hideDone) t = t.filter((x) => x.status.toLowerCase() !== 'done');

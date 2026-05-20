@@ -105,7 +105,7 @@ export function ProjectOverviewPage(): JSX.Element {
   });
 
   const project = projectQuery.data;
-  const tasks = tasksQuery.data ?? [];
+  const tasks = useMemo(() => tasksQuery.data ?? [], [tasksQuery.data]);
 
   // Top-level tasks only — exclude subtasks from the stat counts so the same
   // "shape" you see on the board matches the numbers here.

@@ -250,6 +250,13 @@ export function StandupRunner({
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+    // Lint wants `onClose`, `toggleRun`, `next`, `prev` in the deps, but
+    // they're inline functions recreated every render — including them would
+    // detach/re-attach the listener on every paint. The handlers' MEANINGFUL
+    // inputs are `participants.length` and `turnIndex`, so re-binding when
+    // those change is exactly what we want; everything else read by the
+    // handlers (toggleRun → secondsLeft, onClose) is stable across the
+    // window we care about.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [participants.length, turnIndex]);
 
