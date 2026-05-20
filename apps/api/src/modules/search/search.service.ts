@@ -126,7 +126,21 @@ export class SearchService {
       ordered = ordered.filter((t) => (input.hasAttachments ? hasMap.has(t.id) : !hasMap.has(t.id)));
     }
 
-    return paginate(ordered.slice(0, limit + 1), limit, (t) => t.id);
+    // Synthesize the display `key` ("ACME-42") on every result. The raw Task
+    // row only has `keyNumber: number`; the regular /tasks endpoints construct
+    // the flat key via TasksService.hydrateKey() but the search path was
+    // returning rows without it. Every consumer (MyTasks, Calendar, dashboard
+    // task lists, the doc-editor mention extension) treats `key` as a present
+    // string — MyTasks even called `t.key.split('-')` and crashed the page
+    // when it landed undefined. Synthesise here so we fix every caller in one
+    // place; the field is additive so older clients that only read
+    // `keyNumber` keep working.
+    const hydrated = ordered.map((t) => ({
+      ...t,
+      key: t.project ? `${t.project.key}-${t.keyNumber}` : String(t.keyNumber),
+    }));
+
+    return paginate(hydrated.slice(0, limit + 1), limit, (t) => t.id);
   }
 
   /**
