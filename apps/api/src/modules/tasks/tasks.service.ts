@@ -455,9 +455,20 @@ export class TasksService {
     });
     const boardPosition = generateKeyBetween(last?.boardPosition ?? null, null);
 
+    // Stamp / clear completedAt on done-transitions. Drives the branded
+    // sprint + project PDF reports' "tasks completed in this window" filter.
+    // Stamp when entering a done status; clear when leaving one. The
+    // re-open clear-out keeps the field honest if a Done task gets
+    // re-opened (Done → In Progress is a permitted edge in defaults).
+    const wasDone = isDone(previous);
+    const willBeDone = isDone(newStatus);
+    const completedAtUpdate: { completedAt?: Date | null } = {};
+    if (!wasDone && willBeDone) completedAtUpdate.completedAt = new Date();
+    else if (wasDone && !willBeDone) completedAtUpdate.completedAt = null;
+
     const updated = await this.prisma.task.update({
       where: { id },
-      data: { status: newStatus, boardPosition },
+      data: { status: newStatus, boardPosition, ...completedAtUpdate },
     });
     this.events.emit('task.status_changed', {
       taskId: id, fromStatus: previous, toStatus: newStatus,

@@ -1,16 +1,22 @@
-import { BadRequestException, Controller, Get, Param, ParseIntPipe, ParseUUIDPipe, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Param, ParseIntPipe, ParseUUIDPipe, Query, Res } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
 import { AnalyticsService } from './analytics.service';
+import { SprintReportService } from './sprint-report.service';
+import { renderSprintReportPdf } from './sprint-pdf-renderer';
 
 @ApiTags('analytics')
 @ApiBearerAuth()
 @Controller('analytics')
 export class AnalyticsController {
-  constructor(private readonly analytics: AnalyticsService) {}
+  constructor(
+    private readonly analytics: AnalyticsService,
+    private readonly sprintReports: SprintReportService,
+  ) {}
 
   @Get('me')
   personal(@CurrentUser() actor: AuthenticatedUser) {
@@ -147,5 +153,75 @@ export class AnalyticsController {
     @Query('days', new ParseIntPipe({ optional: true })) days?: number,
   ) {
     return this.analytics.cumulativeFlow(actor, projectId, Math.min(180, Math.max(7, days ?? 30)));
+  }
+
+  // ----- Branded sprint / project PDF reports -----
+
+  /**
+   * Stream a branded sprint report PDF. Manager+ on the project. The report
+   * shows the sprint's completed tasks, hours logged per task, hours logged
+   * per user, summary tiles, and a Nockta header strip.
+   *
+   * `from`/`to` (ISO dates) optionally override the sprint's start/end
+   * dates so a manager can pull a "this sprint up to today" snapshot
+   * before the sprint formally closes.
+   */
+  @Get('sprints/:sprintId/report.pdf')
+  async sprintReportPdf(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('sprintId', new ParseUUIDPipe()) sprintId: string,
+    @Res() res: Response,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ): Promise<void> {
+    const override: { from?: Date; to?: Date } = {};
+    if (from) {
+      const d = new Date(from);
+      if (Number.isNaN(d.getTime())) throw new BadRequestException('Invalid `from`');
+      override.from = d;
+    }
+    if (to) {
+      const d = new Date(to);
+      if (Number.isNaN(d.getTime())) throw new BadRequestException('Invalid `to`');
+      override.to = d;
+    }
+    const payload = await this.sprintReports.buildSprintReport(actor, sprintId, override);
+    const buffer = await renderSprintReportPdf(payload);
+    const slug = `${payload.project.key}_${payload.sprint.name}`.replace(/[^a-z0-9-_.]+/gi, '-').toLowerCase();
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${slug}-sprint-report.pdf"`);
+    res.setHeader('Content-Length', String(buffer.byteLength));
+    res.send(buffer);
+  }
+
+  /**
+   * Stream a branded project-level report PDF for an arbitrary date window.
+   * Manager+ on the project. Useful when work isn't sprint-organised or for
+   * monthly executive summaries.
+   */
+  @Get('projects/:projectId/report.pdf')
+  async projectReportPdf(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('projectId', new ParseUUIDPipe()) projectId: string,
+    @Res() res: Response,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ): Promise<void> {
+    if (!from || !to) throw new BadRequestException('from and to are required for the project report');
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+      throw new BadRequestException('Invalid from/to');
+    }
+    const payload = await this.sprintReports.buildProjectReport(actor, projectId, {
+      from: fromDate,
+      to: toDate,
+    });
+    const buffer = await renderSprintReportPdf(payload);
+    const slug = `${payload.project.key}_${from.slice(0, 10)}_${to.slice(0, 10)}`.replace(/[^a-z0-9-_.]+/gi, '-').toLowerCase();
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${slug}-project-report.pdf"`);
+    res.setHeader('Content-Length', String(buffer.byteLength));
+    res.send(buffer);
   }
 }

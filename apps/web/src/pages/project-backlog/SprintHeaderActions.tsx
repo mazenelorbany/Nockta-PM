@@ -1,5 +1,7 @@
-import { Play, Sparkles, Trash2 } from 'lucide-react';
+import { FileText, Play, Sparkles, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
+import { downloadPdf } from '../../lib/download-pdf';
 
 import { RunRetroButton } from './RetroModal';
 import type { Sprint } from './types';
@@ -78,6 +80,21 @@ export function SprintHeaderActions({
           items in the same place they ended the sprint. */}
       {sprint.state === 'completed' && (
         <RunRetroButton sprintId={sprint.id} />
+      )}
+      {/* Branded PDF export — available on active + completed sprints (a
+          planned sprint with no logged time would print a blank report). */}
+      {(sprint.state === 'active' || sprint.state === 'completed') && (
+        <button
+          type="button"
+          onClick={() =>
+            downloadPdf(`/analytics/sprints/${sprint.id}/report.pdf`, `${sprint.name}-sprint-report.pdf`)
+          }
+          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition"
+          title="Download a branded PDF of completed tasks + hours logged for this sprint"
+        >
+          <FileText className="h-3 w-3" />
+          Export PDF
+        </button>
       )}
       {sprint.state === 'planned' && (
         <button

@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { Download, Timer } from 'lucide-react';
+import { Download, FileText, Timer } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { cn, EmptyState, QueryErrorState, SkeletonList } from '@nockta/ui';
 
 import { ProjectTabs } from '../components/ProjectTabs';
 import { AvatarCircle } from '../components/task-bits';
 import { api } from '../lib/api';
+import { downloadPdf } from '../lib/download-pdf';
 import { useResolvedProject } from '../lib/project-route';
 import { queryKeys } from '../lib/query-keys';
 
@@ -141,6 +142,38 @@ export function ProjectWorklogReportPage(): JSX.Element {
         >
           <Download className="h-3.5 w-3.5" />
           Export CSV
+        </button>
+        {/* Branded PDF — uses the current week-window converted into a
+            from/to range so the report matches what's visible on screen.
+            Falls back to the full window when the data hasn't streamed in
+            yet (the button is also disabled in that state). */}
+        <button
+          type="button"
+          onClick={() => {
+            if (!data || data.weekStartsUTC.length === 0 || !project) return;
+            const firstWeek = data.weekStartsUTC[0]!;
+            // The exclusive `to` is the start of the day AFTER the last
+            // bucket's last day, so the report window matches what the
+            // table shows. data.weekStartsUTC is Monday-aligned; add 7 days
+            // for the upper bound.
+            const lastWeek = data.weekStartsUTC[data.weekStartsUTC.length - 1]!;
+            const lastEnd = new Date(`${lastWeek}T00:00:00.000Z`);
+            lastEnd.setUTCDate(lastEnd.getUTCDate() + 7);
+            const qs = new URLSearchParams({
+              from: `${firstWeek}T00:00:00.000Z`,
+              to: lastEnd.toISOString(),
+            });
+            void downloadPdf(
+              `/analytics/projects/${projectId}/report.pdf?${qs.toString()}`,
+              `${project.key}-${firstWeek}-${lastEnd.toISOString().slice(0, 10)}-report.pdf`,
+            );
+          }}
+          disabled={!data || data.rows.length === 0}
+          className="inline-flex items-center gap-1.5 px-2.5 h-7 rounded-md text-xs border border-border bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Download a branded PDF of completed tasks + hours for this window"
+        >
+          <FileText className="h-3.5 w-3.5" />
+          Export PDF
         </button>
       </div>
 

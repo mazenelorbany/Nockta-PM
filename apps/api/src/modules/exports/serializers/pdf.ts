@@ -28,10 +28,13 @@ export async function renderPdf(
   rows: Array<Record<string, string | number | null>>,
   generatedAt: Date,
 ): Promise<Buffer> {
-  // pdfkit is optional — when not installed, the dynamic import throws.
+  // pdfkit is now a real dependency (apps/api/package.json), but we keep
+  // the try/catch for parity with the pre-install behavior — if something
+  // weird happens at runtime (incompatible Node version, missing native
+  // fonts on a stripped-down container), the user gets a clear error
+  // instead of a stack trace.
   let PdfModule: unknown;
   try {
-    // @ts-expect-error — dependency is optional; type may not resolve.
     PdfModule = await import('pdfkit');
   } catch {
     throw new InternalServerErrorException(PDF_MISSING_MESSAGE);

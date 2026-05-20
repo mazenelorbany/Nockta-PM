@@ -651,6 +651,11 @@ model Task {
   aiTriageExplanation String?
   estimate           Int?        // unit-agnostic
   boardPosition      String      // fractional indexing
+  /// When the task transitioned into a done-marked status. Stamped by
+  /// tasks.service.changeStatus on done-transitions; cleared on re-open.
+  /// Used by the branded sprint / project PDF reports to filter "tasks
+  /// completed in this window" without needing to consult the Event log.
+  completedAt        DateTime?
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
 
