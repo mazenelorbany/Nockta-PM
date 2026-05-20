@@ -176,6 +176,23 @@ describe('TasksService.changeStatus', () => {
       project: { workflowPreset: 'engineering', key: 'PRJ' },
       ...overrides,
     } as never);
+    // The new transition gate calls projectWorkflowTransition.findMany. Seed
+    // it with a permissive set for the engineering preset so existing tests
+    // that exercise a legal transition (e.g. Todo → In Progress) still pass
+    // without per-test stubs. Tests that exercise an illegal transition
+    // override this with their own mockResolvedValueOnce(...).
+    vi.mocked(
+      (mocks.prisma as unknown as {
+        projectWorkflowTransition: { findMany: ReturnType<typeof vi.fn> };
+      }).projectWorkflowTransition.findMany,
+    ).mockResolvedValueOnce([
+      { fromStatus: 'Todo', toStatus: 'In Progress' },
+      { fromStatus: 'In Progress', toStatus: 'Todo' },
+      { fromStatus: 'In Progress', toStatus: 'In Review' },
+      { fromStatus: 'In Review', toStatus: 'Testing' },
+      { fromStatus: 'Testing', toStatus: 'Done' },
+      { fromStatus: 'Done', toStatus: 'In Progress' },
+    ] as never);
   }
 
   it('rejects a status that does not exist in the project preset', async () => {

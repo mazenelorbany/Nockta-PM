@@ -1,9 +1,10 @@
 import {
-  Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post,
+  Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Put,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ProjectRole, ProjectVisibility, Visibility, WorkflowPreset } from '@prisma/client';
-import { IsArray, IsBoolean, IsEmail, IsEnum, IsIn, IsOptional, IsString, IsUUID, Matches, MaxLength, MinLength } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsEmail, IsEnum, IsIn, IsOptional, IsString, IsUUID, Matches, MaxLength, MinLength, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
@@ -67,6 +68,21 @@ class CreateFromTemplateDto {
   @IsString() @Matches(/^[A-Z]{2,10}$/) key!: string;
   @IsString() @MinLength(1) @MaxLength(120) name!: string;
   @IsOptional() @IsString() @MaxLength(2000) description?: string;
+}
+
+class WorkflowTransitionDto {
+  @IsString() @MaxLength(60) fromStatus!: string;
+  @IsString() @MaxLength(60) toStatus!: string;
+}
+
+class ReplaceTransitionsDto {
+  // Cap the array at the cartesian-product worst case for the largest preset
+  // (Design has 5 statuses → 5×5 = 25 possible edges) plus headroom for the
+  // custom-status feature landing next; 100 is comfortably above and bounds
+  // the worst-case payload size.
+  @IsArray() @ArrayMaxSize(100)
+  @ValidateNested({ each: true }) @Type(() => WorkflowTransitionDto)
+  transitions!: WorkflowTransitionDto[];
 }
 
 @ApiTags('projects')
@@ -150,6 +166,44 @@ export class ProjectsController {
     @Body() dto: GrantAccessDto,
   ) {
     return this.projects.grantAccess(actor, id, dto);
+  }
+
+  // ---- Workflow transitions (allowed status edges) ----
+
+  /**
+   * List the allowed (from → to) status transitions for this project.
+   * Viewer+ — the board / drawer also need to read this to grey-out
+   * disallowed status options in the picker.
+   */
+  @Get(':id/workflow-transitions')
+  listWorkflowTransitions(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return this.projects.listWorkflowTransitions(actor, id);
+  }
+
+  /**
+   * Replace the project's transition set in one shot. Manager+ only.
+   * Sending an empty array effectively locks every task in its current
+   * status; the UI should surface that explicitly before allowing it.
+   */
+  @Put(':id/workflow-transitions')
+  replaceWorkflowTransitions(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: ReplaceTransitionsDto,
+  ) {
+    return this.projects.replaceWorkflowTransitions(actor, id, dto.transitions);
+  }
+
+  /** Reset the project's transitions to the preset's defaults. Manager+. */
+  @Post(':id/workflow-transitions/reset')
+  resetWorkflowTransitions(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return this.projects.resetWorkflowTransitions(actor, id);
   }
 
   @Delete(':id/access/:grantId')

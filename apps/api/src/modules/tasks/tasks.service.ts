@@ -9,7 +9,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import type { AuthenticatedUser } from '../auth/types';
 
-import { defaultStatusFor, doneStatusesFor, isValidStatusFor } from './workflow';
+import { defaultStatusFor, doneStatusesFor, isValidStatusFor, transitionKey } from './workflow';
 
 interface CreateTaskInput {
   projectId: string;
@@ -395,6 +395,33 @@ export class TasksService {
 
     const previous = task.status;
     if (previous === newStatus) return task;
+
+    // Workflow-transition gate. The board / drawer / API all flow through
+    // here; admins configure the allowed (from → to) edges per project in
+    // Project Settings → Workflow → Allowed transitions. The graph is
+    // backfilled on project creation (and existing projects were
+    // backfilled by migration 0028) so this branch is never a "deny by
+    // empty config" — an unconfigured project is impossible.
+    //
+    // GitHub-driven and deployment-driven transitions still pass through
+    // here, but for them we DON'T enforce the graph: those flips reflect
+    // upstream state (a PR merged, a deploy succeeded) and an admin
+    // misconfiguring transitions shouldn't desync the system. Only
+    // human ('user') triggers are gated. `system` is used by the
+    // recurrence + cron paths and is intentionally also exempt.
+    if (triggeredBy === 'user') {
+      const transitions = await this.prisma.projectWorkflowTransition.findMany({
+        where: { projectId: task.projectId },
+        select: { fromStatus: true, toStatus: true },
+      });
+      const allowed = new Set(transitions.map((t) => transitionKey(t.fromStatus, t.toStatus)));
+      if (!allowed.has(transitionKey(previous, newStatus))) {
+        throw new BadRequestException(
+          `Transition "${previous}" → "${newStatus}" is not allowed by this project's workflow. ` +
+            `An admin can edit allowed transitions in Project Settings → Workflow.`,
+        );
+      }
+    }
 
     // Move to bottom of new column for board ordering.
     const last = await this.prisma.task.findFirst({

@@ -2,6 +2,7 @@ import type { UseMutationResult } from '@tanstack/react-query';
 import { Workflow } from 'lucide-react';
 
 import { Section, Field, ToggleRow } from './shared';
+import { WorkflowTransitionsMatrix } from './WorkflowTransitionsMatrix';
 import type { Project } from './types';
 
 export function WorkflowSection({
@@ -56,6 +57,16 @@ export function WorkflowSection({
           }
           onBlur={() => commit('maxAttachmentMb')}
           className="rounded-md border border-input bg-background px-2 py-1.5 text-sm w-32"
+        />
+      </Field>
+
+      <Field
+        label="Allowed transitions"
+        hint="The board and task drawer use this matrix to decide which status flips are legal. Blocks Todo → Done unless an admin opts in."
+      >
+        <WorkflowTransitionsMatrix
+          projectId={draft.id}
+          workflowPreset={draft.workflowPreset}
         />
       </Field>
     </Section>

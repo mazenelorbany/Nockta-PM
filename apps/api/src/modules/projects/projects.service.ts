@@ -13,6 +13,7 @@ import { PermissionsService } from '../permissions/permissions.service';
 import { AuthService } from '../auth/auth.service';
 import { Env } from '../../config/env';
 import type { AuthenticatedUser } from '../auth/types';
+import { defaultTransitionsFor, WORKFLOW_STATUSES } from '../tasks/workflow';
 
 interface CreateProjectInput {
   key: string;
@@ -59,16 +60,33 @@ export class ProjectsService {
       throw new BadRequestException('Project key must be 2-10 uppercase letters');
     }
     try {
-      const project = await this.prisma.project.create({
-        data: {
-          key: input.key,
-          name: input.name,
-          description: input.description ?? null,
-          visibility: input.visibility,
-          workflowPreset: input.workflowPreset,
-          sprintsEnabled: input.sprintsEnabled ?? false,
-          createdById: actor.id,
-        },
+      // Project + default workflow transitions in one transaction so a new
+      // project is never momentarily missing its edge set. The transitions
+      // mirror migration 0028 + workflow.ts:defaultTransitionsFor — a
+      // linear-with-reopen graph that explicitly excludes Todo → Done.
+      const project = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.project.create({
+          data: {
+            key: input.key,
+            name: input.name,
+            description: input.description ?? null,
+            visibility: input.visibility,
+            workflowPreset: input.workflowPreset,
+            sprintsEnabled: input.sprintsEnabled ?? false,
+            createdById: actor.id,
+          },
+        });
+        const edges = defaultTransitionsFor(input.workflowPreset);
+        if (edges.length > 0) {
+          await tx.projectWorkflowTransition.createMany({
+            data: edges.map(([fromStatus, toStatus]) => ({
+              projectId: created.id,
+              fromStatus,
+              toStatus,
+            })),
+          });
+        }
+        return created;
       });
       this.events.emit('project.created', { projectId: project.id, actorUserId: actor.id });
       return project;
@@ -232,6 +250,99 @@ export class ProjectsService {
         workflowPreset: true,
       },
     });
+  }
+
+  // ---- Workflow transitions ----
+
+  /**
+   * Read the project's allowed (from → to) status edges. Viewer+ — the
+   * board's status picker calls this to grey out disallowed targets in
+   * the dropdown so users see the constraint before clicking.
+   */
+  async listWorkflowTransitions(actor: AuthenticatedUser, projectId: string) {
+    await this.permissions.assertAtLeast(actor, projectId, 'Viewer');
+    const rows = await this.prisma.projectWorkflowTransition.findMany({
+      where: { projectId },
+      select: { id: true, fromStatus: true, toStatus: true },
+      orderBy: [{ fromStatus: 'asc' }, { toStatus: 'asc' }],
+    });
+    return rows;
+  }
+
+  /**
+   * Replace the project's transition set in a single transaction. Manager+.
+   * Validates every edge against the project's preset so an admin can't
+   * accidentally author edges for a status that doesn't exist in the
+   * preset (which would silently no-op once enforcement reads the set).
+   */
+  async replaceWorkflowTransitions(
+    actor: AuthenticatedUser,
+    projectId: string,
+    transitions: Array<{ fromStatus: string; toStatus: string }>,
+  ) {
+    await this.permissions.assertAtLeast(actor, projectId, 'Manager');
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { workflowPreset: true },
+    });
+    if (!project) throw new NotFoundException('Project not found');
+    const validStatuses = new Set(WORKFLOW_STATUSES[project.workflowPreset] as readonly string[]);
+    for (const t of transitions) {
+      if (!validStatuses.has(t.fromStatus) || !validStatuses.has(t.toStatus)) {
+        throw new BadRequestException(
+          `Transition "${t.fromStatus}" → "${t.toStatus}" references a status outside the ${project.workflowPreset} preset.`,
+        );
+      }
+      if (t.fromStatus === t.toStatus) {
+        throw new BadRequestException(
+          `Self-edges ("${t.fromStatus}" → "${t.fromStatus}") aren't meaningful; same-status transitions are handled as no-ops.`,
+        );
+      }
+    }
+    // Dedupe — the unique index would catch this with a P2002 but a clean
+    // pre-check returns a friendlier error and keeps the transaction small.
+    const dedup = new Map<string, { fromStatus: string; toStatus: string }>();
+    for (const t of transitions) {
+      dedup.set(`${t.fromStatus}→${t.toStatus}`, { fromStatus: t.fromStatus, toStatus: t.toStatus });
+    }
+    const next = Array.from(dedup.values());
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.projectWorkflowTransition.deleteMany({ where: { projectId } });
+      if (next.length > 0) {
+        await tx.projectWorkflowTransition.createMany({
+          data: next.map((t) => ({ projectId, fromStatus: t.fromStatus, toStatus: t.toStatus })),
+        });
+      }
+    });
+    this.events.emit('project.workflow_updated', { projectId, actorUserId: actor.id, count: next.length });
+    return next;
+  }
+
+  /** Reset the project's transitions to the preset's defaults. Manager+. */
+  async resetWorkflowTransitions(actor: AuthenticatedUser, projectId: string) {
+    await this.permissions.assertAtLeast(actor, projectId, 'Manager');
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { workflowPreset: true },
+    });
+    if (!project) throw new NotFoundException('Project not found');
+    const edges = defaultTransitionsFor(project.workflowPreset);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.projectWorkflowTransition.deleteMany({ where: { projectId } });
+      if (edges.length > 0) {
+        await tx.projectWorkflowTransition.createMany({
+          data: edges.map(([fromStatus, toStatus]) => ({ projectId, fromStatus, toStatus })),
+        });
+      }
+    });
+    this.events.emit('project.workflow_updated', {
+      projectId,
+      actorUserId: actor.id,
+      count: edges.length,
+      reset: true,
+    });
+    return edges.map(([fromStatus, toStatus]) => ({ fromStatus, toStatus }));
   }
 
   async listAccess(actor: AuthenticatedUser, projectId: string) {
@@ -465,6 +576,20 @@ export class ProjectsService {
           createdById: actor.id,
         },
       });
+
+      // Seed default workflow transitions for the template's preset so a
+      // freshly-cloned project enforces the same Todo → … → Done graph as
+      // any other new project. Mirror of the seeding in create().
+      const edges = defaultTransitionsFor(tpl.workflowPreset);
+      if (edges.length > 0) {
+        await tx.projectWorkflowTransition.createMany({
+          data: edges.map(([fromStatus, toStatus]) => ({
+            projectId: created.id,
+            fromStatus,
+            toStatus,
+          })),
+        });
+      }
 
       // Clone labels
       const labels = (tpl.labels as unknown as { name: string; color: string }[]) ?? [];

@@ -480,8 +480,37 @@ model Project {
   customReports       CustomReport[]
   // Outstanding `project_invite` magic links targeting this project.
   pendingInvites      MagicLink[]   @relation("MagicLinkProject")
+  // Per-project allowed status transitions. Backfilled from the preset's
+  // defaults when the project is created; admins can edit the set in
+  // Project Settings → Workflow → Allowed transitions.
+  workflowTransitions ProjectWorkflowTransition[]
 
   @@index([archivedAt])
+}
+
+/// Per-project directed graph of allowed status transitions. Rows are
+/// (from → to) edges. The board / drawer / API all consult this set
+/// before flipping a task's status — Todo → Done direct-jumps no longer
+/// pass unless an admin explicitly authors that edge.
+///
+/// Backfilled per workflow preset on project creation (see
+/// projects.service.ts) and on the 0028 migration for existing projects.
+/// Resetting to defaults removes every row for the project and re-seeds
+/// the preset-default set.
+model ProjectWorkflowTransition {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @db.Uuid
+  /// Source status — must match a status valid for the project's preset
+  /// (we don't add a FK to a StatusEnum because statuses are still
+  /// preset-strings today; the API validates membership before write).
+  fromStatus  String
+  toStatus    String
+  createdAt   DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, fromStatus, toStatus])
+  @@index([projectId])
 }
 
 model ProjectAccess {
