@@ -4,7 +4,7 @@ import {
   Settings, Sparkles, Target, Timer, Zap,
 } from 'lucide-react';
 import { useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { cn } from '@nockta/ui';
 
 import {
@@ -14,6 +14,7 @@ import {
 } from '../components/task-bits';
 import { api } from '../lib/api';
 import { ProjectTabs } from '../components/ProjectTabs';
+import { useResolvedProject } from '../lib/project-route';
 import { queryKeys } from '../lib/query-keys';
 
 // =============================================================================
@@ -72,7 +73,7 @@ interface TimelineEvent {
 }
 
 export function ProjectOverviewPage(): JSX.Element {
-  const { projectId = '' } = useParams<{ projectId: string }>();
+  const { projectId } = useResolvedProject();
 
   const projectQuery = useQuery({
     queryKey: queryKeys.project(projectId),

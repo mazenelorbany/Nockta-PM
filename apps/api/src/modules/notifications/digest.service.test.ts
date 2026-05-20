@@ -131,12 +131,17 @@ describe('NotificationDigestService.enqueueOrBatch', () => {
         queuedAt: new Date(Date.now() - i * 1000).toISOString(),
       })),
     });
-    digestModel(mocks.prisma).update.mockResolvedValueOnce({ id: 'd-1' });
+    // The append now happens via $executeRaw (atomic JSONB ||) rather than
+    // a read-then-write update(). $executeRaw is mocked to return rows-
+    // affected; 1 means the append landed on the open bucket.
+    const exec = (mocks.prisma as unknown as { $executeRaw: ReturnType<typeof vi.fn> }).$executeRaw;
+    exec.mockResolvedValueOnce(1);
 
     await service.enqueueOrBatch(makeInput());
 
     // 3 existing + 1 appended = 4, below the 10-item flush threshold.
-    expect(digestModel(mocks.prisma).update).toHaveBeenCalledOnce();
+    expect(exec).toHaveBeenCalledOnce();
+    expect(digestModel(mocks.prisma).update).not.toHaveBeenCalled();
     expect(mocks.events.emit).not.toHaveBeenCalled();
     expect(digestModel(mocks.prisma).updateMany).not.toHaveBeenCalled();
   });
@@ -163,9 +168,13 @@ describe('NotificationDigestService.enqueueOrBatch', () => {
       storedItems = args.data.items;
       return { id: 'd-1' };
     });
-    digestModel(mocks.prisma).update.mockImplementation(async (args: { data: { items: unknown[] } }) => {
-      storedItems = args.data.items;
-      return { id: 'd-1' };
+    // $executeRaw simulates the atomic JSONB append by pushing onto the
+    // shared storedItems closure. Returns 1 because every append in this
+    // single-threaded test lands on the still-open bucket.
+    const exec = (mocks.prisma as unknown as { $executeRaw: ReturnType<typeof vi.fn> }).$executeRaw;
+    exec.mockImplementation(async (_strings: unknown, ..._values: unknown[]) => {
+      storedItems = [...storedItems, makeInput()];
+      return 1;
     });
     // The 10th call triggers an inline flush: claim the row via updateMany,
     // then re-read it via findUnique to emit the event.
@@ -212,10 +221,15 @@ describe('NotificationDigestService.enqueueOrBatch', () => {
       buckets.push({ id, items: args.data.items, sentAt: null });
       return { id };
     });
-    digestModel(mocks.prisma).update.mockImplementation(async (args: { where: { id: string }; data: { items: unknown[] } }) => {
-      const b = buckets.find((x) => x.id === args.where.id)!;
-      b.items = args.data.items;
-      return { id: b.id };
+    // Atomic-append now goes through $executeRaw. The mock walks the
+    // bucket list, finds the open one, and pushes a synthetic item onto
+    // its items array — mirroring the production JSONB || append.
+    const exec = (mocks.prisma as unknown as { $executeRaw: ReturnType<typeof vi.fn> }).$executeRaw;
+    exec.mockImplementation(async () => {
+      const open = buckets.find((b) => b.sentAt === null);
+      if (!open) return 0;
+      open.items = [...open.items, makeInput()];
+      return 1;
     });
     digestModel(mocks.prisma).updateMany.mockImplementation(async (args: { where: { id: string; sentAt: null } }) => {
       const b = buckets.find((x) => x.id === args.where.id && x.sentAt === null);

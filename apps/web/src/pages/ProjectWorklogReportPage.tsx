@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { Download, Timer } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
 import { cn, EmptyState, QueryErrorState, SkeletonList } from '@nockta/ui';
 
 import { ProjectTabs } from '../components/ProjectTabs';
 import { AvatarCircle } from '../components/task-bits';
 import { api } from '../lib/api';
+import { useResolvedProject } from '../lib/project-route';
 import { queryKeys } from '../lib/query-keys';
 
 // =============================================================================
@@ -40,7 +40,7 @@ interface Project {
 const WEEK_OPTIONS = [4, 8, 12, 26] as const;
 
 export function ProjectWorklogReportPage(): JSX.Element {
-  const { projectId = '' } = useParams<{ projectId: string }>();
+  const { projectId } = useResolvedProject();
   const [weeks, setWeeks] = useState<number>(12);
 
   const projectQuery = useQuery({

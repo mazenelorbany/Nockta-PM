@@ -232,6 +232,11 @@ model User {
   archivedAt  DateTime?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+  /// Stamped by JwtStrategy.touchLastSeen on every authenticated request,
+  /// throttled to ~5min. Powers the Members tab "Last Activity" column.
+  /// Defaults to now() on row creation so freshly-invited users don't read
+  /// as "never seen".
+  lastSeenAt  DateTime    @default(now())
 
   // ---- Time-tracking preferences ----
   /// Optional weekly worklog target in hours. When set, the personal dashboard

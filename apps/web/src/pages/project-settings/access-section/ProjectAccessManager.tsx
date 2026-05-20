@@ -28,9 +28,11 @@ import { InlineInviteGuestDialog } from './InlineInviteGuestDialog';
 // Shows the existing grants, plus an "Add" row that lets a Manager pick a
 // user OR a team and assign a role. Three rules baked in:
 //
-//   1. Clients (kind='client') can only get the 'Client' role. The role is
-//      auto-selected and locked when a client is picked so a Manager can't
-//      accidentally promote a guest to Contributor.
+//   1. External users (kind='client') can be granted any project role —
+//      Viewer (read), Contributor (write), Manager, or the legacy Client
+//      role (bug-only, kept for backwards compat). The picker defaults
+//      to Viewer because that's the common "share with a collaborator"
+//      case; Contributor is for partners who need to edit.
 //   2. Teams can never carry the 'Client' role (spec §4 — clients are always
 //      per-user). When the subject is a Team, the Client role is hidden.
 //   3. Granting an internal user the 'Client' role is allowed but discouraged
@@ -265,17 +267,17 @@ export function ProjectAccessManager({
         )}
       </AccessGroup>
 
-      {/* ----- Guests ----- */}
+      {/* ----- External users ----- */}
       <AccessGroup
         id="access-guests"
-        title="Guests"
+        title="External users"
         icon={<Sparkles className="h-3.5 w-3.5" />}
-        hint="External collaborators who sign in via magic link. They only see content marked client-visible, and can comment + report bugs."
+        hint="Collaborators outside the company. They sign in via magic link. Pick Viewer for read-only access, Contributor for write access."
         empty={guestGrants.length === 0}
         emptyHint={
           loading
             ? 'Loading…'
-            : 'No guests on this project yet. Invite one below — the magic link will land in their inbox.'
+            : 'No external users on this project yet. Invite one below — the magic link will land in their inbox.'
         }
         action={
           <button
@@ -284,12 +286,21 @@ export function ProjectAccessManager({
             className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background/60 px-2.5 py-1 text-xs font-medium text-foreground hover:bg-accent transition-colors"
           >
             <UserPlus className="h-3.5 w-3.5" />
-            Invite new guest
+            Invite external user
           </button>
         }
       >
         {guestGrants.map((g) => {
           const u = resolveUser(g);
+          // Externals can now hold any role. We expose Viewer / Contributor /
+          // Manager — the read / write / full-control trio — and preserve
+          // the legacy Client role ONLY when the current grant still uses
+          // it, so an admin can migrate a legacy bug-only grant to Viewer
+          // without losing the picker option entirely.
+          const externalRoles: ProjectRole[] =
+            g.role === 'Client'
+              ? ['Viewer', 'Contributor', 'Manager', 'Client']
+              : ['Viewer', 'Contributor', 'Manager'];
           return (
             <GrantRow
               key={g.id}
@@ -309,14 +320,12 @@ export function ProjectAccessManager({
               }
               primary={u?.name ?? u?.email ?? g.userId ?? ''}
               secondary={u?.email}
-              badge={{ label: 'Guest', tone: 'guest' }}
+              badge={{ label: 'External', tone: 'guest' }}
               currentRole={g.role}
-              // Guests are locked to Client — surfacing other roles here would
-              // be a footgun (and the backend would reject the change anyway).
-              availableRoles={['Client']}
-              onRoleChange={() => undefined}
+              availableRoles={externalRoles}
+              onRoleChange={(role) => updateRoleMutation.mutate({ grant: g, role })}
               onRevoke={() => {
-                if (window.confirm('Remove this guest from the project?')) revokeMutation.mutate(g.id);
+                if (window.confirm('Remove this external user from the project?')) revokeMutation.mutate(g.id);
               }}
             />
           );
@@ -324,8 +333,8 @@ export function ProjectAccessManager({
         <AddGuestInline
           clientUsers={clientUsers}
           pending={grantMutation.isPending}
-          onSubmit={(userId) =>
-            grantMutation.mutate({ subjectKind: 'user', userId, role: 'Client' })
+          onSubmit={(userId, role) =>
+            grantMutation.mutate({ subjectKind: 'user', userId, role })
           }
           onInvite={() => setInviteOpen(true)}
         />

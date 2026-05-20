@@ -14,6 +14,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import type { Priority } from '../components/task-bits';
 import { api } from '../lib/api';
+import { useResolvedProject } from '../lib/project-route';
 import { queryKeys } from '../lib/query-keys';
 
 import { Pane } from './sprint-planning/Pane';
@@ -33,7 +34,11 @@ import type { PlannerTask, Project, Side, Sprint } from './sprint-planning/types
 // =============================================================================
 
 export function SprintPlanningPage(): JSX.Element {
-  const { projectId = '', sprintId = '' } = useParams<{ projectId: string; sprintId: string }>();
+  // Sprint id keeps using useParams (still a UUID). Project resolution goes
+  // through the slug-aware hook so `/projects/ACME/sprints/<sprintId>/plan`
+  // works alongside legacy UUID URLs.
+  const { sprintId = '' } = useParams<{ sprintId: string }>();
+  const { projectId } = useResolvedProject();
   const queryClient = useQueryClient();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 

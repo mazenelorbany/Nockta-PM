@@ -6,6 +6,7 @@ import { api } from '../lib/api';
 import { useAuth } from '../lib/auth-store';
 
 import { GreetingHero } from './dashboard/GreetingHero';
+import { MyProjects } from './dashboard/MyProjects';
 import { StatStrip } from './dashboard/StatStrip';
 import { TimeThisWeek } from './dashboard/TimeThisWeek';
 import { StandupCard } from './dashboard/StandupCard';
@@ -77,11 +78,15 @@ export function DashboardPage(): JSX.Element {
   const firstName = (user?.name ?? user?.email ?? 'there').split(' ')[0];
 
   return (
-    <div className="space-y-8 pb-12">
+    // Tightened from space-y-8 → space-y-5 on the outer stack and space-y-6 →
+    // space-y-5 inside so a returning user sees Stat strip + Projects + first
+    // task list above the fold on a 13" laptop. The hero itself was also
+    // slimmed (see GreetingHero) for the same reason.
+    <div className="space-y-5 pb-12">
       {/* Cinematic greeting hero — brand gradient band, big display heading */}
       <GreetingHero firstName={firstName} />
 
-      <div className="px-4 sm:px-6 md:px-8 space-y-6">
+      <div className="px-4 sm:px-6 md:px-8 space-y-5">
         {/* Surface fetch failures so the user knows the numbers aren't current.
          * Stats + tasks are computed from independent queries; either can fail
          * without the other. Retry attempts both for simplicity. */}
@@ -103,6 +108,12 @@ export function DashboardPage(): JSX.Element {
             className="rounded-lg border border-destructive/30 bg-destructive/5 py-6"
           />
         )}
+
+        {/* Recent-projects shortcut strip — one-click re-entry into any
+         * project the user has open work in, ranked by urgency. Free of an
+         * extra API call: bucketed from `allMine`. Hides itself when the
+         * user has nothing assigned (e.g. brand-new account). */}
+        <MyProjects tasks={allMine} />
 
         {/* Stat strip — four equal urgency tiles. All counts derived from
          * /search/tasks so they stay in sync with what the lists below show. */}

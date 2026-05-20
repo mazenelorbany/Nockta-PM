@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { ExternalLink, Rocket } from 'lucide-react';
-import { useParams } from 'react-router-dom';
 import { cn, EmptyState, QueryErrorState, SkeletonList } from '@nockta/ui';
 
 import { ProjectTabs } from '../components/ProjectTabs';
 import { api } from '../lib/api';
+import { useResolvedProject } from '../lib/project-route';
 import { queryKeys } from '../lib/query-keys';
 
 // =============================================================================
@@ -42,7 +42,7 @@ interface Project {
 }
 
 export function ProjectDeploymentsPage(): JSX.Element {
-  const { projectId = '' } = useParams<{ projectId: string }>();
+  const { projectId } = useResolvedProject();
 
   const projectQuery = useQuery({
     queryKey: queryKeys.project(projectId),

@@ -111,10 +111,32 @@ export class AttachmentsService {
     sizeBytes: number;
     visibility?: Visibility;
   }) {
+    // Resolve the parent FIRST so we can re-assert the actor's role on its
+    // project. sign() does this gate up-front, but confirm() previously
+    // trusted any (parentType, parentId, storageKey) the client supplied —
+    // an authed user could call confirm() targeting a project they have no
+    // upload right on (or even no access to) and plant a row pointing at a
+    // blob they uploaded against their own project. The role check + the
+    // storageKey prefix check below close that gap.
+    const { projectId, parentVisibility } = await this.resolveParentContext(input.parentType, input.parentId);
+    const role = await this.permissions.effectiveRole(actor, projectId);
+    if (role === null) throw new ForbiddenException('No access');
+    if (role === 'Viewer') throw new ForbiddenException('Viewers cannot upload');
+
+    // Pin the storageKey to the parent we just resolved. sign() always
+    // builds keys as `projects/<projectId>/<parentType>/<parentId>/<id>-<slug>`,
+    // so anything that doesn't match that prefix is either a stale/forged key
+    // from a different parent or a path-traversal attempt. Without this, an
+    // attacker who can sign a blob under their own project could attach it
+    // to a victim's task by supplying the victim's parentType+parentId.
+    const expectedPrefix = `projects/${projectId}/${input.parentType}/${input.parentId}/`;
+    if (!input.storageKey.startsWith(expectedPrefix)) {
+      throw new BadRequestException('storageKey does not match the supplied parent');
+    }
+
     const exists = await this.storage.exists(input.storageKey);
     if (!exists) throw new BadRequestException('Upload not found in object storage');
 
-    const { projectId, parentVisibility } = await this.resolveParentContext(input.parentType, input.parentId);
     // Client-uploaded files inherit client-visible regardless of incoming flag.
     const visibility: Visibility = actor.kind === 'client'
       ? 'client_visible'

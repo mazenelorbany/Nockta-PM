@@ -55,31 +55,45 @@ export class NotificationPreferencesController {
   async upsert(@CurrentUser() actor: AuthenticatedUser, @Body() dto: UpsertPrefDto) {
     // Prisma compound unique with nullable column requires findFirst+update/create — the generated
     // compound-key shape doesn't accept null for the nullable field.
-    const existing = await this.prisma.notificationPreference.findFirst({
-      where: {
-        userId: actor.id,
-        channel: dto.channel,
-        eventType: dto.eventType,
-        projectId: dto.projectId ?? null,
-      },
-    });
+    //
+    // The unique `(userId, channel, eventType, projectId)` index exists in
+    // the schema, but Postgres treats NULL as distinct in unique indexes —
+    // so two rows with `projectId IS NULL` both pass and the constraint is
+    // effectively absent for the workspace-wide row. To get atomicity we
+    // wrap the find-or-create in a Serializable transaction; two concurrent
+    // upserts now produce one winner and one P2034 retry instead of two
+    // duplicate rows that the dispatcher would then arbitrarily pick from.
     const data = {
       enabled: dto.enabled,
       digestMode: dto.digestMode ?? false,
       snoozeUntil: dto.snoozeUntil ? new Date(dto.snoozeUntil) : null,
     };
-    if (existing) {
-      return this.prisma.notificationPreference.update({ where: { id: existing.id }, data });
-    }
-    return this.prisma.notificationPreference.create({
-      data: {
-        userId: actor.id,
-        channel: dto.channel,
-        eventType: dto.eventType,
-        projectId: dto.projectId ?? null,
-        ...data,
+    const projectId = dto.projectId ?? null;
+    return this.prisma.$transaction(
+      async (tx) => {
+        const existing = await tx.notificationPreference.findFirst({
+          where: {
+            userId: actor.id,
+            channel: dto.channel,
+            eventType: dto.eventType,
+            projectId,
+          },
+        });
+        if (existing) {
+          return tx.notificationPreference.update({ where: { id: existing.id }, data });
+        }
+        return tx.notificationPreference.create({
+          data: {
+            userId: actor.id,
+            channel: dto.channel,
+            eventType: dto.eventType,
+            projectId,
+            ...data,
+          },
+        });
       },
-    });
+      { isolationLevel: 'Serializable' },
+    );
   }
 
   @Delete(':id')
@@ -109,31 +123,42 @@ export class NotificationPreferencesController {
     }
 
     // Sentinel row keeps the snooze sticky even for users with zero per-event
-    // prefs configured. Upsert it first.
-    const existing = await this.prisma.notificationPreference.findFirst({
-      where: {
-        userId: actor.id,
-        channel: SNOOZE_ALL_CHANNEL,
-        eventType: SNOOZE_ALL_EVENT,
-        projectId: null,
+    // prefs configured. The schema's unique on
+    // (userId, channel, eventType, projectId) does NOT enforce uniqueness
+    // for the sentinel because projectId=NULL, and Postgres treats NULL as
+    // distinct in unique indexes. Without the Serializable transaction below,
+    // two concurrent /snooze-all requests both find existing=null and both
+    // create a sentinel — the dispatcher then sees two rows and picks one
+    // arbitrarily, leaving the user with a "sometimes snoozed" experience.
+    await this.prisma.$transaction(
+      async (tx) => {
+        const existing = await tx.notificationPreference.findFirst({
+          where: {
+            userId: actor.id,
+            channel: SNOOZE_ALL_CHANNEL,
+            eventType: SNOOZE_ALL_EVENT,
+            projectId: null,
+          },
+        });
+        if (existing) {
+          await tx.notificationPreference.update({
+            where: { id: existing.id },
+            data: { snoozeUntil, enabled: true },
+          });
+        } else if (snoozeUntil) {
+          await tx.notificationPreference.create({
+            data: {
+              userId: actor.id,
+              channel: SNOOZE_ALL_CHANNEL,
+              eventType: SNOOZE_ALL_EVENT,
+              enabled: true,
+              snoozeUntil,
+            },
+          });
+        }
       },
-    });
-    if (existing) {
-      await this.prisma.notificationPreference.update({
-        where: { id: existing.id },
-        data: { snoozeUntil, enabled: true },
-      });
-    } else if (snoozeUntil) {
-      await this.prisma.notificationPreference.create({
-        data: {
-          userId: actor.id,
-          channel: SNOOZE_ALL_CHANNEL,
-          eventType: SNOOZE_ALL_EVENT,
-          enabled: true,
-          snoozeUntil,
-        },
-      });
-    }
+      { isolationLevel: 'Serializable' },
+    );
     // Mirror onto every existing pref so the settings UI shows the snooze
     // alongside per-event toggles.
     await this.prisma.notificationPreference.updateMany({

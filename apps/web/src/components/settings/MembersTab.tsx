@@ -182,15 +182,19 @@ export function MembersTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
             type="button"
             onClick={() => setInviteOpen(true)}
             className="tap inline-flex items-center gap-1.5 rounded-md bg-foreground text-background px-3 py-1.5 text-xs font-semibold hover:opacity-90 transition-opacity"
-            title="Email a magic-link to an external client"
+            title="Email a magic-link to an external collaborator"
           >
             <UserPlus className="h-3.5 w-3.5" />
-            Invite guest
+            Invite external
           </button>
         </div>
       </div>
 
-      {/* Segmented control: Internal / Clients / Pending / Archived */}
+      {/* Segmented control: Internal / External / Pending / Archived
+          The `client` view value still maps to the API's kind=client filter —
+          we just relabel it "External" in the UI to match the rest of the
+          rename. Keeping the underlying value avoids touching every URL,
+          query key, and analytics event that references the kind. */}
       <div className="inline-flex items-center rounded-md border border-border bg-card/30 p-0.5 text-xs">
         {(['internal', 'client', 'pending', 'archived'] as MemberView[]).map((v) => (
           <button
@@ -205,7 +209,7 @@ export function MembersTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
             )}
           >
             {v === 'client'
-              ? 'Clients'
+              ? 'External'
               : v === 'internal'
               ? 'Internal'
               : v === 'pending'
@@ -309,8 +313,9 @@ export function MembersTab({ isAdmin }: { isAdmin: boolean }): JSX.Element {
         <InviteGuestDialog
           onClose={() => setInviteOpen(false)}
           onInvited={() => {
-            // Refresh members so the new guest appears immediately, and flip
-            // the kind tab so the admin sees the new row land in Clients.
+            // Refresh members so the new external user appears immediately,
+            // and flip the kind tab so the admin sees the new row land in
+            // the External list.
             void queryClient.invalidateQueries({ queryKey: queryKeys.members() });
             setView('client');
             setInviteOpen(false);

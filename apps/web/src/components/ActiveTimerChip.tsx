@@ -34,6 +34,10 @@ interface ActiveTimer {
     id: string;
     title: string;
     projectId: string;
+    // Short project slug (e.g. "ACME") — populated by the backend so the
+    // chip can deep-link via the new key-based URL scheme without needing
+    // to round-trip through the projects list.
+    projectKey: string;
     key: string;
   };
 }
@@ -183,7 +187,7 @@ export function ActiveTimerChip(): JSX.Element | null {
     >
       <span className="h-1.5 w-1.5 rounded-full bg-status-done animate-pulse shrink-0" />
       <Link
-        to={`/projects/${active.task.projectId}/board?task=${active.taskId}`}
+        to={`/projects/${active.task.projectKey || active.task.projectId}/board?task=${active.taskId}`}
         className="text-[11px] font-mono tabular-nums text-status-done hover:underline"
       >
         {showPomodoro

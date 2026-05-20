@@ -374,6 +374,11 @@ export function makePrismaMock(): PrismaService {
   // window queries (analytics, ai cost-tracking) call $queryRaw directly.
   // Tests override with mockResolvedValueOnce per case.
   bag.$queryRaw = vi.fn().mockResolvedValue([]);
+  // $executeRaw is used for in-place writes that side-step model methods —
+  // currently the digest service's atomic JSONB append. Returns row-count by
+  // contract; default to 1 ("affected one row") so the happy path doesn't
+  // accidentally exercise the "row vanished mid-flight" branch.
+  bag.$executeRaw = vi.fn().mockResolvedValue(1);
   return bag as unknown as PrismaService;
 }
 

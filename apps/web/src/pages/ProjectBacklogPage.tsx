@@ -16,13 +16,14 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { cn, QueryErrorState, Spinner } from '@nockta/ui';
 
 import { ProjectTabs } from '../components/ProjectTabs';
 import { TaskDetailDrawer } from '../components/TaskDetailDrawer';
 import { type Priority } from '../components/task-bits';
 import { api } from '../lib/api';
+import { useResolvedProject } from '../lib/project-route';
 import { queryKeys } from '../lib/query-keys';
 
 import { BulkMoveMenu } from './project-backlog/BulkMoveMenu';
@@ -56,7 +57,9 @@ import type {
 // =============================================================================
 
 export function ProjectBacklogPage(): JSX.Element {
-  const { projectId = '' } = useParams<{ projectId: string }>();
+  // Resolve URL slug → canonical project. URL param may be UUID (legacy) or
+  // project key (`/projects/ACME/backlog`) — both resolve to the same record.
+  const { projectId } = useResolvedProject();
   const [searchParams, setSearchParams] = useSearchParams();
   const openTaskId = searchParams.get('task');
   const queryClient = useQueryClient();

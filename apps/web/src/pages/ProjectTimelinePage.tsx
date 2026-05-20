@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 
 import { ProjectTabs } from '../components/ProjectTabs';
 import { TaskDetailDrawer } from '../components/TaskDetailDrawer';
 import { api } from '../lib/api';
+import { useResolvedProject } from '../lib/project-route';
 import { queryKeys } from '../lib/query-keys';
 
 import { GanttGrid } from './project-timeline/GanttGrid';
@@ -48,7 +49,7 @@ import { apiErrorMessage } from './project-timeline/utils';
 // =============================================================================
 
 export function ProjectTimelinePage(): JSX.Element {
-  const { projectId = '' } = useParams<{ projectId: string }>();
+  const { projectId } = useResolvedProject();
   const [searchParams, setSearchParams] = useSearchParams();
   const openTaskId = searchParams.get('task');
   const queryClient = useQueryClient();

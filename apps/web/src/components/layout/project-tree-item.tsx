@@ -24,13 +24,17 @@ export function ProjectTreeItem({
   expanded?: boolean;
   onToggle?: () => void;
 }): JSX.Element {
-  const { projectId: activeProjectId } = useParams<{ projectId: string }>();
-  const isActive = activeProjectId === project.id;
+  const { projectId: activeProjectParam } = useParams<{ projectId: string }>();
+  // The URL param can be either the key (new) or the UUID (legacy bookmarks),
+  // so highlight when EITHER matches the active project.
+  const isActive =
+    activeProjectParam === project.id || activeProjectParam === project.key;
   const accent = projectAccent(project.key);
 
   return (
     <Link
-      to={`/projects/${project.id}`}
+      // Slug URL — falls back to UUID if a project somehow has no key.
+      to={`/projects/${project.key || project.id}`}
       className={cn(
         'group flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors',
         isActive

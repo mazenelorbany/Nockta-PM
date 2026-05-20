@@ -2,10 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useParams } from 'react-router-dom';
 
 import { ProjectTabs } from '../components/ProjectTabs';
 import { api } from '../lib/api';
+import { useResolvedProject } from '../lib/project-route';
 import { queryKeys } from '../lib/query-keys';
 
 import { AutomationRow } from './project-automations/AutomationRow';
@@ -22,7 +22,7 @@ import type {
 import { apiErrorMessage } from './project-automations/utils';
 
 export function ProjectAutomationsPage(): JSX.Element {
-  const { projectId = '' } = useParams<{ projectId: string }>();
+  const { projectId } = useResolvedProject();
   const queryClient = useQueryClient();
 
   const projectQuery = useQuery({

@@ -177,7 +177,10 @@ function ProjectTile({
 
   return (
     <Link
-      to={`/projects/${project.id}/board`}
+      // Prefer the human-readable key in the URL (`/projects/ACME/board`).
+      // Falls back to the UUID for any project missing a key — shouldn't
+      // happen in practice but the schema allows it.
+      to={`/projects/${project.key || project.id}/board`}
       style={{ animationDelay: `${Math.min(index, 8) * 30}ms` }}
       className={cn(
         'stagger-item magnetic relative overflow-hidden rounded-xl border border-border bg-card group transition-colors hover:border-ring',
@@ -332,7 +335,7 @@ function CreateProjectDialog({ onClose }: { onClose: () => void }): JSX.Element 
       await queryClient.invalidateQueries({ queryKey: queryKeys.projects() });
       toast.success(`Created ${project.key}`);
       onClose();
-      navigate(`/projects/${project.id}/board`);
+      navigate(`/projects/${project.key || project.id}/board`);
     },
     onError: (err) => {
       const detail =

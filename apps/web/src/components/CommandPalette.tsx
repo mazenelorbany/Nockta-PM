@@ -186,22 +186,26 @@ export function CommandPalette(): JSX.Element | null {
   function openHit(hit: Hit): void {
     if (hit.kind === 'task') {
       if (!hit.data.project) return;
+      // Emit the human-readable project key in the URL; the resolver hook on
+      // the destination page maps it back to a canonical id for API calls.
+      const projectSlug = hit.data.project.key || hit.data.project.id;
       saveRecent({
         id: `task-${hit.data.id}`,
         label: hit.data.title,
         key: hit.data.key,
-        to: `/projects/${hit.data.project.id}/board?task=${hit.data.id}`,
+        to: `/projects/${projectSlug}/board?task=${hit.data.id}`,
         type: 'task',
       });
-      navigate(`/projects/${hit.data.project.id}/board?task=${hit.data.id}`);
+      navigate(`/projects/${projectSlug}/board?task=${hit.data.id}`);
     } else if (hit.kind === 'doc') {
+      const projectSlug = hit.data.projectKey || hit.data.projectId;
       saveRecent({
         id: `doc-${hit.data.id}`,
         label: hit.data.title,
-        to: `/projects/${hit.data.projectId}/docs/${hit.data.id}`,
+        to: `/projects/${projectSlug}/docs/${hit.data.id}`,
         type: 'doc',
       });
-      navigate(`/projects/${hit.data.projectId}/docs/${hit.data.id}`);
+      navigate(`/projects/${projectSlug}/docs/${hit.data.id}`);
     } else if (hit.kind === 'recent') {
       navigate(hit.data.to);
     } else {

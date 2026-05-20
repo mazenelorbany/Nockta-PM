@@ -22,28 +22,28 @@ export function GuestSharingMode({
       value: 'internal',
       label: 'Curated',
       body:
-        'Guests only see tasks marked client-visible. Default — picks safer for projects with sensitive internal work alongside client deliverables.',
+        'External users only see tasks marked client-visible. Default — picks safer for projects with sensitive internal work alongside client deliverables.',
     },
     {
       value: 'client_visible',
       label: 'Open',
       body:
-        'Guests see every task on the project. New tasks default to client-visible. Use this when the whole project IS the client deliverable.',
+        'External users see every task on the project. New tasks default to client-visible. Use this when the whole project IS the client deliverable.',
     },
   ];
   return (
     <div className="rounded-lg border border-border bg-card/40 p-3">
       <div className="flex items-baseline justify-between mb-2">
         <div>
-          <div className="text-xs font-semibold tracking-tight">Guest sharing mode</div>
+          <div className="text-xs font-semibold tracking-tight">External sharing mode</div>
           <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-            What guests on this project see by default. You can still flip any
-            individual task with the visibility toggle in its drawer.
+            What external users on this project see by default. You can still
+            flip any individual task with the visibility toggle in its drawer.
           </p>
         </div>
         {!hasGuests && (
           <span className="text-[10px] text-muted-foreground/60 italic shrink-0 ml-2">
-            No guests yet — this setting kicks in when you add one.
+            No external users yet — this setting kicks in when you add one.
           </span>
         )}
       </div>

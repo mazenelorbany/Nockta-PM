@@ -157,7 +157,10 @@ export class WorklogService {
     taskId: string;
     startedAt: Date;
     note: string | null;
-    task: { id: string; title: string; projectId: string; key: string };
+    // `projectKey` is the project's short slug ("ACME"), included so the
+    // floating timer chip can navigate to `/projects/ACME/board?task=…`
+    // without a follow-up projects-list lookup.
+    task: { id: string; title: string; projectId: string; projectKey: string; key: string };
   } | null> {
     const row = await this.prisma.worklog.findFirst({
       where: { userId: actor.id, endedAt: null },
@@ -184,6 +187,7 @@ export class WorklogService {
         id: row.task.id,
         title: row.task.title,
         projectId: row.task.projectId,
+        projectKey: row.task.project.key,
         key: `${row.task.project.key}-${row.task.keyNumber}`,
       },
     };

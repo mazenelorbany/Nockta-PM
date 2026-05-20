@@ -5,6 +5,7 @@ import { Env } from '../../config/env';
 import { AuthModule } from '../auth/auth.module';
 
 import { NotificationDigestService } from './digest.service';
+import { DigestSinkService } from './digest-sink.service';
 import { DigestPreferencesController } from './digest.controller';
 import { NotificationMutesController } from './mutes.controller';
 import { NotificationMutesService } from './mutes.service';
@@ -61,6 +62,7 @@ const redisUrl = new URL(Env.REDIS_URL);
     NotificationMutesService,
     NotificationSnoozeService,
     NotificationDigestService,
+    DigestSinkService,
   ],
   exports: [
     NotificationsService,

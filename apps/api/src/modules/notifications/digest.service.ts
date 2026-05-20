@@ -146,13 +146,35 @@ export class NotificationDigestService implements OnModuleInit, OnModuleDestroy 
         });
         return true; // flushed + recorded, dispatcher must NOT also enqueue
       }
-      const next = [...existingItems, item];
-      const updated = await this.prisma.notificationDigest.update({
-        where: { id: open.id },
-        data: { items: next as unknown as Prisma.InputJsonValue },
-      });
-      bucketId = updated.id;
-      newLength = next.length;
+      // Atomic JSONB append. Reading `items` then writing `[...items, item]`
+      // is lost-update-prone: two concurrent enqueues both read [A,B] and
+      // both write [A,B,C] / [A,B,D]; the second wins and one notification
+      // disappears. PostgreSQL's `||` JSONB concat happens in-place, so two
+      // concurrent statements both append cleanly. Gated on `sentAt IS NULL`
+      // so a row a flusher just claimed can't be revived. count=0 means the
+      // bucket was just flushed underneath us — fall through to create a
+      // fresh one.
+      const appended = await this.prisma.$executeRaw`
+        UPDATE "NotificationDigest"
+        SET "items" = COALESCE("items", '[]'::jsonb) || ${JSON.stringify(item)}::jsonb
+        WHERE "id" = ${open.id}::uuid AND "sentAt" IS NULL
+      `;
+      if (appended === 0) {
+        // Bucket was claimed for flush mid-flight; start a new one so this
+        // event isn't dropped.
+        const created = await this.prisma.notificationDigest.create({
+          data: {
+            userId: input.recipientUserId,
+            channelKind: channel,
+            items: [item] as unknown as Prisma.InputJsonValue,
+          },
+        });
+        bucketId = created.id;
+        newLength = 1;
+      } else {
+        bucketId = open.id;
+        newLength = existingItems.length + 1;
+      }
     } else {
       const created = await this.prisma.notificationDigest.create({
         data: {

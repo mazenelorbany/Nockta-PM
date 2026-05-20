@@ -96,6 +96,13 @@ export class RecurrenceService {
   /**
    * Spawn copies for every due, enabled recurrence. Called from the recurrence
    * cron-style job. Idempotent: re-running before nextRunAt is harmless.
+   *
+   * Multi-instance safety: the spawn loop atomically claims each row via a
+   * conditional updateMany on the unchanged `nextRunAt`. If two API replicas
+   * both fire the cron at the same instant and both findMany the same due
+   * batch, only one claim wins per row — the loser sees `count: 0` and
+   * skips. Without this, both replicas would spawn duplicate tasks for the
+   * same recurrence.
    */
   async spawnDueRecurrences(now: Date = new Date()): Promise<{ spawned: number }> {
     const due = await this.prisma.taskRecurrence.findMany({
@@ -114,6 +121,19 @@ export class RecurrenceService {
 
     let spawned = 0;
     for (const r of due) {
+      // Provisional nextRunAt — the real one is recomputed inside spawnOne
+      // after the task is created. We just need *some* future timestamp to
+      // gate concurrent claimants. 10 minutes is well past the cron
+      // tick rate so a same-instant retry can't collide.
+      const provisional = new Date(now.getTime() + 10 * 60 * 1000);
+      const claim = await this.prisma.taskRecurrence.updateMany({
+        where: { id: r.id, nextRunAt: r.nextRunAt },
+        data: { nextRunAt: provisional },
+      });
+      if (claim.count === 0) {
+        // Another replica claimed this row first; skip silently.
+        continue;
+      }
       try {
         await this.spawnOne(r);
         spawned += 1;

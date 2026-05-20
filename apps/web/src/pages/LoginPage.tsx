@@ -148,21 +148,21 @@ export function LoginPage(): JSX.Element {
                   onClick={() => void devLogin('design')}
                 />
                 <PersonaButton
-                  label={'Guest · Contributor'}
-                  sub={'External · can edit'}
+                  label={'External · Contributor'}
+                  sub={'Write access'}
                   disabled={loadingPersona !== null}
                   active={loadingPersona === 'guest-contributor'}
                   onClick={() => void devLogin('guest-contributor')}
                 />
                 <PersonaButton
-                  label={'Guest · Viewer'}
-                  sub={'External · read-only'}
+                  label={'External · Viewer'}
+                  sub={'Read-only'}
                   disabled={loadingPersona !== null}
                   active={loadingPersona === 'guest-viewer'}
                   onClick={() => void devLogin('guest-viewer')}
                 />
                 <PersonaButton
-                  label={'Guest · Client'}
+                  label={'External · Bug reporter (legacy)'}
                   sub={'Bug reports only'}
                   disabled={loadingPersona !== null}
                   active={loadingPersona === 'guest-client'}

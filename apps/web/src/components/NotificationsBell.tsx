@@ -272,17 +272,28 @@ export function NotificationsBell(): JSX.Element {
               </div>
             ) : (
               <ul className="stagger-list">
-                {items.map((n) => (
+                {items.map((n) => {
+                  // Notification rows carry the related project's UUID; the
+                  // projects query (already cached above) lets us translate
+                  // to the human-readable key so the deep-link URL reads as
+                  // `/projects/ACME/board?task=…` instead of a UUID.
+                  const proj =
+                    n.relatedProjectId && projectsQuery.data
+                      ? projectsQuery.data.find((p) => p.id === n.relatedProjectId)
+                      : null;
+                  return (
                   <li key={n.id} className="stagger-item">
                     <NotificationItem
                       n={n}
+                      projectKey={proj?.key ?? null}
                       onClick={() => {
                         if (!n.readAt) markOne.mutate(n.id);
                         setOpen(false);
                       }}
                     />
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
           </div>
@@ -588,11 +599,22 @@ function minutesUntilTomorrow9am(): number {
   return Math.max(1, Math.round((tomorrow.getTime() - d.getTime()) / 60_000));
 }
 
-function NotificationItem({ n, onClick }: { n: Notification; onClick: () => void }): JSX.Element {
+function NotificationItem({
+  n,
+  projectKey,
+  onClick,
+}: {
+  n: Notification;
+  projectKey: string | null;
+  onClick: () => void;
+}): JSX.Element {
   const unread = !n.readAt;
+  // Slug-first URL when the parent component resolved a key; UUID otherwise
+  // so deep-links still work for projects the cache hasn't surfaced yet.
+  const projectSlug = projectKey || n.relatedProjectId;
   const href =
-    n.relatedTaskId && n.relatedProjectId
-      ? `/projects/${n.relatedProjectId}/board?task=${n.relatedTaskId}`
+    n.relatedTaskId && projectSlug
+      ? `/projects/${projectSlug}/board?task=${n.relatedTaskId}`
       : '#';
   const summary =
     typeof n.payload['title'] === 'string'

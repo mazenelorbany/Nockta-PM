@@ -211,18 +211,105 @@ describe('AttachmentsService.confirm', () => {
       projectId: 'p1',
       visibility: 'internal',
     } as never);
+    // confirm() now re-asserts the role on the resolved project, mirroring
+    // sign(). Default the happy-path tests to Contributor so existing
+    // assertions about visibility/queue side-effects don't trip on the
+    // freshly-added authz gate.
+    mocks.permissions.effectiveRole.mockResolvedValueOnce('Contributor');
   }
+
+  it('refuses if the actor has no access to the parent project', async () => {
+    // confirm() used to skip the role check that sign() enforces, so any authed
+    // user could plant blobs on tasks they had no role on (the storage object
+    // existed because they'd uploaded under their own project). Lock that down.
+    const { service, mocks } = build();
+    vi.mocked(mocks.prisma.task.findUnique).mockResolvedValueOnce({
+      projectId: 'p1',
+      visibility: 'internal',
+    } as never);
+    mocks.permissions.effectiveRole.mockResolvedValueOnce(null);
+
+    await expect(
+      service.confirm(buildActor(), {
+        uploadId: 'upload-1',
+        storageKey: 'projects/p1/Task/task-1/file.pdf',
+        parentType: 'Task',
+        parentId: 'task-1',
+        originalFilename: 'file.pdf',
+        mimeType: 'application/pdf',
+        sizeBytes: 100,
+      }),
+    ).rejects.toThrow(ForbiddenException);
+    expect(mocks.prisma.attachment.create).not.toHaveBeenCalled();
+  });
+
+  it('refuses Viewers — read-only role can never persist an attachment row', async () => {
+    const { service, mocks } = build();
+    vi.mocked(mocks.prisma.task.findUnique).mockResolvedValueOnce({
+      projectId: 'p1',
+      visibility: 'internal',
+    } as never);
+    mocks.permissions.effectiveRole.mockResolvedValueOnce('Viewer');
+
+    await expect(
+      service.confirm(buildActor(), {
+        uploadId: 'upload-1',
+        storageKey: 'projects/p1/Task/task-1/file.pdf',
+        parentType: 'Task',
+        parentId: 'task-1',
+        originalFilename: 'file.pdf',
+        mimeType: 'application/pdf',
+        sizeBytes: 100,
+      }),
+    ).rejects.toThrow(ForbiddenException);
+    expect(mocks.prisma.attachment.create).not.toHaveBeenCalled();
+  });
+
+  it('refuses a storageKey whose path does not match the supplied parent', async () => {
+    // Concrete attack this guard blocks: attacker has Contributor on project
+    // P_attacker, uploads under projects/P_attacker/Task/own/...; then calls
+    // /confirm with parentType+parentId pointing at a task in P_victim
+    // (where they're also Contributor). Without the prefix pin, the row
+    // would be persisted against the victim's task, pointing at the
+    // attacker-controlled blob.
+    const { service, mocks } = build();
+    vi.mocked(mocks.prisma.task.findUnique).mockResolvedValueOnce({
+      projectId: 'p_victim',
+      visibility: 'internal',
+    } as never);
+    mocks.permissions.effectiveRole.mockResolvedValueOnce('Contributor');
+
+    await expect(
+      service.confirm(buildActor(), {
+        uploadId: 'upload-1',
+        // Path-encodes a different project than parentId resolves to.
+        storageKey: 'projects/p_attacker/Task/own/file.pdf',
+        parentType: 'Task',
+        parentId: 'task-victim',
+        originalFilename: 'file.pdf',
+        mimeType: 'application/pdf',
+        sizeBytes: 100,
+      }),
+    ).rejects.toThrow(BadRequestException);
+    expect(mocks.storage.exists).not.toHaveBeenCalled();
+    expect(mocks.prisma.attachment.create).not.toHaveBeenCalled();
+  });
 
   it('refuses to record an attachment that does not actually exist in S3', async () => {
     // Guards against a malicious client calling /confirm without ever calling
     // /sign — otherwise we'd persist a DB row pointing at nothing.
     const { service, mocks } = build();
+    vi.mocked(mocks.prisma.task.findUnique).mockResolvedValueOnce({
+      projectId: 'p1',
+      visibility: 'internal',
+    } as never);
+    mocks.permissions.effectiveRole.mockResolvedValueOnce('Contributor');
     mocks.storage.exists.mockResolvedValueOnce(false);
 
     await expect(
       service.confirm(buildActor(), {
         uploadId: 'upload-1',
-        storageKey: 'projects/p/Task/t/missing.pdf',
+        storageKey: 'projects/p1/Task/task-1/missing.pdf',
         parentType: 'Task',
         parentId: 'task-1',
         originalFilename: 'missing.pdf',

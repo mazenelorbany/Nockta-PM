@@ -67,7 +67,10 @@ export const EVENT_MAP: Record<string, EventMapEntry> = {
   //     AuditLog row, which is what admins actually need;
   //   - keeping the emit as a no-mapping signal lets future subscribers
   //     (rate-limit, anomaly detection) attach without ceremony.
-  'auth.refresh_reuse':   { type: 'WebhookSignatureFailed', visibility: 'admin_only', entityType: 'User', entityIdKey: 'userId' },
+  // Refresh-token reuse — fired by AuthService when a child token is presented
+  // a second time. The prior label here was 'WebhookSignatureFailed', a
+  // copy-paste artefact that surfaced an unrelated string in the audit log.
+  'auth.refresh_reuse':   { type: 'RefreshTokenReuse', visibility: 'admin_only', entityType: 'User', entityIdKey: 'userId' },
 
   // GitHub / Chat / Deployment events — populated later as those modules ship
   'github.pr_linked':         { type: 'PRLinked',           visibility: 'public', entityType: 'Task',       entityIdKey: 'taskId',       projectIdKey: 'projectId' },

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Clock, ListChecks, ShieldAlert, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { cn } from '@nockta/ui';
 
 import { ProjectTabs } from '../components/ProjectTabs';
@@ -17,6 +17,7 @@ import {
   type TaskType,
 } from '../components/task-bits';
 import { api } from '../lib/api';
+import { useResolvedProject } from '../lib/project-route';
 import { queryKeys } from '../lib/query-keys';
 
 // =============================================================================
@@ -77,7 +78,7 @@ interface Task {
 }
 
 export function ProjectDashboardPage(): JSX.Element {
-  const { projectId = '' } = useParams<{ projectId: string }>();
+  const { projectId } = useResolvedProject();
   const [searchParams, setSearchParams] = useSearchParams();
   const openTaskId = searchParams.get('task');
   const [assigneeFilter, setAssigneeFilter] = useState<string | null>(null);
@@ -375,7 +376,7 @@ function TeammateCard({
             {displayName}
             {row.user?.kind === 'client' && (
               <span className="text-[9px] uppercase tracking-wider px-1 py-px rounded bg-priority-medium/15 text-priority-medium font-semibold">
-                Guest
+                External
               </span>
             )}
           </div>

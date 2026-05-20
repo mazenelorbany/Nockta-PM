@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { ProjectTabs } from '../components/ProjectTabs';
 import { api } from '../lib/api';
+import { useResolvedProject } from '../lib/project-route';
 import { queryKeys } from '../lib/query-keys';
 
 import { SettingsRail } from './project-settings/SettingsRail';
@@ -24,7 +25,9 @@ import type { Access, Project } from './project-settings/types';
 // =============================================================================
 
 export function ProjectSettingsPage(): JSX.Element {
-  const { projectId = '' } = useParams<{ projectId: string }>();
+  // URL param may be UUID (legacy) or project key (new default); the
+  // resolver gives us the canonical id for every API call below.
+  const { projectId } = useResolvedProject();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const location = useLocation();

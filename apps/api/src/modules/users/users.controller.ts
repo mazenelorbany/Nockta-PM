@@ -70,12 +70,20 @@ export class UsersController {
 
   @Get()
   list(
+    @CurrentUser() actor: AuthenticatedUser,
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
     @Query('kind') kind?: string,
     @Query('archived') archived?: string,
     @Query('q') q?: string,
   ) {
+    // Internal-only. Guests would otherwise dump every workspace member's
+    // email + lastSeenAt by hitting this endpoint directly — even though the
+    // SPA never points the guest portal at it, the route lives behind plain
+    // JwtAuthGuard and that's not enough on its own.
+    if (actor.kind !== 'internal') {
+      throw new ForbiddenException('Internal users only');
+    }
     if (kind && kind !== 'internal' && kind !== 'client' && kind !== 'all') {
       throw new BadRequestException(`Invalid kind: ${kind}`);
     }

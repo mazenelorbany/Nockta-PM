@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Play, Sun } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { ApiError } from '@nockta/sdk';
 import { QueryErrorState, Spinner } from '@nockta/ui';
 
@@ -20,6 +20,7 @@ import { StandupRunner } from '../components/StandupRunner';
 import { TaskDetailDrawer } from '../components/TaskDetailDrawer';
 import { api } from '../lib/api';
 import { getSocket } from '../lib/socket';
+import { useResolvedProject } from '../lib/project-route';
 import { queryKeys } from '../lib/query-keys';
 
 import { ActiveSprintBanner } from './project-board/ActiveSprintBanner';
@@ -31,7 +32,11 @@ import { CreateTaskDialog } from './project-board/TaskCreateModal';
 import { TemplatesQuickCreate } from './project-board/TemplatesQuickCreate';
 
 export function ProjectBoardPage(): JSX.Element {
-  const { projectId } = useParams<{ projectId: string }>();
+  // Routes accept either the project KEY (`/projects/ACME/board`) or the
+  // legacy UUID. `useResolvedProject` reads the URL param and looks it up
+  // against the cached projects list, returning the canonical id we hand to
+  // every downstream API call.
+  const { projectId } = useResolvedProject();
   const [searchParams, setSearchParams] = useSearchParams();
   const openTaskId = searchParams.get('task');
   const queryClient = useQueryClient();

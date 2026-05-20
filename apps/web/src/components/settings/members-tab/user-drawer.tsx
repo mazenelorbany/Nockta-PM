@@ -66,7 +66,7 @@ export function UserDrawer({
     mutationFn: (kind: 'internal' | 'client') =>
       api.patch(`/users/${userId}/kind`, { kind }),
     onSuccess: (_resp, kind) => {
-      toast.success(kind === 'client' ? 'Converted to Guest' : 'Converted to internal');
+      toast.success(kind === 'client' ? 'Converted to External' : 'Converted to internal');
       void queryClient.invalidateQueries({ queryKey: ['user-detail', userId] });
       void queryClient.invalidateQueries({ queryKey: queryKeys.members() });
     },
@@ -85,8 +85,16 @@ export function UserDrawer({
     mutationFn: (patch: { name?: string; email?: string }) =>
       api.patch<{ id: string; name: string; email: string }>(`/users/${userId}`, patch),
     onSuccess: (resp, vars) => {
-      if (vars.email !== undefined) toast.success(`Email set to ${resp.email}`);
-      else if (vars.name !== undefined) toast.success(`Renamed to ${resp.name}`);
+      if (vars.email !== undefined) {
+        // The previous copy was "Email set to X" — close enough to "Email
+        // sent to X" that more than one admin assumed a notification went
+        // out. Be explicit: this endpoint only updates the row, it does
+        // not message the user. For an external user that means their next
+        // magic link needs to be re-issued manually from the invite flow.
+        toast.success(`Email updated to ${resp.email}. The user was not notified.`);
+      } else if (vars.name !== undefined) {
+        toast.success(`Renamed to ${resp.name}`);
+      }
       void queryClient.invalidateQueries({ queryKey: ['user-detail', userId] });
       void queryClient.invalidateQueries({ queryKey: queryKeys.members() });
     },
@@ -174,7 +182,7 @@ export function UserDrawer({
                   onSave={(email) => updateProfile.mutate({ email })}
                 />
                 <div className="text-[11px] text-muted-foreground mt-1">
-                  {isClient ? 'Client' : detail.companyRole ?? 'Member'} ·
+                  {isClient ? 'External' : detail.companyRole ?? 'Member'} ·
                   joined {new Date(detail.createdAt).toLocaleDateString()}
                 </div>
               </div>
@@ -195,7 +203,7 @@ export function UserDrawer({
                   hint={
                     isMe
                       ? "Can't change your own standing."
-                      : 'Admins see everything. Members are internal teammates. Guests use the client portal.'
+                      : 'Admins see everything. Members are internal teammates. External users sign in via magic link and only see what you grant them.'
                   }
                 />
                 <div className="mt-3 inline-flex rounded-md border border-border bg-background/60 p-0.5">
@@ -203,7 +211,11 @@ export function UserDrawer({
                     [
                       { value: 'Admin' as const, label: 'Admin' },
                       { value: 'Member' as const, label: 'Member' },
-                      { value: 'Guest' as const, label: 'Guest' },
+                      // Internal identifier kept as 'Guest' so the click
+                      // handler below (which maps it to setKind('client'))
+                      // doesn't need rewriting — only the visible label
+                      // changes to match the External rename.
+                      { value: 'Guest' as const, label: 'External' },
                     ]
                   ).map((opt) => {
                     const active = isClient
@@ -220,7 +232,7 @@ export function UserDrawer({
                           if (opt.value === 'Guest') {
                             if (
                               window.confirm(
-                                `Convert ${detail.email} to a Guest? They'll lose internal access and team memberships, and will sign in via the client portal.`,
+                                `Convert ${detail.email} to an external user? They'll lose internal access and team memberships, and will sign in via magic link.`,
                               )
                             ) {
                               setKind.mutate('client');
@@ -247,7 +259,7 @@ export function UserDrawer({
                 </div>
                 {isClient && (
                   <p className="mt-2 text-[11px] text-muted-foreground">
-                    Guest accounts see only projects you grant them explicitly.
+                    External users see only projects you grant them explicitly.
                     To grant access, open a project and add them under Settings → Access.
                   </p>
                 )}

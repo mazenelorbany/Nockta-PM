@@ -227,6 +227,45 @@ export function buildCardForNotification(input: ChatPayload): CardV2 {
         },
       };
 
+    case 'DigestSummary': {
+      // Consolidated digest card — one ping for N rolled-up events instead
+      // of fanning out per item. The sink emits this with a `groupedCounts`
+      // payload so the card stays small (and Chat truncates aggressively
+      // beyond a few lines).
+      const totalCount = (payload['totalCount'] as number | undefined) ?? 0;
+      const counts = (payload['groupedCounts'] ?? {}) as {
+        mentions?: number;
+        assignments?: number;
+        blocked?: number;
+        dueSoon?: number;
+        other?: number;
+      };
+      const lines: string[] = [];
+      if (counts.mentions) lines.push(`• ${counts.mentions} mention${counts.mentions === 1 ? '' : 's'}`);
+      if (counts.assignments) lines.push(`• ${counts.assignments} assignment${counts.assignments === 1 ? '' : 's'}`);
+      if (counts.blocked) lines.push(`• ${counts.blocked} blocked`);
+      if (counts.dueSoon) lines.push(`• ${counts.dueSoon} due soon / overdue`);
+      if (counts.other) lines.push(`• ${counts.other} other`);
+      return {
+        cardId: `digest-summary-${payload['firstQueuedAt'] ?? Date.now()}`,
+        card: {
+          header: { title: 'NOCKTA DIGEST', subtitle: `${totalCount} update${totalCount === 1 ? '' : 's'}` },
+          sections: [
+            {
+              widgets: [
+                { textParagraph: { text: lines.join('<br>') || 'See inbox for details.' } },
+                {
+                  buttonList: {
+                    buttons: [button('Open inbox', { openLink: { url: `${Env.APP_URL_INTERNAL}/notifications` } })],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      };
+    }
+
     default:
       return {
         cardId: `nf-${type}`,

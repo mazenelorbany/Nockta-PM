@@ -109,7 +109,7 @@ export function SecurityTab(): JSX.Element {
           </dd>
           <dt className="text-muted-foreground inline-flex items-center gap-1">
             {'Kind'}
-            <HelpHint hint={"'internal' = signs in via Google OAuth. 'client' = magic-link guest using the client portal."} />
+            <HelpHint hint={"'internal' = signs in via Google OAuth. 'client' (a.k.a. External) = magic-link external user."} />
           </dt>
           <dd className="col-span-2 font-medium capitalize">{user?.kind ?? 'internal'}</dd>
           {sessionStart && (

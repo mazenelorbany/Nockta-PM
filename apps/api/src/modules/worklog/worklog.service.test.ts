@@ -264,7 +264,13 @@ describe('WorklogService.getMyActive', () => {
       taskId: 't-1',
       startedAt,
       note: 'refactoring login',
-      task: { id: 't-1', title: 'Login bug', projectId: 'p1', key: 'WEB-42' },
+      task: {
+        id: 't-1',
+        title: 'Login bug',
+        projectId: 'p1',
+        projectKey: 'WEB',
+        key: 'WEB-42',
+      },
     });
   });
 

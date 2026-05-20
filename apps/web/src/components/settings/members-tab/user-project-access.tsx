@@ -104,7 +104,7 @@ export function UserProjectAccess({
         title="Project access"
         hint={
           userKind === 'client'
-            ? 'Pick which projects this guest can see in the client portal.'
+            ? 'Pick which projects this external user can see, and at what level. Viewer = read-only, Contributor = read + write.'
             : 'Direct project grants (in addition to team or public access).'
         }
       />
@@ -152,8 +152,20 @@ export function UserProjectAccess({
                     : `Role inherited from ${p.source} — can't edit here`
                 }
               >
+                {/* Externals (kind='client') can now hold any project role —
+                    the legacy "locked to Client" restriction was the gap the
+                    user flagged. We surface Viewer / Contributor (the read /
+                    write framing they asked for) plus Manager for the agency
+                    case, and keep Client visible only when the current grant
+                    still uses it (so a legacy row can be edited but new ones
+                    default to the clearer Viewer/Contributor roles). */}
                 {userKind === 'client' ? (
-                  <option value="Client">Client</option>
+                  <>
+                    <option value="Viewer">Viewer (read)</option>
+                    <option value="Contributor">Contributor (write)</option>
+                    <option value="Manager">Manager</option>
+                    {p.role === 'Client' && <option value="Client">Client (legacy)</option>}
+                  </>
                 ) : (
                   <>
                     <option value="Manager">Manager</option>
@@ -241,8 +253,11 @@ function UserProjectAddRow({
   ) => void;
 }): JSX.Element {
   const [projectId, setProjectId] = useState('');
+  // Default external users to Viewer (read-only) — safer than the legacy
+  // Client role, and matches the most common "share this project with a
+  // collaborator" intent. Admin can bump to Contributor if write is needed.
   const [role, setRole] = useState<'Manager' | 'Contributor' | 'Viewer' | 'Client'>(
-    userKind === 'client' ? 'Client' : 'Contributor',
+    userKind === 'client' ? 'Viewer' : 'Contributor',
   );
 
   return (
@@ -275,17 +290,16 @@ function UserProjectAddRow({
         onChange={(e) =>
           setRole(e.target.value as 'Manager' | 'Contributor' | 'Viewer' | 'Client')
         }
-        disabled={userKind === 'client'}
-        className="rounded-md border border-input bg-background px-2 py-1.5 text-xs disabled:opacity-60"
-        title={
-          userKind === 'client'
-            ? 'Guests can only have the Client role.'
-            : 'Pick a role'
-        }
+        className="rounded-md border border-input bg-background px-2 py-1.5 text-xs"
+        title="Pick a role"
         aria-label="Role"
       >
         {userKind === 'client' ? (
-          <option value="Client">Client</option>
+          <>
+            <option value="Viewer">Viewer (read)</option>
+            <option value="Contributor">Contributor (write)</option>
+            <option value="Manager">Manager</option>
+          </>
         ) : (
           <>
             <option value="Manager">Manager</option>

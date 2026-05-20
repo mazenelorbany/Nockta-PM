@@ -29,7 +29,7 @@ export function AccessSection({
       id="access"
       icon={<ShieldCheck className="h-4 w-4" />}
       title="Access"
-      hint="Who can see this project, and at what level. Members are internal teammates. Teams roll up everyone on the team. Guests use the client portal and only see what's marked client-visible."
+      hint="Who can see this project, and at what level. Members are internal teammates. Teams roll up everyone on the team. External users sign in via magic link — pick Viewer for read-only or Contributor for write access."
     >
       {/* Chips strip — quick read on the shape of access. Clickable
           to scroll to the relevant subsection below. */}
@@ -47,7 +47,7 @@ export function AccessSection({
           href="#access-teams"
         />
         <AccessChip
-          label="Guests"
+          label="External"
           count={grantSummary.guests}
           icon={<Sparkles className="h-3 w-3" />}
           tone="guest"

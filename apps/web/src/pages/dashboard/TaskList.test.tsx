@@ -73,7 +73,11 @@ describe('TaskList', () => {
     expect(getByText('NOCK-3')).toBeTruthy();
   });
 
-  it('routes each row to /projects/:id/board?task=:id when the task has a project', () => {
+  it('routes each row to /projects/:key/board?task=:id when the task has a project', () => {
+    // URLs now embed the project KEY (e.g. /projects/NOCK/board) instead of
+    // the UUID — the dashboard's task rows were one of the high-traffic spots
+    // surfacing the legacy UUID path to users. Task id stays a UUID for the
+    // `?task=` drawer param.
     const tasks = buildTasks();
     const { container } = render(
       <MemoryRouter>
@@ -83,8 +87,8 @@ describe('TaskList', () => {
     const links = Array.from(container.querySelectorAll('a'));
     // Three tasks → three links.
     expect(links.length).toBe(3);
-    expect(links[0]?.getAttribute('href')).toBe('/projects/p1/board?task=t1');
-    expect(links[1]?.getAttribute('href')).toBe('/projects/p1/board?task=t2');
+    expect(links[0]?.getAttribute('href')).toBe('/projects/NOCK/board?task=t1');
+    expect(links[1]?.getAttribute('href')).toBe('/projects/NOCK/board?task=t2');
   });
 
   it('uses the noop "#" href when a task has no project', () => {

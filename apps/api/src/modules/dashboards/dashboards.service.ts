@@ -28,15 +28,20 @@ export class DashboardsService {
       where: { userId: actor.id }, select: { teamId: true },
     });
     const teamIds = teamMemberships.map((m) => m.teamId);
+    // IMPORTANT: do NOT drop an empty `{}` into the OR — Prisma reads it as a
+    // wildcard match and the list returns every dashboard in the workspace,
+    // leaking private dashboards' metadata to users who have no team
+    // memberships. Build the array conditionally instead.
+    const orClauses: Prisma.DashboardWhereInput[] = [
+      { ownerUserId: actor.id },
+      { scope: 'workspace' },
+      { access: { some: { userId: actor.id } } },
+    ];
+    if (teamIds.length > 0) {
+      orClauses.push({ access: { some: { teamId: { in: teamIds } } } });
+    }
     return this.prisma.dashboard.findMany({
-      where: {
-        OR: [
-          { ownerUserId: actor.id },
-          { scope: 'workspace' },
-          { access: { some: { userId: actor.id } } },
-          teamIds.length ? { access: { some: { teamId: { in: teamIds } } } } : {},
-        ].filter(Boolean) as Prisma.DashboardWhereInput[],
-      },
+      where: { OR: orClauses },
       orderBy: [{ updatedAt: 'desc' }],
       include: {
         owner: { select: { id: true, name: true, avatarUrl: true } },

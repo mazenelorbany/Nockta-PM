@@ -30,14 +30,17 @@ interface InvitePayload {
   invitedAt: string;
 }
 
-// Roles a guest can hold. The 'Client' default matches the most common
-// "external stakeholder" case — Manager / Contributor / Viewer are for the
-// less-frequent agency-or-vendor flow.
+// Roles an external user can hold. Order leads with Viewer (read-only) and
+// Contributor (read + write) — those are the two roles the user explicitly
+// asked to surface for externals. Manager is the agency / vendor case;
+// the legacy Client role (bug-only) is tucked at the bottom because we're
+// quietly de-emphasising it in favour of the clearer Viewer/Contributor
+// framing, but keep it available for the file-a-bug use case.
 const ROLE_OPTIONS: Array<{ value: ProjectRole; label: string; hint: string }> = [
-  { value: 'Client', label: 'Client', hint: 'Read-only on tasks, can file bugs and read docs.' },
-  { value: 'Viewer', label: 'Viewer', hint: 'Read-only across the whole project.' },
-  { value: 'Contributor', label: 'Contributor', hint: 'Can create + edit tasks, can\'t grant access.' },
-  { value: 'Manager', label: 'Manager', hint: 'Full control of the project (invites, settings, danger zone).' },
+  { value: 'Viewer', label: 'Viewer · Read', hint: 'See every task, comment, doc, and attachment on the project. Cannot make changes.' },
+  { value: 'Contributor', label: 'Contributor · Write', hint: 'Read + create / edit tasks and comments. Cannot grant access or change project settings.' },
+  { value: 'Manager', label: 'Manager', hint: 'Full control: invite others, edit settings, archive.' },
+  { value: 'Client', label: 'Client · Bug reporter (legacy)', hint: 'Sees only tasks marked client-visible; can file bugs. Kept for compatibility — prefer Viewer for read access.' },
 ];
 
 export function InlineInviteGuestDialog({
@@ -51,7 +54,10 @@ export function InlineInviteGuestDialog({
 }): JSX.Element {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
-  const [role, setRole] = useState<ProjectRole>('Client');
+  // Default to Viewer (read-only). The previous default was Client (the
+  // legacy bug-only role); switching to Viewer matches the "external user"
+  // mental model the rest of the UI is now built around.
+  const [role, setRole] = useState<ProjectRole>('Viewer');
 
   const invite = useMutation({
     mutationFn: () =>
@@ -83,7 +89,7 @@ export function InlineInviteGuestDialog({
         <div className="px-5 py-4 border-b border-border">
           <h2 className="text-base font-semibold flex items-center gap-2">
             <UserPlus className="h-4 w-4 text-brand" />
-            Invite a guest to this project
+            Invite an external user
           </h2>
           <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
             We'll email them a 7-day sign-in link and grant them the role you

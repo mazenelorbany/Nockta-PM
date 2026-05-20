@@ -12,9 +12,12 @@ export function TaskList({ tasks }: { tasks: MyTask[] }): JSX.Element {
       {tasks.map((t) => (
         <li key={t.id} className="stagger-item">
           <Link
+            // Prefer the project key in the URL when available so dashboard
+            // deep-links produce `/projects/ACME/board?task=…` instead of
+            // a UUID. Task id stays a UUID for the drawer's `?task=` param.
             to={
               t.project
-                ? `/projects/${t.project.id}/board?task=${t.id}`
+                ? `/projects/${t.project.key || t.project.id}/board?task=${t.id}`
                 : '#'
             }
             className="tap card-hover flex items-center gap-3 rounded-md border border-border bg-background/40 hover:bg-background hover:border-ring transition-colors px-3 py-2 text-sm group"

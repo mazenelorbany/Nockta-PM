@@ -15,6 +15,7 @@ import {
   type PMNode,
 } from '../components/prosemirror-markdown';
 import { api } from '../lib/api';
+import { useResolvedProject } from '../lib/project-route';
 import { queryKeys } from '../lib/query-keys';
 
 // =============================================================================
@@ -50,7 +51,10 @@ interface DocRevision {
 }
 
 export function ProjectDocsPage(): JSX.Element {
-  const { projectId = '', docId } = useParams<{ projectId: string; docId?: string }>();
+  // Doc id keeps using useParams (it's still a UUID). Project id (UUID, for
+  // API calls) and project key (slug, for URLs) both come from the resolver.
+  const { docId } = useParams<{ docId?: string }>();
+  const { projectId, projectKey } = useResolvedProject();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -70,7 +74,10 @@ export function ProjectDocsPage(): JSX.Element {
       api.post<DocSummary>(`/projects/${projectId}/docs`, input),
     onSuccess: (doc) => {
       queryClient.invalidateQueries({ queryKey: ['docs', projectId] });
-      navigate(`/projects/${projectId}/docs/${doc.id}`);
+      // Use the slug for the URL bar even though `projectId` (UUID) is what
+      // the API consumed above. Falls back to the raw param if the resolver
+      // hasn't yet produced a key.
+      navigate(`/projects/${projectKey || projectId}/docs/${doc.id}`);
     },
     onError: (err) => toast.error(apiErrorMessage(err, 'Could not create doc')),
   });
@@ -124,7 +131,7 @@ export function ProjectDocsPage(): JSX.Element {
               (docsQuery.data ?? []).map((d) => (
                 <Link
                   key={d.id}
-                  to={`/projects/${projectId}/docs/${d.id}`}
+                  to={`/projects/${projectKey || projectId}/docs/${d.id}`}
                   className={cn(
                     'flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors truncate',
                     d.id === docId

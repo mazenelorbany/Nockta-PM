@@ -22,17 +22,22 @@ export function GreetingHero({ firstName }: { firstName: string }): JSX.Element 
         aria-hidden="true"
         className="absolute -right-32 -bottom-24 h-[320px] w-[320px] object-contain pointer-events-none select-none opacity-30"
       />
-      <div className="relative px-4 sm:px-6 md:px-8 pt-6 pb-8 sm:pt-10 sm:pb-12 flex items-end justify-between gap-4 sm:gap-6 flex-wrap">
+      <div className="relative px-4 sm:px-6 md:px-8 pt-5 pb-6 sm:pt-7 sm:pb-8 flex items-end justify-between gap-4 sm:gap-6 flex-wrap">
         <div className="min-w-0">
           <span className="nockta-eyebrow text-brand">{greeting()}</span>
+          {/* Tightened vertical rhythm: the hero used to dominate the viewport
+              on a fresh dashboard load, pushing the actually-useful task lists
+              below the fold. Smaller display heading + reduced top padding
+              gets the user to content one screen earlier without losing the
+              welcome moment. */}
           <h1
-            className="display-heading mt-3 leading-[1.04]"
-            style={{ fontSize: 'clamp(2rem, 4vw, 3.4rem)' }}
+            className="display-heading mt-2 leading-[1.04]"
+            style={{ fontSize: 'clamp(1.7rem, 3vw, 2.6rem)' }}
           >
             {firstName}
             <span className="text-brand">.</span>
           </h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-3 max-w-xl">
+          <p className="text-sm text-muted-foreground mt-1.5 max-w-xl">
             {"Here's what's on your plate today. Sharpest items first."}
           </p>
         </div>

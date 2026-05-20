@@ -39,8 +39,9 @@ import { renderPdf } from './serializers/pdf';
 //   5. upload to S3 if S3_BUCKET-style storage is configured; otherwise drop
 //      the file in LOCAL_EXPORT_DIR/<runId> and stamp an /exports/:runId
 //      /download URL on the run.
-//   6. flip the run to 'completed' + emit 'export.completed' so the email
-//      delivery path (TODO: real email module) can fire on it.
+//   6. flip the run to 'completed', email the signed URL to the recipient
+//      configured on the schedule, then emit 'export.completed' for listeners
+//      (audit log, etc.).
 // =============================================================================
 
 export const LOCAL_EXPORT_DIR = '/tmp/nockta-exports';
