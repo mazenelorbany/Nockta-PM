@@ -10,6 +10,7 @@ import { teamStats as teamStatsMetric } from './metrics/team-stats';
 import { org as orgMetric } from './metrics/org-dashboard';
 import { burndown as burndownMetric } from './metrics/burndown';
 import { worklogReport as worklogReportMetric } from './metrics/worklog-report';
+import { worklogByUser as worklogByUserMetric } from './metrics/worklog-by-user';
 import { workload as workloadMetric } from './metrics/workload';
 import { workloadDetail as workloadDetailMetric } from './metrics/workload-detail';
 import { goalHitRate as goalHitRateMetric } from './metrics/goal-hit-rate';
@@ -69,6 +70,15 @@ export class AnalyticsService {
     weeks: number,
   ) {
     return worklogReportMetric(this.prisma, this.permissions, actor, projectId, weeks);
+  }
+
+  // ---------------- Workspace-wide hours-by-user (Admin only) ----------------
+
+  async worklogByUser(
+    actor: AuthenticatedUser,
+    input: { from: Date; to: Date; projectId?: string | null },
+  ) {
+    return worklogByUserMetric(this.prisma, actor, input);
   }
 
   // ---------------- Workload (cross-project) ----------------

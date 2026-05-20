@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseIntPipe, ParseUUIDPipe, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Param, ParseIntPipe, ParseUUIDPipe, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -58,6 +58,39 @@ export class AnalyticsController {
     @Query('weeks', new ParseIntPipe({ optional: true })) weeks?: number,
   ) {
     return this.analytics.worklogReport(actor, projectId, weeks ?? 12);
+  }
+
+  /**
+   * Workspace-wide per-user hours roll-up for an arbitrary date range.
+   * Admin-only — see worklog-by-user.ts for the rationale (the personal
+   * + per-project views cover non-admin self-service).
+   *
+   * Query params:
+   *   - from        ISO date (required) — inclusive lower bound.
+   *   - to          ISO date (required) — EXCLUSIVE upper bound, so a
+   *                 month range like 2026-04-01..2026-05-01 is right-open.
+   *   - projectId   UUID (optional)     — narrow to a single project.
+   */
+  @Get('worklog/by-user')
+  worklogByUser(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('projectId') projectId?: string,
+  ) {
+    if (!from || !to) {
+      throw new BadRequestException('from and to (ISO dates) are required');
+    }
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+      throw new BadRequestException('from and to must be valid ISO dates');
+    }
+    return this.analytics.worklogByUser(actor, {
+      from: fromDate,
+      to: toDate,
+      ...(projectId ? { projectId } : {}),
+    });
   }
 
   @Get('workload')

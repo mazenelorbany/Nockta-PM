@@ -16,6 +16,13 @@ const AnalyticsReportsPage = lazy(() =>
   import('./AnalyticsReportsPage').then((m) => ({ default: m.AnalyticsReportsPage })),
 );
 
+// Admin-only "Hours by user" — date pickers + per-user table are heavy
+// enough that we keep it lazy so non-admins (and admins on the personal
+// tab) don't pay the bundle cost on first paint.
+const HoursByUserTab = lazy(() =>
+  import('./analytics/HoursByUserTab').then((m) => ({ default: m.HoursByUserTab })),
+);
+
 // =============================================================================
 // /analytics — recharts-powered dashboards for personal + org.
 // =============================================================================
@@ -76,7 +83,7 @@ interface VelocityData {
 export function AnalyticsPage(): JSX.Element {
   const { user } = useAuth();
   const isAdmin = user?.companyRole === 'Admin';
-  const [tab, setTab] = useState<'personal' | 'org' | 'burndown' | 'velocity' | 'reports'>('personal');
+  const [tab, setTab] = useState<'personal' | 'org' | 'burndown' | 'velocity' | 'hours' | 'reports'>('personal');
 
   return (
     <div className="flex flex-col h-full">
@@ -109,6 +116,10 @@ export function AnalyticsPage(): JSX.Element {
             ...(isAdmin ? [{ id: 'org' as const, label: 'Organization' }] : []),
             { id: 'burndown' as const, label: 'Sprint burndown' },
             { id: 'velocity' as const, label: 'Velocity' },
+            // Hours-by-user is Admin-only — the endpoint refuses non-admins
+            // and the tab would otherwise show an error pane for them, so
+            // keep it off the strip entirely for Members/Externals.
+            ...(isAdmin ? [{ id: 'hours' as const, label: 'Hours by user' }] : []),
             { id: 'reports' as const, label: 'Reports' },
           ]
         ).map((tab2) => (
@@ -130,6 +141,11 @@ export function AnalyticsPage(): JSX.Element {
         {tab === 'org' && isAdmin && <OrgDashboard />}
         {tab === 'burndown' && <BurndownTab />}
         {tab === 'velocity' && <VelocityTab />}
+        {tab === 'hours' && isAdmin && (
+          <Suspense fallback={<Skeleton className="h-64" />}>
+            <HoursByUserTab />
+          </Suspense>
+        )}
         {tab === 'reports' && (
           <Suspense fallback={<Skeleton className="h-64" />}>
             <AnalyticsReportsPage />
