@@ -3,6 +3,7 @@ import { Workflow } from 'lucide-react';
 
 import { Section, Field, ToggleRow } from './shared';
 import { WorkflowTransitionsMatrix } from './WorkflowTransitionsMatrix';
+import { WorkflowStatusesEditor } from './WorkflowStatusesEditor';
 import type { Project } from './types';
 
 export function WorkflowSection({
@@ -58,6 +59,13 @@ export function WorkflowSection({
           onBlur={() => commit('maxAttachmentMb')}
           className="rounded-md border border-input bg-background px-2 py-1.5 text-sm w-32"
         />
+      </Field>
+
+      <Field
+        label="Statuses & columns"
+        hint="The granular states a task can be in (statuses) and the visual lanes on the board (columns). Each column owns one or more statuses; new tasks start in the status flagged 'Initial'."
+      >
+        <WorkflowStatusesEditor projectId={draft.id} />
       </Field>
 
       <Field

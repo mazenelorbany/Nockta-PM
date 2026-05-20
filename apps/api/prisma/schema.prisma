@@ -484,8 +484,72 @@ model Project {
   // defaults when the project is created; admins can edit the set in
   // Project Settings → Workflow → Allowed transitions.
   workflowTransitions ProjectWorkflowTransition[]
+  // Custom statuses + columns. Backfilled per workflow preset on project
+  // creation (1 status per column initially). Admins can author additional
+  // statuses and group them under columns from Project Settings → Workflow.
+  columns             ProjectColumn[]
+  statuses            ProjectStatus[]
 
   @@index([archivedAt])
+}
+
+/// Visual grouping on the board. A column owns 1+ statuses; the board
+/// renders one lane per column and bins cards by their status' column.
+/// Renaming or deleting a column cascades to its statuses (delete blocked
+/// if any status in the column still owns tasks — see the service).
+model ProjectColumn {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @db.Uuid
+  name      String
+  /// Display order on the board (0-based). App-managed; reordering shifts
+  /// the whole strip via a single $transaction so the relative order
+  /// stays consistent.
+  position  Int
+  /// Hex (e.g. "#7c3aed") or null to derive from the name hash at render
+  /// time. Kept as TEXT rather than a strict 7-char format so the schema
+  /// doesn't fight an admin who pastes "rgb(…)".
+  color     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project  Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  statuses ProjectStatus[]
+
+  @@unique([projectId, name])
+  @@index([projectId])
+}
+
+/// Granular state a task can be in. Many statuses can share a column
+/// (e.g. "Done" + "Shipped" + "Won't Fix" all under the "Done" column).
+/// `Task.status` is the status's NAME (text) — the name is unique per
+/// project and renames cascade across Task.status and the workflow
+/// transitions table in the service.
+model ProjectStatus {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  columnId        String   @db.Uuid
+  name            String
+  /// Display order WITHIN the parent column. Cards in the same status are
+  /// ordered by their `boardPosition`; this position is only the order in
+  /// which the status badge appears in pickers and the column header strip.
+  position        Int
+  color           String?
+  /// Exactly one status per project is the default for newly-created tasks
+  /// (legacy WorkflowPreset's first entry). Enforced by a partial unique
+  /// index in companion.sql so the constraint survives renames.
+  isInitialStatus Boolean  @default(false)
+  /// "Terminal" status used by the parent-completion gate. Any number per
+  /// project (a Design project may have both Approved + Done as done-ish).
+  isDoneStatus    Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  column  ProjectColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, name])
+  @@index([projectId])
+  @@index([columnId])
 }
 
 /// Per-project directed graph of allowed status transitions. Rows are

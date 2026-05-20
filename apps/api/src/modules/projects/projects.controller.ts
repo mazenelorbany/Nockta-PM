@@ -10,6 +10,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
 
 import { ProjectsService } from './projects.service';
+import { ProjectWorkflowService } from './project-workflow.service';
 
 class CreateProjectDto {
   @IsString() @Matches(/^[A-Z]{2,10}$/) key!: string;
@@ -85,11 +86,48 @@ class ReplaceTransitionsDto {
   transitions!: WorkflowTransitionDto[];
 }
 
+class CreateColumnDto {
+  @IsString() @MinLength(1) @MaxLength(60) name!: string;
+  @IsOptional() @IsString() color?: string | null;
+  @IsOptional() position?: number;
+}
+
+class UpdateColumnDto {
+  @IsString() @MinLength(1) @MaxLength(60) name!: string;
+}
+
+class ReorderColumnsDto {
+  @IsArray() @ArrayMaxSize(100)
+  @IsUUID('all', { each: true })
+  orderedIds!: string[];
+}
+
+class CreateStatusDto {
+  @IsUUID() columnId!: string;
+  @IsString() @MinLength(1) @MaxLength(60) name!: string;
+  @IsOptional() @IsString() color?: string | null;
+  @IsOptional() @IsBoolean() isInitialStatus?: boolean;
+  @IsOptional() @IsBoolean() isDoneStatus?: boolean;
+  @IsOptional() position?: number;
+}
+
+class UpdateStatusDto {
+  @IsOptional() @IsString() @MinLength(1) @MaxLength(60) name?: string;
+  @IsOptional() @IsUUID() columnId?: string;
+  @IsOptional() @IsString() color?: string | null;
+  @IsOptional() @IsBoolean() isInitialStatus?: boolean;
+  @IsOptional() @IsBoolean() isDoneStatus?: boolean;
+  @IsOptional() position?: number;
+}
+
 @ApiTags('projects')
 @ApiBearerAuth()
 @Controller('projects')
 export class ProjectsController {
-  constructor(private readonly projects: ProjectsService) {}
+  constructor(
+    private readonly projects: ProjectsService,
+    private readonly workflow: ProjectWorkflowService,
+  ) {}
 
   @Get()
   list(@CurrentUser() actor: AuthenticatedUser) {
@@ -204,6 +242,99 @@ export class ProjectsController {
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
     return this.projects.resetWorkflowTransitions(actor, id);
+  }
+
+  // ---- Columns + statuses (custom workflow) ----
+
+  /**
+   * Snapshot of a project's columns + statuses. Powers the board column
+   * strip + the workflow settings editor. Viewer+ because the board
+   * reads this on every paint.
+   */
+  @Get(':id/workflow')
+  workflowSnapshot(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return this.workflow.snapshot(actor, id);
+  }
+
+  /** Hard reset columns + statuses + transitions to preset defaults. Manager+. */
+  @Post(':id/workflow/reset')
+  resetWorkflow(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return this.workflow.resetToDefaults(actor, id);
+  }
+
+  // ----- columns -----
+
+  @Post(':id/columns')
+  createColumn(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: CreateColumnDto,
+  ) {
+    return this.workflow.createColumn(actor, id, dto);
+  }
+
+  @Patch(':id/columns/:columnId')
+  renameColumn(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('columnId', new ParseUUIDPipe()) columnId: string,
+    @Body() dto: UpdateColumnDto,
+  ) {
+    return this.workflow.renameColumn(actor, id, columnId, dto.name);
+  }
+
+  @Put(':id/columns/order')
+  reorderColumns(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: ReorderColumnsDto,
+  ) {
+    return this.workflow.reorderColumns(actor, id, dto.orderedIds);
+  }
+
+  @Delete(':id/columns/:columnId')
+  deleteColumn(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('columnId', new ParseUUIDPipe()) columnId: string,
+  ) {
+    return this.workflow.deleteColumn(actor, id, columnId);
+  }
+
+  // ----- statuses -----
+
+  @Post(':id/statuses')
+  createStatus(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: CreateStatusDto,
+  ) {
+    return this.workflow.createStatus(actor, id, dto);
+  }
+
+  @Patch(':id/statuses/:statusId')
+  updateStatus(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('statusId', new ParseUUIDPipe()) statusId: string,
+    @Body() dto: UpdateStatusDto,
+  ) {
+    return this.workflow.updateStatus(actor, id, statusId, dto);
+  }
+
+  @Delete(':id/statuses/:statusId')
+  deleteStatus(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('statusId', new ParseUUIDPipe()) statusId: string,
+  ) {
+    return this.workflow.deleteStatus(actor, id, statusId);
   }
 
   @Delete(':id/access/:grantId')

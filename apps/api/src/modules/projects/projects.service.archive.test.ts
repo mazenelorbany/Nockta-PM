@@ -49,11 +49,13 @@ function buildService(): { service: ProjectsService; mocks: ArchiveMocks } {
     sendProjectInvite: vi.fn().mockResolvedValue(undefined),
     requestMagicLink: vi.fn().mockResolvedValue(undefined),
   };
+  const workflow = { seedDefaults: vi.fn().mockResolvedValue(undefined) };
   const service = new ProjectsService(
     prisma,
     permissions as unknown as PermissionsService,
     events.instance,
     auth as unknown as AuthService,
+    workflow as unknown as import('./project-workflow.service').ProjectWorkflowService,
   );
   return { service, mocks: { prisma, permissions, events } };
 }

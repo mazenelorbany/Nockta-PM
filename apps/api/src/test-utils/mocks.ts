@@ -59,7 +59,9 @@ export function makePrismaMock(): PrismaService {
       'delete',
     ]),
     projectAccess: model(['findFirst', 'findMany', 'create', 'update', 'upsert', 'delete']),
-    projectWorkflowTransition: model(['findMany', 'createMany', 'deleteMany']),
+    projectWorkflowTransition: model(['findMany', 'createMany', 'deleteMany', 'updateMany']),
+    projectColumn: model(['findFirst', 'findUnique', 'findMany', 'create', 'update', 'delete', 'deleteMany']),
+    projectStatus: model(['findFirst', 'findUnique', 'findMany', 'create', 'update', 'delete', 'deleteMany', 'updateMany', 'count']),
     teamMember: model(['findMany', 'deleteMany', 'createMany']),
     team: model(['findMany', 'findUnique']),
     task: model([

@@ -7,6 +7,21 @@ import { PRESET_STATUSES } from '../constants';
 import type { ActiveSprint, Project, Task } from '../types';
 import { queryKeys } from '../../../lib/query-keys';
 
+// Server-driven workflow snapshot. Drives the board's column list so admins
+// can add a custom status from Project Settings → Workflow and see it appear
+// as a new lane on the next paint, without restarting the app.
+interface WorkflowSnapshot {
+  columns: Array<{ id: string; name: string; position: number }>;
+  statuses: Array<{
+    id: string;
+    columnId: string;
+    name: string;
+    position: number;
+    isInitialStatus: boolean;
+    isDoneStatus: boolean;
+  }>;
+}
+
 export interface UseBoardDataResult {
   projectQuery: UseQueryResult<Project>;
   tasksQuery: UseQueryResult<Task[]>;
@@ -54,12 +69,36 @@ export function useBoardData({
     enabled: Boolean(savedViewParam),
     staleTime: 30_000,
   });
+  const workflowQuery = useQuery({
+    queryKey: ['project-workflow', projectId],
+    queryFn: () => api.get<WorkflowSnapshot>(`/projects/${projectId}/workflow`),
+    enabled: Boolean(projectId),
+  });
 
   const activeSprint = (sprintsQuery.data ?? []).find((s) => s.state === 'active') ?? null;
   const tasks = tasksQuery.data ?? [];
   const project = projectQuery.data;
 
-  const columns = useMemo(() => (project ? PRESET_STATUSES[project.workflowPreset] : []), [project]);
+  // Columns on the board are the project's ProjectStatus names, ordered by
+  // (column.position, status.position) so the visual order tracks what the
+  // Workflow settings editor shows. Falls back to the preset constant
+  // during the brief window before the workflow query resolves so the board
+  // doesn't render a blank canvas on first paint.
+  const columns = useMemo(() => {
+    const snap = workflowQuery.data;
+    if (!snap || snap.statuses.length === 0) {
+      return project ? PRESET_STATUSES[project.workflowPreset] : [];
+    }
+    const colPos = new Map(snap.columns.map((c) => [c.id, c.position]));
+    return [...snap.statuses]
+      .sort((a, b) => {
+        const ca = colPos.get(a.columnId) ?? 0;
+        const cb = colPos.get(b.columnId) ?? 0;
+        if (ca !== cb) return ca - cb;
+        return a.position - b.position;
+      })
+      .map((s) => s.name);
+  }, [workflowQuery.data, project]);
   const visibleTasks = useMemo(() => applyTaskFilters(tasks, filters), [tasks, filters]);
   // Children (anything with a parentTaskId — subtasks, stories under epics,
   // tasks under stories) live inside their parent card. Keep them OUT of the

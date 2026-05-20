@@ -193,6 +193,15 @@ describe('TasksService.changeStatus', () => {
       { fromStatus: 'Testing', toStatus: 'Done' },
       { fromStatus: 'Done', toStatus: 'In Progress' },
     ] as never);
+    // The custom-statuses feature added a ProjectStatus.findMany on every
+    // changeStatus call to source the valid + done sets. Returning [] here
+    // triggers the legacy preset-constant fallback, which keeps existing
+    // assertions wired against the engineering-preset constants.
+    vi.mocked(
+      (mocks.prisma as unknown as {
+        projectStatus: { findMany: ReturnType<typeof vi.fn> };
+      }).projectStatus.findMany,
+    ).mockResolvedValueOnce([] as never);
   }
 
   it('rejects a status that does not exist in the project preset', async () => {

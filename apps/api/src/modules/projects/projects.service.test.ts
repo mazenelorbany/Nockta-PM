@@ -33,6 +33,9 @@ interface Mocks {
     sendProjectInvite: ReturnType<typeof vi.fn>;
     requestMagicLink: ReturnType<typeof vi.fn>;
   };
+  workflow: {
+    seedDefaults: ReturnType<typeof vi.fn>;
+  };
 }
 
 function build(): { service: ProjectsService; mocks: Mocks } {
@@ -47,13 +50,20 @@ function build(): { service: ProjectsService; mocks: Mocks } {
     sendProjectInvite: vi.fn().mockResolvedValue(undefined),
     requestMagicLink: vi.fn().mockResolvedValue(undefined),
   };
+  // The workflow service is exercised by its own tests + the integration
+  // path; here we just stub `seedDefaults` because every create() call hits
+  // it. snapshot/createColumn/etc. aren't reached by these tests.
+  const workflow = {
+    seedDefaults: vi.fn().mockResolvedValue(undefined),
+  };
   const service = new ProjectsService(
     prisma,
     permissions as unknown as PermissionsService,
     events.instance,
     auth as unknown as AuthService,
+    workflow as unknown as import('./project-workflow.service').ProjectWorkflowService,
   );
-  return { service, mocks: { prisma, permissions, events, auth } };
+  return { service, mocks: { prisma, permissions, events, auth, workflow } };
 }
 
 const ADMIN: AuthenticatedUser = {

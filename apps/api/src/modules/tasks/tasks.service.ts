@@ -105,9 +105,19 @@ export class TasksService {
     const type = (isClientBug ? 'Bug' : input.type ?? 'Task') as TaskType;
     assertTypeHierarchy({ type, parent: parent ? { type: parent.type } : null });
 
-    // Determine the position at the bottom of the Todo column.
+    // Pull the project's INITIAL status from ProjectStatus. Falls back to
+    // the preset's first status name only if the project somehow has no
+    // status rows (shouldn't happen post-migration 0029 but keeps the
+    // fail-mode graceful — a task is more useful than a 500).
+    const initialStatusRow = await this.prisma.projectStatus.findFirst({
+      where: { projectId: input.projectId, isInitialStatus: true },
+      select: { name: true },
+    });
+    const initialStatus = initialStatusRow?.name ?? defaultStatusFor(project.workflowPreset);
+
+    // Determine the position at the bottom of the initial-status column.
     const last = await this.prisma.task.findFirst({
-      where: { projectId: input.projectId, status: defaultStatusFor(project.workflowPreset) },
+      where: { projectId: input.projectId, status: initialStatus },
       orderBy: { boardPosition: 'desc' },
       select: { boardPosition: true },
     });
@@ -129,7 +139,7 @@ export class TasksService {
           type,
           title: input.title,
           description: input.description ?? null,
-          status: defaultStatusFor(project.workflowPreset),
+          status: initialStatus,
           priority: input.priority ?? 'Medium',
           visibility: isClientBug ? 'client_visible' : (input.visibility ?? 'internal'),
           reportedByClient: isClientBug,
@@ -374,17 +384,31 @@ export class TasksService {
     });
     await this.permissions.assertAtLeast(actor, task.projectId, 'Contributor');
 
-    if (!isValidStatusFor(task.project.workflowPreset, newStatus)) {
+    // Pull the project's custom status set. ProjectStatus is the runtime
+    // source of truth; the preset constant only seeds the defaults.
+    const projectStatuses = await this.prisma.projectStatus.findMany({
+      where: { projectId: task.projectId },
+      select: { name: true, isDoneStatus: true },
+    });
+    const validNames = new Set(projectStatuses.map((s) => s.name));
+    const doneNames = new Set(projectStatuses.filter((s) => s.isDoneStatus).map((s) => s.name));
+
+    // Fallback: if a project somehow has no status rows (shouldn't happen
+    // post-migration 0029) defer to the preset constants so we never 500.
+    const validate = (s: string): boolean =>
+      validNames.size > 0 ? validNames.has(s) : isValidStatusFor(task.project.workflowPreset, s);
+    const isDone = (s: string): boolean =>
+      doneNames.size > 0 ? doneNames.has(s) : doneStatusesFor(task.project.workflowPreset).includes(s);
+
+    if (!validate(newStatus)) {
       throw new BadRequestException(
-        `Status ${newStatus} not valid for workflow preset ${task.project.workflowPreset}`,
+        `Status "${newStatus}" doesn't exist in this project. Admins can add statuses from Project Settings → Workflow.`,
       );
     }
 
-    // Parent-completion gate: parents can't move to Done if any subtask isn't done.
-    if (doneStatusesFor(task.project.workflowPreset).includes(newStatus) && task.subtasks.length > 0) {
-      const incomplete = task.subtasks.filter(
-        (s) => !doneStatusesFor(task.project.workflowPreset).includes(s.status),
-      );
+    // Parent-completion gate: parents can't move to a done-marked status if any subtask isn't done.
+    if (isDone(newStatus) && task.subtasks.length > 0) {
+      const incomplete = task.subtasks.filter((s) => !isDone(s.status));
       if (incomplete.length > 0) {
         throw new ConflictException({
           message: 'Cannot complete parent while subtasks are incomplete',

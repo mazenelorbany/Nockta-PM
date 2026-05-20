@@ -5,6 +5,7 @@ import { AuthModule } from '../auth/auth.module';
 
 import { ProjectsController } from './projects.controller';
 import { ProjectsService } from './projects.service';
+import { ProjectWorkflowService } from './project-workflow.service';
 import { ProjectsPurgeProcessor } from './projects-purge.processor';
 
 @Module({
@@ -15,7 +16,7 @@ import { ProjectsPurgeProcessor } from './projects-purge.processor';
   // the magic-link invitation flow.
   imports: [ScheduleModule.forRoot(), AuthModule],
   controllers: [ProjectsController],
-  providers: [ProjectsService, ProjectsPurgeProcessor],
-  exports: [ProjectsService],
+  providers: [ProjectsService, ProjectWorkflowService, ProjectsPurgeProcessor],
+  exports: [ProjectsService, ProjectWorkflowService],
 })
 export class ProjectsModule {}

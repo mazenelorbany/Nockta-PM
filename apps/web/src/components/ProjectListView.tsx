@@ -65,6 +65,11 @@ const PRESET_STATUSES: Record<Project['workflowPreset'], string[]> = {
   generic:     ['Todo', 'In Progress', 'Done'],
 };
 
+interface WorkflowSnapshot {
+  columns: Array<{ id: string; name: string; position: number }>;
+  statuses: Array<{ id: string; columnId: string; name: string; position: number }>;
+}
+
 export function ProjectListView({
   project,
   tasks,
@@ -82,7 +87,26 @@ export function ProjectListView({
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
 }): JSX.Element {
-  const columns = PRESET_STATUSES[project.workflowPreset];
+  // Custom statuses + columns ship via /projects/:id/workflow. Fall back to
+  // the preset constant during the loading window so the table doesn't
+  // disappear on first paint.
+  const workflowQuery = useQuery({
+    queryKey: ['project-workflow', project.id],
+    queryFn: () => api.get<WorkflowSnapshot>(`/projects/${project.id}/workflow`),
+  });
+  const columns = useMemo(() => {
+    const snap = workflowQuery.data;
+    if (!snap || snap.statuses.length === 0) return PRESET_STATUSES[project.workflowPreset];
+    const colPos = new Map(snap.columns.map((c) => [c.id, c.position]));
+    return [...snap.statuses]
+      .sort((a, b) => {
+        const ca = colPos.get(a.columnId) ?? 0;
+        const cb = colPos.get(b.columnId) ?? 0;
+        if (ca !== cb) return ca - cb;
+        return a.position - b.position;
+      })
+      .map((s) => s.name);
+  }, [workflowQuery.data, project.workflowPreset]);
   const filtered = useMemo(() => applyTaskFilters(tasks, filters), [tasks, filters]);
 
   // Build the parent/child index off the FILTERED set so the hierarchy

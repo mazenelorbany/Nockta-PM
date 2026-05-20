@@ -13,7 +13,9 @@ import { PermissionsService } from '../permissions/permissions.service';
 import { AuthService } from '../auth/auth.service';
 import { Env } from '../../config/env';
 import type { AuthenticatedUser } from '../auth/types';
-import { defaultTransitionsFor, WORKFLOW_STATUSES } from '../tasks/workflow';
+import { defaultTransitionsFor } from '../tasks/workflow';
+
+import { ProjectWorkflowService } from './project-workflow.service';
 
 interface CreateProjectInput {
   key: string;
@@ -52,6 +54,7 @@ export class ProjectsService {
     private readonly permissions: PermissionsService,
     private readonly events: EventEmitter2,
     private readonly auth: AuthService,
+    private readonly workflow: ProjectWorkflowService,
   ) {}
 
   async create(actor: AuthenticatedUser, input: CreateProjectInput) {
@@ -60,10 +63,10 @@ export class ProjectsService {
       throw new BadRequestException('Project key must be 2-10 uppercase letters');
     }
     try {
-      // Project + default workflow transitions in one transaction so a new
-      // project is never momentarily missing its edge set. The transitions
-      // mirror migration 0028 + workflow.ts:defaultTransitionsFor — a
-      // linear-with-reopen graph that explicitly excludes Todo → Done.
+      // Project + workflow columns/statuses/transitions all in one
+      // transaction so a fresh project is never momentarily missing the
+      // backing data the board/picker reads. seedDefaults plants the
+      // preset's column-per-status set + its transition graph in one go.
       const project = await this.prisma.$transaction(async (tx) => {
         const created = await tx.project.create({
           data: {
@@ -76,16 +79,7 @@ export class ProjectsService {
             createdById: actor.id,
           },
         });
-        const edges = defaultTransitionsFor(input.workflowPreset);
-        if (edges.length > 0) {
-          await tx.projectWorkflowTransition.createMany({
-            data: edges.map(([fromStatus, toStatus]) => ({
-              projectId: created.id,
-              fromStatus,
-              toStatus,
-            })),
-          });
-        }
+        await this.workflow.seedDefaults(tx, created.id, input.workflowPreset);
         return created;
       });
       this.events.emit('project.created', { projectId: project.id, actorUserId: actor.id });
@@ -283,14 +277,21 @@ export class ProjectsService {
     await this.permissions.assertAtLeast(actor, projectId, 'Manager');
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
-      select: { workflowPreset: true },
+      select: { id: true },
     });
     if (!project) throw new NotFoundException('Project not found');
-    const validStatuses = new Set(WORKFLOW_STATUSES[project.workflowPreset] as readonly string[]);
+    // Validate edge endpoints against the project's CUSTOM status set, not
+    // the preset constant — once admins author custom statuses
+    // (ProjectStatus rows) they can reference those in transitions too.
+    const projectStatuses = await this.prisma.projectStatus.findMany({
+      where: { projectId },
+      select: { name: true },
+    });
+    const validStatuses = new Set(projectStatuses.map((s) => s.name));
     for (const t of transitions) {
       if (!validStatuses.has(t.fromStatus) || !validStatuses.has(t.toStatus)) {
         throw new BadRequestException(
-          `Transition "${t.fromStatus}" → "${t.toStatus}" references a status outside the ${project.workflowPreset} preset.`,
+          `Transition "${t.fromStatus}" → "${t.toStatus}" references a status that doesn't exist in this project.`,
         );
       }
       if (t.fromStatus === t.toStatus) {
@@ -577,19 +578,10 @@ export class ProjectsService {
         },
       });
 
-      // Seed default workflow transitions for the template's preset so a
-      // freshly-cloned project enforces the same Todo → … → Done graph as
-      // any other new project. Mirror of the seeding in create().
-      const edges = defaultTransitionsFor(tpl.workflowPreset);
-      if (edges.length > 0) {
-        await tx.projectWorkflowTransition.createMany({
-          data: edges.map(([fromStatus, toStatus]) => ({
-            projectId: created.id,
-            fromStatus,
-            toStatus,
-          })),
-        });
-      }
+      // Seed default columns/statuses + workflow transitions for the
+      // template's preset so a freshly-cloned project has the same
+      // workflow plumbing as one created from scratch.
+      await this.workflow.seedDefaults(tx, created.id, tpl.workflowPreset);
 
       // Clone labels
       const labels = (tpl.labels as unknown as { name: string; color: string }[]) ?? [];

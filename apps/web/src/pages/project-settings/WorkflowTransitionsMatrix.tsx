@@ -25,19 +25,27 @@ import { api } from '../../lib/api';
 // click doesn't reset the running gate before the user is sure.
 // =============================================================================
 
-// Mirrors the backend `WORKFLOW_STATUSES` constant — kept inline here because
-// the alternative (an extra API call to read it) adds latency for what is
-// effectively a frozen string list per preset.
-const STATUSES_BY_PRESET: Record<'engineering' | 'design' | 'generic', readonly string[]> = {
-  engineering: ['Todo', 'In Progress', 'In Review', 'Testing', 'Done'],
-  design:      ['Todo', 'In Progress', 'In Review', 'Approved', 'Done'],
-  generic:     ['Todo', 'In Progress', 'Done'],
-};
+// Custom statuses + columns let an admin author statuses that aren't on the
+// preset constant — so the matrix's row/column headers now come from the
+// project's actual ProjectStatus rows (via /projects/:id/workflow) rather
+// than the preset constant.
 
 interface TransitionRow {
   id?: string;
   fromStatus: string;
   toStatus: string;
+}
+
+interface WorkflowSnapshot {
+  columns: Array<{ id: string; name: string; position: number }>;
+  statuses: Array<{
+    id: string;
+    columnId: string;
+    name: string;
+    position: number;
+    isInitialStatus: boolean;
+    isDoneStatus: boolean;
+  }>;
 }
 
 function key(from: string, to: string): string {
@@ -46,18 +54,40 @@ function key(from: string, to: string): string {
 
 export function WorkflowTransitionsMatrix({
   projectId,
-  workflowPreset,
+  workflowPreset: _workflowPreset,
 }: {
   projectId: string;
   workflowPreset: 'engineering' | 'design' | 'generic';
 }): JSX.Element {
   const queryClient = useQueryClient();
-  const statuses = STATUSES_BY_PRESET[workflowPreset];
 
   const transitionsQuery = useQuery({
     queryKey: ['project-workflow-transitions', projectId],
     queryFn: () => api.get<TransitionRow[]>(`/projects/${projectId}/workflow-transitions`),
   });
+
+  // Pull the project's actual statuses so the matrix headers reflect any
+  // custom statuses an admin has authored (and not the preset constant).
+  // Sorted by (column position, status position) so the order matches the
+  // board's visual flow.
+  const workflowQuery = useQuery<WorkflowSnapshot>({
+    queryKey: ['project-workflow', projectId],
+    queryFn: () => api.get<WorkflowSnapshot>(`/projects/${projectId}/workflow`),
+  });
+
+  const statuses = useMemo<string[]>(() => {
+    const snap = workflowQuery.data;
+    if (!snap) return [];
+    const colPos = new Map(snap.columns.map((c) => [c.id, c.position]));
+    return [...snap.statuses]
+      .sort((a, b) => {
+        const ca = colPos.get(a.columnId) ?? 0;
+        const cb = colPos.get(b.columnId) ?? 0;
+        if (ca !== cb) return ca - cb;
+        return a.position - b.position;
+      })
+      .map((s) => s.name);
+  }, [workflowQuery.data]);
 
   // Local edit buffer keyed by "from→to". When the saved set arrives we seed
   // the buffer; subsequent toggles diff against this until the user hits Save.
@@ -131,10 +161,18 @@ export function WorkflowTransitionsMatrix({
     if (savedEdges) setPendingEdges(new Set(savedEdges));
   }
 
-  if (transitionsQuery.isLoading || !pendingEdges) {
+  if (transitionsQuery.isLoading || workflowQuery.isLoading || !pendingEdges) {
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Spinner className="text-sm" /> Loading transitions…
+      </div>
+    );
+  }
+
+  if (statuses.length === 0) {
+    return (
+      <div className="text-xs text-muted-foreground rounded-md border border-border bg-background/40 p-3">
+        This project has no statuses yet. Add statuses above before authoring transitions.
       </div>
     );
   }
